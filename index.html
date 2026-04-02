@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SidelineOS — The Operating System for Your Soccer Club</title>
+    <meta name="description" content="AI-driven club operating system built for Directors of Coaching. Automate scheduling, communication, coach coverage, and player development.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="hero" id="hero">
+        <div class="hero__bg"></div>
+        <div class="container">
+            <h1 class="hero__title">THE OPERATING SYSTEM FOR YOUR SOCCER CLUB</h1>
+            <p class="hero__subtitle">Built for Directors of Coaching to run their entire club in one place.</p>
+            <form class="waitlist-form" id="hero-form">
+                <label for="hero-email" class="sr-only">Email address</label>
+                <input type="email" id="hero-email" name="email" placeholder="Enter your email" required>
+                <button type="submit" class="btn btn--primary">Join the Waitlist</button>
+            </form>
+            <p class="form-message" id="hero-message" hidden></p>
+        </div>
+    </header>
+
+    <main>
+        <section class="problems" id="problems">
+            <div class="container">
+                <div class="problems__grid">
+                    <div class="card card--problem">
+                        <div class="card__icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        </div>
+                        <h3 class="card__title">Drowning in Parent Emails</h3>
+                        <p class="card__text">Hours spent answering the same questions about schedules, locations, and logistics every single week.</p>
+                    </div>
+                    <div class="card card--problem">
+                        <div class="card__icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </div>
+                        <h3 class="card__title">Juggling 5 Different Apps</h3>
+                        <p class="card__text">TeamSnap for scheduling, GroupMe for chat, email for parents, spreadsheets for everything else.</p>
+                    </div>
+                    <div class="card card--problem">
+                        <div class="card__icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <h3 class="card__title">Coach Coverage Chaos</h3>
+                        <p class="card__text">A coach cancels last minute and you are scrambling to find a replacement through texts and calls.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <div class="container">
+                <h2 class="section-title">Everything Your Club Needs</h2>
+                <div class="features__grid">
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
+                        <h3 class="card__title">AI Communication Hub</h3>
+                        <p class="card__text">Emails, messages, and chats centralized. Common questions answered automatically. Urgent issues highlighted.</p>
+                    </div>
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        <h3 class="card__title">Automated Scheduling</h3>
+                        <p class="card__text">Practices, games, cancellations, and changes pushed instantly to coaches, players, and parents with built-in maps.</p>
+                    </div>
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                        </div>
+                        <h3 class="card__title">Coach Coverage System</h3>
+                        <p class="card__text">Coaches mark unavailability. System finds qualified replacements automatically. DOC has full visibility.</p>
+                    </div>
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <h3 class="card__title">Player Development Profiles</h3>
+                        <p class="card__text">Positions, performance data, highlights, and voice-to-text coach feedback stored per player.</p>
+                    </div>
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <h3 class="card__title">Camp & Revenue Tracking</h3>
+                        <p class="card__text">Active, upcoming, and completed camps with registration counts and revenue tracking over time.</p>
+                    </div>
+                    <div class="card card--feature">
+                        <div class="card__icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <h3 class="card__title">Parent & Player Portal</h3>
+                        <p class="card__text">Clean, simple access to schedules, chat, travel info, camps, and attendance confirmation via push notification.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works" id="how-it-works">
+            <div class="container">
+                <h2 class="section-title">How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step__number">1</div>
+                        <h3 class="step__title">Set Up Your Club</h3>
+                        <p class="step__text">Add teams, coaches, players, and schedules.</p>
+                    </div>
+                    <div class="step__connector" aria-hidden="true"></div>
+                    <div class="step">
+                        <div class="step__number">2</div>
+                        <h3 class="step__title">System Runs in the Background</h3>
+                        <p class="step__text">AI handles communication, coverage, and notifications.</p>
+                    </div>
+                    <div class="step__connector" aria-hidden="true"></div>
+                    <div class="step">
+                        <div class="step__number">3</div>
+                        <h3 class="step__title">You Focus on Coaching</h3>
+                        <p class="step__text">Less admin, more development.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tiers" id="who-its-for">
+            <div class="container">
+                <h2 class="section-title">Who It's For</h2>
+                <div class="tiers__grid">
+                    <div class="card card--tier card--tier-doc">
+                        <h3 class="card__title">Director of Coaching</h3>
+                        <p class="card__text">Full control. Centralized dashboard, voice-enabled commands, complete club visibility.</p>
+                    </div>
+                    <div class="card card--tier">
+                        <h3 class="card__title">Coaches</h3>
+                        <p class="card__text">Team-level access. Schedules, player profiles, attendance, availability management.</p>
+                    </div>
+                    <div class="card card--tier">
+                        <h3 class="card__title">Parents & Players</h3>
+                        <p class="card__text">Simple experience. Schedules, chat, attendance confirmation, camp info, travel recommendations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-cta" id="waitlist">
+            <div class="container">
+                <h2 class="section-title">Be the First to Run Your Club Smarter</h2>
+                <p class="final-cta__subtitle">Join the waitlist. Early access coming soon.</p>
+                <form class="waitlist-form" id="footer-form">
+                    <label for="footer-email" class="sr-only">Email address</label>
+                    <input type="email" id="footer-email" name="email" placeholder="Enter your email" required>
+                    <button type="submit" class="btn btn--primary">Join the Waitlist</button>
+                </form>
+                <p class="form-message" id="footer-message" hidden></p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="site-footer__inner">
+                <p class="site-footer__logo">SidelineOS</p>
+                <div class="site-footer__social" aria-label="Social media links">
+                    <a href="#" aria-label="Twitter"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+                    <a href="#" aria-label="Instagram"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+                </div>
+                <p class="site-footer__copy">&copy; 2026 SidelineOS. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
