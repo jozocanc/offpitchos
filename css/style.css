@@ -332,3 +332,61 @@ body {
     padding: 4px 14px;
     border-radius: 20px;
 }
+
+/* === Final CTA === */
+.final-cta {
+    padding: var(--section-padding);
+    text-align: center;
+}
+
+.final-cta__subtitle {
+    color: var(--color-gray);
+    font-size: 1.1rem;
+    margin-bottom: 32px;
+}
+
+/* === Footer === */
+.site-footer {
+    padding: 40px 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.site-footer__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.site-footer__logo {
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.site-footer__social {
+    display: flex;
+    gap: 16px;
+}
+
+.site-footer__social a {
+    color: var(--color-gray);
+    transition: color 0.3s ease;
+}
+
+.site-footer__social a:hover {
+    color: var(--color-green);
+}
+
+.site-footer__social a:focus-visible {
+    outline: 2px solid var(--color-green);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+.site-footer__copy {
+    color: var(--color-gray);
+    font-size: 0.8rem;
+}
