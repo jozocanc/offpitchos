@@ -15,6 +15,7 @@ Foundation layer for the SidelineOS web app — a Next.js + Supabase application
 | Next.js 14 (App Router) | React framework with server components, API routes, middleware |
 | Supabase | Postgres database, auth (email + Google OAuth), row-level security |
 | Tailwind CSS | Utility-first CSS, configured with SidelineOS brand tokens |
+| Resend | Transactional email (invite emails). Free tier: 3k emails/month |
 | Vercel | Hosting, auto-deploy from GitHub |
 
 ## Brand Tokens (Tailwind Config)
@@ -46,14 +47,18 @@ Three user roles stored in the `profiles` table:
 2. Chooses Google or email/password
 3. Supabase Auth handles the session (JWT stored in cookie via `@supabase/ssr`)
 4. On first login, check if `profiles` record exists:
-   - If no profile → redirect to `/onboarding` (new DOC) or auto-create profile with invite role (coach/parent joining via invite)
-   - If profile exists → redirect to `/dashboard`
+   - If no profile and no invite context → create profile (role: `doc`, `onboarding_complete: false`) → redirect to `/onboarding`
+   - If no profile but joining via invite → create profile with invite role → add to club/team → redirect to `/dashboard`
+   - If profile exists and `onboarding_complete: false` → redirect to `/onboarding`
+   - If profile exists and `onboarding_complete: true` → redirect to `/dashboard`
 5. Next.js middleware checks auth on every protected route. Unauthenticated users redirect to `/login`.
 
 ### Route Protection
 - Public routes: `/login`, `/signup`, `/join/[token]` (invite link)
 - Protected routes: everything else
 - Role-based access: middleware checks `profile.role` and restricts routes per role
+- Onboarding guard: authenticated users with `onboarding_complete: false` are redirected to `/onboarding` from any protected route. Users with `onboarding_complete: true` are redirected away from `/onboarding`.
+- Parent access: parents attempting to access `/teams` (list) are redirected to `/teams/[their-team-id]`
 
 ## DOC Onboarding
 
@@ -74,10 +79,10 @@ Three user roles stored in the `profiles` table:
 ## Invite System
 
 ### Coach Invites (Email)
-1. DOC enters coach's email from the dashboard or team page
-2. System creates `invites` record (role: `coach`, linked to club)
-3. Email sent via Supabase's built-in email or a transactional email service
-4. Coach clicks link → `/join/[token]` → signs up → profile created with `coach` role → added to club
+1. DOC enters coach's email and selects team(s) to assign from the dashboard or team page
+2. System creates `invites` record (role: `coach`, linked to club and team)
+3. Email sent via **Resend** (free tier: 3k emails/month, easy Next.js integration)
+4. Coach clicks link → `/join/[token]` → signs up → profile created with `coach` role → added to club → `team_members` record created for assigned team(s)
 
 ### Parent Invites (Shareable Link)
 1. DOC generates a team invite link from the team page
@@ -87,9 +92,17 @@ Three user roles stored in the `profiles` table:
 
 ### Invite Rules
 - Invites expire after 7 days
-- DOC can revoke or resend invites
+- DOC can revoke (sets `status` to `revoked`) or resend invites
 - One invite per email per club (prevent duplicates)
 - Invite tokens are UUIDs (not guessable)
+- If a parent uses a team link but already has a profile in the club, add a new `team_members` row (don't create a duplicate profile)
+- DOC accesses all teams via club ownership — no `team_members` entry needed for the DOC
+
+### Invite Error States (`/join/[token]`)
+- **Expired invite:** "This invite has expired. Ask your Director of Coaching for a new one."
+- **Revoked invite:** "This invite is no longer valid."
+- **Already accepted:** "This invite has already been used." + link to `/login`
+- **Invalid token:** "Invite not found." + link to `/signup`
 
 ## Dashboard Layout
 
@@ -141,6 +154,7 @@ Left sidebar, collapsible to icon-only on desktop, hamburger menu on mobile.
 | name | text | Club name |
 | created_by | uuid | References `auth.users(id)` |
 | created_at | timestamptz | Default `now()` |
+| updated_at | timestamptz | Default `now()`, auto-updated via trigger |
 
 ### `teams`
 | Column | Type | Notes |
@@ -156,10 +170,12 @@ Left sidebar, collapsible to icon-only on desktop, hamburger menu on mobile.
 |--------|------|-------|
 | id | uuid | Primary key |
 | user_id | uuid | References `auth.users(id)`, unique |
-| club_id | uuid | References `clubs(id)` |
-| role | text | `doc`, `coach`, or `parent` |
+| club_id | uuid | References `clubs(id)`, nullable (null before onboarding) |
+| role | text | CHECK constraint: `role IN ('doc', 'coach', 'parent')` |
 | display_name | text | User's display name |
+| onboarding_complete | boolean | Default `false`. Set to `true` after wizard completes. |
 | created_at | timestamptz | Default `now()` |
+| updated_at | timestamptz | Default `now()`, auto-updated via trigger |
 
 ### `team_members`
 | Column | Type | Notes |
@@ -167,7 +183,7 @@ Left sidebar, collapsible to icon-only on desktop, hamburger menu on mobile.
 | id | uuid | Primary key |
 | team_id | uuid | References `teams(id)` |
 | profile_id | uuid | References `profiles(id)` |
-| role | text | Role within team context |
+| role | text | CHECK constraint: `role IN ('coach', 'parent')`. DOCs access via club ownership, not team_members. |
 | created_at | timestamptz | Default `now()` |
 
 Unique constraint on `(team_id, profile_id)`.
@@ -181,6 +197,7 @@ Unique constraint on `(team_id, profile_id)`.
 | email | text | Nullable (null for link-based invites) |
 | role | text | `coach` or `parent` |
 | token | uuid | Unique, used in invite URL |
+| status | text | CHECK: `status IN ('pending', 'accepted', 'revoked', 'expired')`. Default `pending`. |
 | expires_at | timestamptz | 7 days from creation |
 | accepted_at | timestamptz | Nullable, set when invite is used |
 | created_at | timestamptz | Default `now()` |
@@ -190,7 +207,10 @@ Unique constraint on `(team_id, profile_id)`.
 - `teams`: DOC can CRUD all teams in their club. Coaches/parents can read teams they belong to.
 - `profiles`: Users can read/update their own profile. DOC can read all profiles in their club.
 - `team_members`: DOC can CRUD. Coaches/parents can read their own team memberships.
-- `invites`: DOC can CRUD invites for their club. Public read on token lookup for the join flow.
+- `invites`: DOC can CRUD invites for their club. Public SELECT allowed only when filtering by `token` column AND `status = 'pending'` AND `expires_at > now()` — prevents enumeration of other invites.
+
+### Database Triggers
+- `updated_at` trigger on `clubs`, `profiles`: automatically sets `updated_at = now()` on UPDATE.
 
 ## Pages
 
