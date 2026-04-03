@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import NotificationBell from './notification-bell'
 
 interface NavItem {
   label: string
@@ -90,7 +91,7 @@ function CloseIcon() {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
   { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon /> },
-  { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon />, disabled: true },
+  { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
   { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon /> },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon />, disabled: true },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon /> },
@@ -155,8 +156,9 @@ export default function Sidebar({ userEmail }: SidebarProps) {
 
       {/* User info + sign out */}
       <div className="px-4 py-4 border-t border-white/5">
-        <div className="mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <p className="text-xs text-gray truncate">{userEmail}</p>
+          <NotificationBell />
         </div>
         <form action="/auth/signout" method="POST">
           <button
