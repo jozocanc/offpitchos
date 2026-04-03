@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import VenuesSection from './venues-section'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -79,6 +80,8 @@ export default async function SettingsPage() {
             Go to Coaches page →
           </a>
         </section>
+
+        <VenuesSection />
 
         {/* Future settings placeholder */}
         <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5 opacity-50">
