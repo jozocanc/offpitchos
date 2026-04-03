@@ -54,15 +54,24 @@ export async function acceptInvite(formData: FormData) {
 
   // Add to team if invite has a team_id
   if (invite.team_id) {
-    const { error: memberError } = await supabase
-      .from('team_members')
-      .upsert({
-        team_id: invite.team_id,
-        user_id: user.id,
-        role: invite.role,
-      }, { onConflict: 'team_id,user_id' })
+    // Get the profile id we just created/updated
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
 
-    if (memberError) throw new Error(`Failed to join team: ${memberError.message}`)
+    if (profile) {
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .upsert({
+          team_id: invite.team_id,
+          profile_id: profile.id,
+          role: invite.role,
+        }, { onConflict: 'team_id,profile_id' })
+
+      if (memberError) throw new Error(`Failed to join team: ${memberError.message}`)
+    }
   }
 
   // Mark invite as accepted
