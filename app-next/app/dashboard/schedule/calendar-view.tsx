@@ -11,8 +11,8 @@ interface Event {
   start_time: string
   end_time: string
   status: string
-  teams: { name: string; age_group: string } | null
-  venues: { name: string } | null
+  teams: { name: string; age_group: string }[] | null
+  venues: { name: string }[] | null
 }
 
 interface CalendarViewProps {
@@ -116,9 +116,9 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                           top: `${(new Date(event.start_time).getMinutes() / 60) * 100}%`,
                           height: `${Math.max(25, getEventDurationPercent(event) * 64)}px`,
                         }}
-                        title={`${event.title} — ${event.teams?.age_group}`}
+                        title={`${event.title} — ${event.teams?.[0]?.age_group}`}
                       >
-                        {event.teams?.age_group} {EVENT_TYPE_LABELS[event.type as EventType]?.[0] ?? ''}
+                        {event.teams?.[0]?.age_group} {EVENT_TYPE_LABELS[event.type as EventType]?.[0] ?? ''}
                       </button>
                     ))}
                   </div>

@@ -12,8 +12,8 @@ interface EventCardProps {
     status: string
     notes: string | null
     recurrence_group: string | null
-    teams: { name: string; age_group: string } | null
-    venues: { name: string } | null
+    teams: { name: string; age_group: string }[] | null
+    venues: { name: string }[] | null
   }
   onEdit: (eventId: string) => void
   onCancel: (eventId: string) => void
@@ -37,7 +37,7 @@ export default function EventCard({ event, onEdit, onCancel, canEdit }: EventCar
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
-              {event.teams?.age_group}
+              {event.teams?.[0]?.age_group}
             </span>
             <span className="text-xs font-medium bg-white/5 text-gray px-2 py-0.5 rounded-full">
               {EVENT_TYPE_LABELS[event.type as EventType] ?? event.type}
@@ -57,8 +57,8 @@ export default function EventCard({ event, onEdit, onCancel, canEdit }: EventCar
             {event.title}
           </p>
           <p className="text-gray text-sm mt-1">{timeStr}</p>
-          {event.venues?.name && (
-            <p className="text-gray text-sm">{event.venues.name}</p>
+          {event.venues?.[0]?.name && (
+            <p className="text-gray text-sm">{event.venues[0].name}</p>
           )}
           {event.notes && (
             <p className="text-gray text-xs mt-2 italic">{event.notes}</p>
