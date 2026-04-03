@@ -22,6 +22,22 @@ export default async function DashboardPage() {
         .eq('club_id', profile.club_id)
     : { count: 0 }
 
+  // Count today's sessions
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayEnd = new Date()
+  todayEnd.setHours(23, 59, 59, 999)
+
+  const { count: todaySessions } = profile?.club_id
+    ? await supabase
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('club_id', profile.club_id)
+        .eq('status', 'scheduled')
+        .gte('start_time', todayStart.toISOString())
+        .lte('start_time', todayEnd.toISOString())
+    : { count: 0 }
+
   const displayName = profile?.display_name ?? user.email?.split('@')[0] ?? 'there'
   const isNewClub = (teamCount ?? 0) <= 1
 
@@ -44,9 +60,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Today's Sessions"
-          value="0"
-          accent="gray"
-          note="Coming soon"
+          value={String(todaySessions ?? 0)}
+          accent="green"
         />
         <StatCard
           label="Coverage Alerts"
@@ -72,6 +87,12 @@ export default async function DashboardPage() {
               title="Invite a coach"
               description="Bring your coaching staff onto SidelineOS."
               icon="📋"
+            />
+            <QuickAction
+              href="/dashboard/schedule"
+              title="Create a schedule"
+              description="Set up practices, games, and events for your teams."
+              icon="📅"
             />
           </div>
         </div>
