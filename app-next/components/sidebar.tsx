@@ -104,7 +104,7 @@ const navItems: NavItem[] = [
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
   { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon /> },
   { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon /> },
-  { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon />, disabled: true },
+  { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon /> },
 ]
 
