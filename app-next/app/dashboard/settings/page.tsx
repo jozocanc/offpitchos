@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VenuesSection from './venues-section'
+import CoverageSettings from './coverage-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -9,7 +10,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id, display_name')
+    .select('club_id, display_name, role')
     .eq('user_id', user.id)
     .single()
 
@@ -82,6 +83,8 @@ export default async function SettingsPage() {
         </section>
 
         <VenuesSection />
+
+        {profile?.role === 'doc' && <CoverageSettings />}
 
         {/* Future settings placeholder */}
         <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5 opacity-50">
