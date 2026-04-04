@@ -69,6 +69,16 @@ function SettingsIcon() {
   )
 }
 
+function CoverageIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <polyline points="17 11 19 13 23 9" />
+    </svg>
+  )
+}
+
 function MenuIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,6 +102,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
   { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon /> },
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
+  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon /> },
   { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon /> },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon />, disabled: true },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon /> },
