@@ -93,7 +93,7 @@ export default async function DashboardPage() {
             <QuickAction
               href="/dashboard/coaches"
               title="Invite a coach"
-              description="Bring your coaching staff onto SidelineOS."
+              description="Bring your coaching staff onto OffPitchOS."
               icon="📋"
             />
             <QuickAction

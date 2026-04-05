@@ -49,7 +49,7 @@ export default async function JoinPage({
       <main className="min-h-screen flex items-center justify-center bg-dark px-4">
         <div className="w-full max-w-md text-center">
           <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
-            Sideline<span className="text-green">OS</span>
+            OffPitch<span className="text-green">OS</span>
           </h1>
           <div className="bg-dark-secondary rounded-2xl p-8 mt-8 border border-red/20">
             <p className="text-red text-lg font-bold mb-2">Invite Not Valid</p>
@@ -78,7 +78,7 @@ export default async function JoinPage({
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
-            Sideline<span className="text-green">OS</span>
+            OffPitch<span className="text-green">OS</span>
           </h1>
           <p className="text-gray">You&apos;ve been invited</p>
         </div>

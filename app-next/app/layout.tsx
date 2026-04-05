@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SidelineOS",
+  title: "OffPitchOS",
   description: "AI-driven club operating system for soccer",
 };
 

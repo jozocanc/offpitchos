@@ -121,7 +121,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/5">
         <span className="text-xl font-black uppercase tracking-tight">
-          Sideline<span className="text-green">OS</span>
+          OffPitch<span className="text-green">OS</span>
         </span>
       </div>
 

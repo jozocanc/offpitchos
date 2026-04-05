@@ -48,7 +48,7 @@ export default function OnboardingWizard() {
         {/* Logo */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black uppercase tracking-tight">
-            Sideline<span className="text-green">OS</span>
+            OffPitch<span className="text-green">OS</span>
           </h1>
           <p className="text-gray text-sm mt-2">Let&apos;s set up your club</p>
         </div>
@@ -63,7 +63,7 @@ export default function OnboardingWizard() {
           {step === 1 && (
             <div>
               <h2 className="text-xl font-bold mb-1">Name your club</h2>
-              <p className="text-gray text-sm mb-6">This is the club you&apos;ll manage on SidelineOS.</p>
+              <p className="text-gray text-sm mb-6">This is the club you&apos;ll manage on OffPitchOS.</p>
 
               <label className="block text-sm font-medium text-gray mb-2" htmlFor="clubName">
                 Club name
