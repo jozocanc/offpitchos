@@ -10,6 +10,7 @@ interface NavItem {
   href: string
   icon: React.ReactNode
   disabled?: boolean
+  roles?: string[]  // if set, only show for these roles
 }
 
 function HomeIcon() {
@@ -100,21 +101,24 @@ function CloseIcon() {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
-  { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon /> },
+  { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon />, roles: ['doc', 'coach'] },
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
-  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon /> },
-  { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon /> },
+  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon />, roles: ['doc'] },
+  { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
-  { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon /> },
+  { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
 
 interface SidebarProps {
   userEmail: string
+  userRole: string
 }
 
-export default function Sidebar({ userEmail }: SidebarProps) {
+export default function Sidebar({ userEmail, userRole }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(userRole))
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -127,7 +131,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map(item => {
+        {filteredNavItems.map(item => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
           if (item.disabled) {

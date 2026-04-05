@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   // Check onboarding status
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_complete')
+    .select('onboarding_complete, role')
     .eq('user_id', user.id)
     .single()
 
@@ -25,7 +25,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-dark">
-      <Sidebar userEmail={user.email ?? ''} />
+      <Sidebar userEmail={user.email ?? ''} userRole={profile.role ?? 'parent'} />
       <main className="flex-1 overflow-auto">
         {children}
       </main>
