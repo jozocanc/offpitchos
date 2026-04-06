@@ -222,7 +222,7 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-64 min-h-screen bg-dark border-r border-white/5 shrink-0">
+      <aside className="hidden md:flex flex-col w-64 h-screen bg-dark border-r border-white/5 shrink-0 sticky top-0">
         {sidebarContent}
       </aside>
 
