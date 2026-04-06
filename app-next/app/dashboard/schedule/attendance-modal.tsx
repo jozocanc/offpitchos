@@ -129,7 +129,7 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                         <span className="text-gray font-bold text-xs">{player.first_name.charAt(0)}</span>
                       </div>
                     )}
-                    <p className="font-medium text-sm flex-1">{player.first_name} {player.last_name}</p>
+                    <a href={`/dashboard/players/${player.id}`} className="font-medium text-sm flex-1 hover:text-green transition-colors">{player.first_name} {player.last_name}</a>
                     <div className="flex gap-1">
                       {(['present', 'late', 'absent', 'excused'] as Status[]).map(status => (
                         <button
