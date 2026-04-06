@@ -32,7 +32,9 @@ export default function ForgotPasswordPage() {
     <main className="min-h-screen flex items-center justify-center bg-dark">
       <div className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="OffPitchOS" className="h-14 w-auto mx-auto mb-2" />
+          <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
+            OffPitch<span className="text-green">OS</span>
+          </h1>
           <p className="text-gray">Reset your password</p>
         </div>
 

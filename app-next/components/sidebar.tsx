@@ -168,8 +168,10 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-white/5">
-        <img src="/logo.png" alt="OffPitchOS" className="h-10 w-auto" />
+      <div className="px-6 py-6 border-b border-white/5">
+        <span className="text-xl font-black uppercase tracking-tight">
+          OffPitch<span className="text-green">OS</span>
+        </span>
       </div>
 
       {/* Nav */}

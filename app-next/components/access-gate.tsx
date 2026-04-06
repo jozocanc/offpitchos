@@ -36,7 +36,9 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-dark flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="OffPitchOS" className="h-12 w-auto mx-auto" />
+          <h1 className="text-2xl font-black uppercase tracking-tight">
+            OffPitch<span className="text-green">OS</span>
+          </h1>
           <p className="text-sm text-gray mt-2">Enter access code to continue</p>
         </div>
         <form onSubmit={handleSubmit}>
