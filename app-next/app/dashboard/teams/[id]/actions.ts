@@ -49,3 +49,81 @@ export async function generateParentInvite(formData: FormData) {
 
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
+
+export async function updateTeam(teamId: string, name: string, ageGroup: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can edit teams')
+
+  const { error } = await supabase
+    .from('teams')
+    .update({ name: name.trim(), age_group: ageGroup })
+    .eq('id', teamId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to update team: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+  revalidatePath('/dashboard/teams')
+}
+
+export async function deleteTeam(teamId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can delete teams')
+
+  // Delete team members first, then the team
+  await supabase.from('team_members').delete().eq('team_id', teamId)
+  await supabase.from('invites').update({ status: 'revoked' }).eq('team_id', teamId).eq('status', 'pending')
+
+  const { error } = await supabase
+    .from('teams')
+    .delete()
+    .eq('id', teamId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to delete team: ${error.message}`)
+
+  revalidatePath('/dashboard/teams')
+  redirect('/dashboard/teams')
+}
+
+export async function removeMember(teamId: string, userId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can remove members')
+
+  const { error } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('team_id', teamId)
+    .eq('user_id', userId)
+
+  if (error) throw new Error(`Failed to remove member: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+}

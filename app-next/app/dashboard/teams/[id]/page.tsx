@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import GenerateInviteButton from './generate-invite-button'
 import CopyLink from './copy-link'
+import TeamActions from './team-actions'
+import RemoveMemberButton from './remove-member-button'
 
 interface Member {
   user_id: string
@@ -32,7 +34,7 @@ export default async function TeamDetailPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id')
+    .select('club_id, role')
     .eq('user_id', user.id)
     .single()
 
@@ -66,6 +68,7 @@ export default async function TeamDetailPage({
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
+  const isDOC = profile?.role === 'doc'
   const coaches = members.filter(m => m.role === 'coach')
   const parents = members.filter(m => m.role === 'parent')
 
@@ -82,9 +85,12 @@ export default async function TeamDetailPage({
             {team.age_group}
           </span>
         </div>
-        <p className="text-gray text-sm mt-1">
-          {members.length} member{members.length !== 1 ? 's' : ''}
-        </p>
+        <div className="flex items-center gap-4 mt-1">
+          <p className="text-gray text-sm">
+            {members.length} member{members.length !== 1 ? 's' : ''}
+          </p>
+          {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -109,10 +115,11 @@ export default async function TeamDetailPage({
                         {(m.profiles?.display_name ?? 'C').charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-sm">{m.profiles?.display_name ?? 'Unknown'}</p>
                       <p className="text-gray text-xs">Coach</p>
                     </div>
+                    {isDOC && <RemoveMemberButton teamId={team.id} userId={m.user_id} />}
                   </div>
                 ))}
               </div>
@@ -138,10 +145,11 @@ export default async function TeamDetailPage({
                         {(m.profiles?.display_name ?? 'P').charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-sm">{m.profiles?.display_name ?? 'Unknown'}</p>
                       <p className="text-gray text-xs">Parent</p>
                     </div>
+                    {isDOC && <RemoveMemberButton teamId={team.id} userId={m.user_id} />}
                   </div>
                 ))}
               </div>
