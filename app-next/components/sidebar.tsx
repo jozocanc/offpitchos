@@ -90,6 +90,15 @@ function MenuIcon() {
   )
 }
 
+function CampsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  )
+}
+
 function AskIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -116,6 +125,7 @@ const navItems: NavItem[] = [
   { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon />, roles: ['doc'] },
   { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
+  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc', 'parent'] },
   { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
