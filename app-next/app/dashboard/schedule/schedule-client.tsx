@@ -110,7 +110,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
         <div>
           <h1 className="text-3xl font-black tracking-tight">Schedule</h1>
           <p className="text-gray text-sm mt-1">
-            {filtered.length} event{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} upcoming event{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center gap-3">

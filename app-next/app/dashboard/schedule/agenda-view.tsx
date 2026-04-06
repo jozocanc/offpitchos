@@ -52,7 +52,9 @@ export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAt
     <div className="space-y-8">
       {grouped.map(({ dateStr, label, events: dayEvents, isPast }) => (
         <div key={dateStr} className={isPast ? 'opacity-50' : ''}>
-          <h3 className="text-sm font-bold text-gray uppercase tracking-wider mb-3">
+          <h3 className={`text-sm font-bold uppercase tracking-wider mb-3 ${
+            label === 'Today' ? 'text-green' : 'text-gray'
+          }`}>
             {label}
           </h3>
           <div className="space-y-3">
