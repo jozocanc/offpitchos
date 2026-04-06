@@ -133,11 +133,14 @@ function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
         <p className="text-sm text-gray">{dateStr} &middot; {timeStr}</p>
         {camp.venue && <p className="text-xs text-gray mt-0.5">{camp.venue}</p>}
         <div className="flex items-center gap-4 mt-2 text-xs text-gray">
-          <span>{camp.registeredCount}{camp.capacity ? `/${camp.capacity}` : ''} registered</span>
-          {fillPct !== null && <span>{fillPct}% full</span>}
+          {isDoc && <span>{camp.registeredCount}{camp.capacity ? `/${camp.capacity}` : ''} registered</span>}
+          {isDoc && fillPct !== null && <span>{fillPct}% full</span>}
           {camp.feeCents > 0 && <span>{formatCurrency(camp.feeCents)} / player</span>}
           {isDoc && camp.feeCents > 0 && (
             <span className="text-green">{formatCurrency(camp.collectedRevenue)} collected</span>
+          )}
+          {isParent && camp.capacity && (
+            <span>{camp.capacity - camp.registeredCount} spots left</span>
           )}
         </div>
       </div>
