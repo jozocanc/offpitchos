@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import InviteCoachForm from './invite-form'
+
+export const metadata: Metadata = { title: 'Coaches' }
 import CopyLink from '../teams/[id]/copy-link'
 import RevokeButton from './revoke-button'
 

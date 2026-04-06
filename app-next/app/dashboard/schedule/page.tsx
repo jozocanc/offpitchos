@@ -1,5 +1,8 @@
+import type { Metadata } from 'next'
 import { getScheduleData } from './actions'
 import ScheduleClient from './schedule-client'
+
+export const metadata: Metadata = { title: 'Schedule' }
 
 export default async function SchedulePage() {
   const data = await getScheduleData()

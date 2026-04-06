@@ -1,5 +1,8 @@
+import type { Metadata } from 'next'
 import { getMessagesData } from './actions'
 import MessagesClient from './messages-client'
+
+export const metadata: Metadata = { title: 'Messages' }
 
 export default async function MessagesPage() {
   const data = await getMessagesData()

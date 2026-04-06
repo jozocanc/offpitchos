@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getCoverageData } from './actions'
 import CoverageClient from './coverage-client'
+
+export const metadata: Metadata = { title: 'Coverage' }
 
 export default async function CoveragePage() {
   const supabase = await createClient()

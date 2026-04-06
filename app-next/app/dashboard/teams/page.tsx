@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AddTeamForm from './add-team-form'
+
+export const metadata: Metadata = { title: 'Teams' }
 
 interface Team {
   id: string

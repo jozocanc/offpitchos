@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VenuesSection from './venues-section'
+
+export const metadata: Metadata = { title: 'Settings' }
 import CoverageSettings from './coverage-settings'
 import AccountSettings from './account-settings'
 import DangerZone from './danger-zone'
