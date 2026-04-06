@@ -13,7 +13,7 @@ export default async function AskPage() {
   return (
     <div className="p-6 md:p-10 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Ask OffPitchOS</h1>
+        <h1 className="text-2xl font-bold text-white">Ask Ref</h1>
         <p className="text-sm text-gray mt-1">Get instant answers about your club — schedule, teams, events, and more.</p>
       </div>
 
