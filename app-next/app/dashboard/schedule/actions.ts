@@ -292,6 +292,10 @@ export async function deleteEvent(eventId: string) {
 export async function getScheduleData() {
   const { profile, supabase } = await getUserProfile()
 
+  // Only load today and future events (past events are rarely needed)
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
   const { data: events } = await supabase
     .from('events')
     .select(`
@@ -301,6 +305,7 @@ export async function getScheduleData() {
       venues ( name )
     `)
     .eq('club_id', profile.club_id!)
+    .gte('start_time', todayStart.toISOString())
     .order('start_time', { ascending: true })
 
   const { data: teams } = await supabase

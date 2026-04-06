@@ -84,7 +84,12 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
           </p>
           <p className="text-gray text-sm mt-1">{timeStr}</p>
           {event.venues?.[0]?.name && (
-            <p className="text-gray text-sm">{event.venues[0].name}</p>
+            <p className="text-gray text-sm flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+              </svg>
+              {event.venues[0].name}
+            </p>
           )}
           {event.notes && (
             <p className="text-gray text-xs mt-2 italic">{event.notes}</p>
