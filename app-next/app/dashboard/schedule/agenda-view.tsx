@@ -30,11 +30,12 @@ interface AgendaViewProps {
     unavailable_coach_id: string
     profiles: any
   }>
+  onAttendance?: (eventId: string, teamId: string) => void
   userRole: string
   userProfileId: string
 }
 
-export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, coverageRequests, userRole, userProfileId }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onAttendance, coverageRequests, userRole, userProfileId }: AgendaViewProps) {
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -63,6 +64,8 @@ export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAt
                 onCancel={onCancel}
                 canEdit={canEdit}
                 onCantAttend={onCantAttend}
+                onAttendance={onAttendance}
+                teamId={event.team_id}
                 coverageRequest={coverageRequests.find(cr => cr.event_id === event.id) ?? null}
                 showCoverageActions={(() => {
                   const cr = coverageRequests.find(cr2 => cr2.event_id === event.id)

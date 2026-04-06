@@ -20,6 +20,8 @@ interface EventCardProps {
   onCancel: (eventId: string) => void
   canEdit: boolean
   onCantAttend?: (eventId: string) => void
+  onAttendance?: (eventId: string, teamId: string) => void
+  teamId?: string
   coverageRequest?: {
     id: string
     status: string
@@ -29,7 +31,7 @@ interface EventCardProps {
   showCoverageActions?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, coverageRequest, showCoverageActions }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions }: EventCardProps) {
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -91,6 +93,14 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
 
         {canEdit && !isCancelled && (
           <div className="flex gap-2 shrink-0">
+            {onAttendance && teamId && (
+              <button
+                onClick={() => onAttendance(event.id, teamId)}
+                className="text-green hover:text-green/80 text-sm transition-colors"
+              >
+                Attendance
+              </button>
+            )}
             <button
               onClick={() => onEdit(event.id)}
               className="text-gray hover:text-white text-sm transition-colors"

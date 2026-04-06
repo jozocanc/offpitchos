@@ -8,6 +8,7 @@ import AgendaView from './agenda-view'
 import CalendarView from './calendar-view'
 import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
+import AttendanceModal from './attendance-modal'
 import { cancelEvent } from './actions'
 
 interface Event {
@@ -60,6 +61,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [modalOpen, setModalOpen] = useState(false)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [cantAttendEventId, setCantAttendEventId] = useState<string | null>(null)
+  const [attendanceEvent, setAttendanceEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
   const [, startTransition] = useTransition()
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
@@ -84,6 +86,11 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     startTransition(async () => {
       await cancelEvent(eventId)
     })
+  }
+
+  function handleAttendance(eventId: string, teamId: string) {
+    const event = events.find(e => e.id === eventId)
+    setAttendanceEvent({ eventId, teamId, title: event?.title ?? '' })
   }
 
   function handleAddNew() {
@@ -156,6 +163,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           onEdit={handleEdit}
           onCancel={handleCancel}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
+          onAttendance={canEdit ? handleAttendance : undefined}
           canEdit={canEdit}
           coverageRequests={coverageRequests}
           userRole={userRole}
@@ -176,6 +184,16 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           userProfileId={userProfileId}
           userRole={userRole}
           onClose={() => setCantAttendEventId(null)}
+        />
+      )}
+
+      {/* Attendance Modal */}
+      {attendanceEvent && (
+        <AttendanceModal
+          eventId={attendanceEvent.eventId}
+          teamId={attendanceEvent.teamId}
+          eventTitle={attendanceEvent.title}
+          onClose={() => setAttendanceEvent(null)}
         />
       )}
 
