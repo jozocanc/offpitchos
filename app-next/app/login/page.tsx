@@ -1,15 +1,17 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get('invite')
   const supabase = createClient()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -23,7 +25,7 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(inviteToken ? `/join/${inviteToken}` : '/dashboard')
       router.refresh()
     }
   }
@@ -32,7 +34,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${inviteToken ? `?next=/join/${inviteToken}` : ''}`,
       },
     })
     if (error) setError(error.message)
@@ -108,9 +110,17 @@ export default function LoginPage() {
 
         <p className="text-center text-gray text-sm mt-6">
           Don&apos;t have an account?{' '}
-          <a href="/signup" className="text-green hover:underline">Sign up</a>
+          <a href={inviteToken ? `/signup?invite=${inviteToken}` : '/signup'} className="text-green hover:underline">Sign up</a>
         </p>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VenuesSection from './venues-section'
 import CoverageSettings from './coverage-settings'
+import AccountSettings from './account-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -30,43 +31,12 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Club info */}
-        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-          <h2 className="text-lg font-bold mb-4">Club Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray mb-1">Club Name</label>
-              <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-                <p className="text-white">{club?.name ?? '—'}</p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray mb-1">Club ID</label>
-              <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-                <p className="text-gray text-sm font-mono">{club?.id ?? '—'}</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Account info */}
-        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-          <h2 className="text-lg font-bold mb-4">Account</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray mb-1">Display Name</label>
-              <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-                <p className="text-white">{profile?.display_name ?? '—'}</p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray mb-1">Email</label>
-              <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-                <p className="text-white">{user.email ?? '—'}</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <AccountSettings
+          clubName={club?.name ?? ''}
+          displayName={profile?.display_name ?? ''}
+          email={user.email ?? ''}
+          isDOC={profile?.role === 'doc'}
+        />
 
         {/* Club invite link */}
         <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import InviteCoachForm from './invite-form'
+import CopyLink from '../teams/[id]/copy-link'
+import RevokeButton from './revoke-button'
 
 interface Coach {
   user_id: string
@@ -123,16 +125,14 @@ export default async function CoachesPage() {
                       </p>
                     )}
                   </div>
-                  <span className="text-xs font-bold bg-yellow-500/10 text-yellow-400 px-2 py-1 rounded-full shrink-0">
-                    Pending
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-bold bg-yellow-500/10 text-yellow-400 px-2 py-1 rounded-full">
+                      Pending
+                    </span>
+                    <RevokeButton inviteId={invite.id} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 bg-dark rounded-xl px-3 py-2">
-                  <span className="text-gray text-xs truncate flex-1 font-mono">
-                    {baseUrl}/join/{invite.token}
-                  </span>
-                  <span className="text-gray text-xs shrink-0">Copy link</span>
-                </div>
+                <CopyLink url={`${baseUrl}/join/${invite.token}`} />
               </div>
             ))}
           </div>
