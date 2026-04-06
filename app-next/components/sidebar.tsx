@@ -213,8 +213,8 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
 
       {/* Mobile: slide-in sidebar */}
       <aside
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-dark border-r border-white/5 flex flex-col transform transition-transform duration-200 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-dark border-r border-white/5 flex flex-col transform transition-transform duration-200 ease-in-out overflow-hidden
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
       >
         {sidebarContent}
       </aside>

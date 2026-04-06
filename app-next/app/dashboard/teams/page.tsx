@@ -8,6 +8,8 @@ interface Team {
   name: string
   age_group: string
   member_count: number
+  coach_count: number
+  next_event: { title: string; start_time: string } | null
 }
 
 export default async function TeamsPage() {
@@ -40,14 +42,36 @@ export default async function TeamsPage() {
     console.error('Teams query error:', teamsError.message)
   }
 
-  // Get member counts for each team
+  // Get member counts, coach counts, and next event for each team
+  const now = new Date().toISOString()
   const teams: Team[] = await Promise.all(
     (teamsRaw ?? []).map(async team => {
-      const { count } = await supabase
+      const { count: memberCount } = await supabase
         .from('team_members')
         .select('id', { count: 'exact', head: true })
         .eq('team_id', team.id)
-      return { ...team, member_count: count ?? 0 }
+
+      const { count: coachCount } = await supabase
+        .from('team_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', team.id)
+        .eq('role', 'coach')
+
+      const { data: nextEvents } = await supabase
+        .from('events')
+        .select('title, start_time')
+        .eq('team_id', team.id)
+        .eq('status', 'scheduled')
+        .gte('start_time', now)
+        .order('start_time', { ascending: true })
+        .limit(1)
+
+      return {
+        ...team,
+        member_count: memberCount ?? 0,
+        coach_count: coachCount ?? 0,
+        next_event: nextEvents?.[0] ?? null,
+      }
     })
   )
 
@@ -89,9 +113,24 @@ function TeamCard({ team }: { team: Team }) {
           {team.age_group}
         </span>
       </div>
-      <p className="text-gray text-sm">
-        {team.member_count} member{team.member_count !== 1 ? 's' : ''}
-      </p>
+      <div className="flex items-center gap-3 text-gray text-sm">
+        <span>{team.member_count} member{team.member_count !== 1 ? 's' : ''}</span>
+        {team.coach_count > 0 && (
+          <>
+            <span className="text-white/10">|</span>
+            <span>{team.coach_count} coach{team.coach_count !== 1 ? 'es' : ''}</span>
+          </>
+        )}
+      </div>
+      {team.next_event && (
+        <div className="mt-3 pt-3 border-t border-white/5">
+          <p className="text-xs text-gray">
+            Next: <span className="text-white">{team.next_event.title}</span>
+            {' '}&middot;{' '}
+            {new Date(team.next_event.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+      )}
     </Link>
   )
 }
