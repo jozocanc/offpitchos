@@ -10,9 +10,11 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, club_id')
+    .select('display_name, club_id, role')
     .eq('user_id', user.id)
     .single()
+
+  const userRole = profile?.role ?? 'parent'
 
   // Count teams in the club
   const { count: teamCount } = profile?.club_id
@@ -47,6 +49,14 @@ export default async function DashboardPage() {
         .in('status', ['pending', 'escalated'])
     : { count: 0 }
 
+  // Fetch user's teams (for coaches and parents)
+  const { data: myTeamsRaw } = await supabase
+    .from('team_members')
+    .select('team_id, role, teams(name, age_group)')
+    .eq('user_id', user.id)
+
+  const myTeams = (myTeamsRaw ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
+
   // Fetch today's upcoming events with details
   const { data: todayEvents } = profile?.club_id
     ? await supabase
@@ -73,23 +83,49 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+      <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-10`}>
         <StatCard
-          label="Total Teams"
-          value={String(teamCount ?? 0)}
+          label={userRole === 'doc' ? 'Total Teams' : 'My Teams'}
+          value={String(userRole === 'doc' ? (teamCount ?? 0) : myTeams.length)}
           accent="green"
         />
         <StatCard
-          label="Today's Sessions"
+          label="Today&apos;s Sessions"
           value={String(todaySessions ?? 0)}
           accent="green"
         />
-        <StatCard
-          label="Coverage Alerts"
-          value={String(coverageAlerts ?? 0)}
-          accent={(coverageAlerts ?? 0) > 0 ? 'green' : 'gray'}
-        />
+        {userRole === 'doc' && (
+          <StatCard
+            label="Coverage Alerts"
+            value={String(coverageAlerts ?? 0)}
+            accent={(coverageAlerts ?? 0) > 0 ? 'green' : 'gray'}
+          />
+        )}
       </div>
+
+      {/* My Teams (for coaches and parents) */}
+      {userRole !== 'doc' && myTeams.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold mb-4">My Teams</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {myTeams.map(tm => (
+              <Link
+                key={tm.team_id}
+                href={`/dashboard/teams/${tm.team_id}`}
+                className="bg-dark-secondary rounded-xl p-4 border border-white/5 hover:border-green/20 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-medium">{tm.teams.name}</p>
+                  <p className="text-gray text-xs mt-0.5 capitalize">{tm.role}</p>
+                </div>
+                <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
+                  {tm.teams.age_group}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Today's schedule */}
       <div className="mb-10">

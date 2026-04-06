@@ -5,8 +5,17 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OffPitchOS",
-  description: "AI-driven club operating system for soccer",
+  title: {
+    default: "OffPitchOS",
+    template: "%s | OffPitchOS",
+  },
+  description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://offpitchos.com"),
+  openGraph: {
+    title: "OffPitchOS",
+    description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
+    siteName: "OffPitchOS",
+  },
 };
 
 export default function RootLayout({
