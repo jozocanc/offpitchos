@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { checkAndEscalateTimeouts } from '../coverage/actions'
+import { checkConflicts } from './conflict-actions'
 
 // ---------- Types ----------
 
@@ -82,7 +83,19 @@ async function notifyTeamMembers(
 export async function createEvent(input: CreateEventInput) {
   const { user, profile, supabase } = await getUserProfile()
 
-  if (!input.recurring.enabled) {
+  if (!input.recurring?.enabled) {
+    // Check for team conflicts on single events (recurring relies on UI-side warnings)
+    const conflicts = await checkConflicts({
+      teamId: input.teamId,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      venueId: input.venueId,
+    })
+
+    if (conflicts.some(c => c.type === 'team')) {
+      throw new Error('This team already has an event at this time. Please choose a different time.')
+    }
+
     // Single event
     const { data: event, error } = await supabase
       .from('events')
