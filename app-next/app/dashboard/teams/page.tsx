@@ -12,6 +12,7 @@ interface Team {
   age_group: string
   member_count: number
   coach_count: number
+  player_count: number
   next_event: { title: string; start_time: string } | null
 }
 
@@ -60,6 +61,11 @@ export default async function TeamsPage() {
         .eq('team_id', team.id)
         .eq('role', 'coach')
 
+      const { count: playerCount } = await supabase
+        .from('players')
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', team.id)
+
       const { data: nextEvents } = await supabase
         .from('events')
         .select('title, start_time')
@@ -73,6 +79,7 @@ export default async function TeamsPage() {
         ...team,
         member_count: memberCount ?? 0,
         coach_count: coachCount ?? 0,
+        player_count: playerCount ?? 0,
         next_event: nextEvents?.[0] ?? null,
       }
     })
@@ -116,13 +123,18 @@ function TeamCard({ team }: { team: Team }) {
           {team.age_group}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-gray text-sm">
-        <span>{team.member_count} member{team.member_count !== 1 ? 's' : ''}</span>
+      <div className="flex items-center gap-3 text-gray text-sm flex-wrap">
+        {team.player_count > 0 && (
+          <span>{team.player_count} player{team.player_count !== 1 ? 's' : ''}</span>
+        )}
         {team.coach_count > 0 && (
           <>
-            <span className="text-white/10">|</span>
+            {team.player_count > 0 && <span className="text-white/10">|</span>}
             <span>{team.coach_count} coach{team.coach_count !== 1 ? 'es' : ''}</span>
           </>
+        )}
+        {team.player_count === 0 && team.coach_count === 0 && (
+          <span>{team.member_count} member{team.member_count !== 1 ? 's' : ''}</span>
         )}
       </div>
       {team.next_event && (
