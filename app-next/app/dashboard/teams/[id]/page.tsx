@@ -6,6 +6,8 @@ import CopyLink from './copy-link'
 import TeamActions from './team-actions'
 import RemoveMemberButton from './remove-member-button'
 import RevokeInviteButton from './revoke-invite-button'
+import AddPlayerForm from './add-player-form'
+import RemovePlayerButton from './remove-player-button'
 
 interface Member {
   user_id: string
@@ -13,6 +15,15 @@ interface Member {
   profiles: {
     display_name: string | null
   } | null
+}
+
+interface Player {
+  id: string
+  first_name: string
+  last_name: string
+  jersey_number: number | null
+  position: string | null
+  parent_id: string
 }
 
 interface ParentInvite {
@@ -67,9 +78,19 @@ export default async function TeamDetailPage({
     .eq('status', 'pending')
     .order('created_at', { ascending: false }) as { data: ParentInvite[] | null }
 
+  // Fetch players on this team
+  const { data: playersRaw } = await supabase
+    .from('players')
+    .select('id, first_name, last_name, jersey_number, position, parent_id')
+    .eq('team_id', id)
+    .order('last_name', { ascending: true })
+
+  const players = (playersRaw ?? []) as Player[]
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
   const isDOC = profile?.role === 'doc'
+  const isParent = profile?.role === 'parent'
   const coaches = members.filter(m => m.role === 'coach')
   const parents = members.filter(m => m.role === 'parent')
 
@@ -121,6 +142,46 @@ export default async function TeamDetailPage({
                       <p className="text-gray text-xs">Coach</p>
                     </div>
                     {isDOC && <RemoveMemberButton teamId={team.id} userId={m.user_id} />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Players */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">Players</h2>
+              {(isDOC || isParent) && <AddPlayerForm teamId={team.id} />}
+            </div>
+            {players.length === 0 ? (
+              <div className="bg-dark-secondary rounded-2xl p-6 text-center border border-white/5">
+                <p className="text-gray text-sm">No players registered yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {players.map(p => (
+                  <div
+                    key={p.id}
+                    className="bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-center gap-3"
+                  >
+                    {p.jersey_number !== null && (
+                      <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center shrink-0">
+                        <span className="text-green font-bold text-xs">{p.jersey_number}</span>
+                      </div>
+                    )}
+                    {p.jersey_number === null && (
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                        <span className="text-gray font-bold text-xs">{p.first_name.charAt(0)}</span>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{p.first_name} {p.last_name}</p>
+                      {p.position && <p className="text-gray text-xs">{p.position}</p>}
+                    </div>
+                    {(isDOC || p.parent_id === user.id) && (
+                      <RemovePlayerButton playerId={p.id} teamId={team.id} />
+                    )}
                   </div>
                 ))}
               </div>
