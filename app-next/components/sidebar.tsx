@@ -141,6 +141,8 @@ const navItems: NavItem[] = [
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
 
+const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
+
 interface SidebarProps {
   userEmail: string
   userRole: string
@@ -149,8 +151,11 @@ interface SidebarProps {
 export default function Sidebar({ userEmail, userRole }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [viewAs, setViewAs] = useState(userRole)
+  const isAdmin = userEmail === ADMIN_EMAIL
 
-  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(userRole))
+  const activeRole = isAdmin ? viewAs : userRole
+  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(activeRole))
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -203,6 +208,23 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
 
       {/* User info + sign out */}
       <div className="px-4 py-4 border-t border-white/5">
+        {isAdmin && (
+          <div className="mb-3 flex gap-1">
+            {(['doc', 'coach', 'parent'] as const).map(role => (
+              <button
+                key={role}
+                onClick={() => setViewAs(role)}
+                className={`flex-1 text-xs py-1 rounded font-medium transition-colors capitalize ${
+                  activeRole === role
+                    ? 'bg-green text-dark'
+                    : 'bg-white/5 text-gray hover:text-white'
+                }`}
+              >
+                {role === 'doc' ? 'DOC' : role}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs text-gray truncate">{userEmail}</p>
           <NotificationBell />
