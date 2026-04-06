@@ -49,3 +49,34 @@ export async function updateClubName(name: string) {
   revalidatePath('/dashboard/settings')
   return { success: true }
 }
+
+export async function leaveClub() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role === 'doc') return { error: 'DOC cannot leave their own club. Transfer ownership first.' }
+
+  await supabase.from('team_members').delete().eq('user_id', user.id)
+  await supabase.from('profiles').delete().eq('user_id', user.id)
+
+  return { success: true }
+}
+
+export async function deleteAccount() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  await supabase.from('team_members').delete().eq('user_id', user.id)
+  await supabase.from('profiles').delete().eq('user_id', user.id)
+  await supabase.auth.signOut()
+
+  return { success: true }
+}

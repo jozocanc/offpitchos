@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import VenuesSection from './venues-section'
 import CoverageSettings from './coverage-settings'
 import AccountSettings from './account-settings'
+import DangerZone from './danger-zone'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -56,16 +57,7 @@ export default async function SettingsPage() {
 
         {profile?.role === 'doc' && <CoverageSettings />}
 
-        {/* Future settings placeholder */}
-        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5 opacity-50">
-          <h2 className="text-lg font-bold mb-2">Notifications</h2>
-          <p className="text-gray text-sm">Coming soon — configure email and push notification preferences.</p>
-        </section>
-
-        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5 opacity-50">
-          <h2 className="text-lg font-bold mb-2">Billing</h2>
-          <p className="text-gray text-sm">Coming soon — manage your subscription and billing details.</p>
-        </section>
+        <DangerZone userRole={profile?.role ?? 'parent'} />
       </div>
     </div>
   )
