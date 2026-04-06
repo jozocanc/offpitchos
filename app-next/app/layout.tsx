@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   },
   description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://offpitchos.com"),
+  manifest: "/manifest.json",
+  themeColor: "#0A1628",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "OffPitchOS",
+  },
   openGraph: {
     title: "OffPitchOS",
     description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
@@ -25,6 +32,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   );
