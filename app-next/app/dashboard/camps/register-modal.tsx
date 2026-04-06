@@ -45,6 +45,21 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
     setSubmitting(true)
     setError(null)
     try {
+      if (camp.feeCents > 0) {
+        // Paid camp — redirect to Stripe Checkout
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: camp.eventId, playerId: selectedPlayerId }),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        if (data.url) {
+          window.location.href = data.url
+          return
+        }
+      }
+      // Free camp — register directly
       await registerForCamp(camp.eventId, selectedPlayerId)
       setSuccess(true)
     } catch (err: any) {
@@ -102,7 +117,7 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
                 disabled={submitting || !selectedPlayerId}
                 className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
               >
-                {submitting ? 'Registering...' : 'Register'}
+                {submitting ? 'Processing...' : camp.feeCents > 0 ? 'Register & Pay' : 'Register'}
               </button>
             </div>
           </>

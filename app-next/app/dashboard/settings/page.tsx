@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: 'Settings' }
 import CoverageSettings from './coverage-settings'
 import AccountSettings from './account-settings'
 import DangerZone from './danger-zone'
+import StripeConnect from './stripe-connect'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -57,6 +58,8 @@ export default async function SettingsPage() {
         </section>
 
         <VenuesSection />
+
+        {profile?.role === 'doc' && <StripeConnect />}
 
         {profile?.role === 'doc' && <CoverageSettings />}
 
