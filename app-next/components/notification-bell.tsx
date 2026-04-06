@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import PushPrompt from './push-prompt'
 
 interface Notification {
   id: string
@@ -161,6 +162,7 @@ export default function NotificationBell() {
               ))
             )}
           </div>
+          <PushPrompt />
         </div>
       )}
     </div>
