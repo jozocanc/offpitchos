@@ -6,9 +6,21 @@ export default function CopyLink({ url }: { url: string }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement('input')
+      input.value = url
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   return (
@@ -16,7 +28,9 @@ export default function CopyLink({ url }: { url: string }) {
       <span className="text-gray text-sm truncate flex-1 font-mono">{url}</span>
       <button
         onClick={handleCopy}
-        className="shrink-0 text-xs font-bold text-green hover:opacity-80 transition-opacity"
+        className={`shrink-0 text-xs font-bold transition-all ${
+          copied ? 'text-green scale-105' : 'text-gray hover:text-green'
+        }`}
       >
         {copied ? 'Copied!' : 'Copy'}
       </button>

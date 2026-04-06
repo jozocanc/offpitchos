@@ -223,7 +223,7 @@ function StatCard({
   note?: string
 }) {
   return (
-    <div className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
+    <div className="bg-dark-secondary rounded-2xl p-6 border border-white/5 hover:border-green/10 transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,135,0.05)]">
       <p className="text-gray text-sm mb-2">{label}</p>
       <p className={`text-4xl font-black ${accent === 'green' ? 'text-green' : 'text-white'}`}>
         {value}

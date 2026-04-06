@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
+import { ToastProvider } from '@/components/toast'
 
 export default async function DashboardLayout({
   children,
@@ -26,9 +27,11 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-dark">
       <Sidebar userEmail={user.email ?? ''} userRole={profile.role ?? 'parent'} />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <ToastProvider>
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </ToastProvider>
     </div>
   )
 }
