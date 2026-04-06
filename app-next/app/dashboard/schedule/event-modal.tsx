@@ -191,7 +191,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 overflow-y-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl my-8">
+      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-6">
           {isEditing ? 'Edit Event' : 'Add Event'}
         </h2>
