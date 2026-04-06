@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -20,7 +21,7 @@ async function getUserProfile() {
 }
 
 export async function getCampsData() {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   // Get all camp events for this club
   const { data: campEvents } = await supabase
@@ -73,9 +74,11 @@ export async function getCampsData() {
     }
   })
 
+  const effectiveRole = await getEffectiveRole(user.email ?? '', profile.role)
+
   return {
     camps,
-    userRole: profile.role,
+    userRole: effectiveRole,
     userProfileId: profile.id,
   }
 }

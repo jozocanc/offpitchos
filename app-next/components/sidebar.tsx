@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import NotificationBell from './notification-bell'
 
@@ -153,8 +153,16 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [viewAs, setViewAs] = useState(userRole)
   const isAdmin = userEmail === ADMIN_EMAIL
+  const router = useRouter()
 
   const activeRole = isAdmin ? viewAs : userRole
+
+  function switchRole(role: string) {
+    setViewAs(role)
+    // Update cookie so server-side pages can read the role
+    document.cookie = `viewAsRole=${role};path=/;max-age=86400`
+    router.refresh()
+  }
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(activeRole))
 
   const sidebarContent = (
@@ -213,7 +221,7 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
             {(['doc', 'coach', 'parent'] as const).map(role => (
               <button
                 key={role}
-                onClick={() => setViewAs(role)}
+                onClick={() => switchRole(role)}
                 className={`flex-1 text-xs py-1 rounded font-medium transition-colors capitalize ${
                   activeRole === role
                     ? 'bg-green text-dark'

@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Sidebar from '@/components/sidebar'
 import { ToastProvider } from '@/components/toast'
+
+const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
 
 export default async function DashboardLayout({
   children,
@@ -24,9 +27,19 @@ export default async function DashboardLayout({
     redirect('/onboarding')
   }
 
+  // Admin role switcher — read cookie
+  let effectiveRole = profile.role ?? 'parent'
+  if (user.email === ADMIN_EMAIL) {
+    const cookieStore = await cookies()
+    const viewAs = cookieStore.get('viewAsRole')?.value
+    if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
+      effectiveRole = viewAs
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-dark">
-      <Sidebar userEmail={user.email ?? ''} userRole={profile.role ?? 'parent'} />
+      <Sidebar userEmail={user.email ?? ''} userRole={effectiveRole} />
       <ToastProvider>
         <main className="flex-1 overflow-auto">
           {children}
