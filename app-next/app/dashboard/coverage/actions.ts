@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { autoAssignCoverage } from './auto-assign'
 
 // ---------- Helpers ----------
 
@@ -108,7 +109,7 @@ export async function createCoverageRequest(eventId: string, unavailableCoachId:
 
   if (!event) throw new Error('Event not found')
 
-  const { error } = await supabase
+  const { data: request, error } = await supabase
     .from('coverage_requests')
     .insert({
       event_id: eventId,
@@ -118,6 +119,8 @@ export async function createCoverageRequest(eventId: string, unavailableCoachId:
       created_by: user.id,
       timeout_at: timeoutAt.toISOString(),
     })
+    .select('id')
+    .single()
 
   if (error) throw new Error(`Failed to create coverage request: ${error.message}`)
 
@@ -128,13 +131,50 @@ export async function createCoverageRequest(eventId: string, unavailableCoachId:
     hour: 'numeric', minute: '2-digit', hour12: true
   })
 
-  await notifyClubCoaches(
+  // Try to auto-assign the best available coach
+  const result = await autoAssignCoverage(
+    request.id,
     eventId,
     profile.club_id!,
-    unavailableCoachId,
-    'coverage_requested',
-    `Can you cover ${event.title} on ${dateStr} at ${timeStr}?`
+    unavailableCoachId
   )
+
+  if (result.assigned) {
+    // Auto-assigned! Notify the covering coach, unavailable coach, and DOC
+    const message = `${result.coachName} has been auto-assigned to cover ${event.title} on ${dateStr} at ${timeStr}`
+
+    const { data: assignedRequest } = await supabase
+      .from('coverage_requests')
+      .select('covering_coach_id')
+      .eq('id', request.id)
+      .single()
+
+    const docId = await getDocProfileId(profile.club_id!)
+    const notifyIds = [unavailableCoachId]
+    if (assignedRequest?.covering_coach_id) notifyIds.push(assignedRequest.covering_coach_id)
+    if (docId) notifyIds.push(docId)
+
+    await notifySpecificProfiles(eventId, notifyIds, 'coverage_accepted', message)
+  } else {
+    // No one available — broadcast to coaches and escalate to DOC immediately
+    await notifyClubCoaches(
+      eventId,
+      profile.club_id!,
+      unavailableCoachId,
+      'coverage_requested',
+      `Can you cover ${event.title} on ${dateStr} at ${timeStr}? (No auto-match found)`
+    )
+
+    const docId = await getDocProfileId(profile.club_id!)
+    if (docId) {
+      await notifySpecificProfiles(
+        eventId,
+        [docId],
+        'coverage_escalated',
+        `No available coach found for ${event.title} on ${dateStr} — please assign manually`
+      )
+    }
+  }
 
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/coverage')
