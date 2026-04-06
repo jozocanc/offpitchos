@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { EVENT_TYPES, EVENT_TYPE_LABELS, DAYS_OF_WEEK, type EventType } from '@/lib/constants'
 import { createEvent, updateEvent } from './actions'
+import { checkConflicts, suggestAlternatives } from './conflict-actions'
+import type { Conflict, Suggestion } from './conflict-actions'
+import ConflictBanner from './conflict-banner'
 
 interface Team {
   id: string
@@ -52,12 +55,70 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
   const [updateFuture, setUpdateFuture] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [conflicts, setConflicts] = useState<Conflict[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [checkingConflicts, setCheckingConflicts] = useState(false)
 
   // Auto-generate title from team + type
   const selectedTeam = teams.find(t => t.id === teamId)
   const autoTitle = selectedTeam
     ? `${selectedTeam.name} ${EVENT_TYPE_LABELS[type]}`
     : ''
+
+  // Check for conflicts when scheduling inputs change
+  useEffect(() => {
+    if (!teamId || !date || !startTime || !endTime) {
+      setConflicts([])
+      setSuggestions([])
+      return
+    }
+
+    const timeout = setTimeout(async () => {
+      setCheckingConflicts(true)
+      try {
+        const startISO = new Date(`${date}T${startTime}`).toISOString()
+        const endISO = new Date(`${date}T${endTime}`).toISOString()
+
+        const found = await checkConflicts({
+          teamId,
+          startTime: startISO,
+          endTime: endISO,
+          venueId: venueId || null,
+          excludeEventId: editEvent?.id,
+        })
+        setConflicts(found)
+
+        if (found.length > 0) {
+          const startDate = new Date(`${date}T${startTime}`)
+          const endDate = new Date(`${date}T${endTime}`)
+          const durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000
+
+          const alts = await suggestAlternatives({
+            teamId,
+            venueId: venueId || null,
+            date,
+            durationMinutes,
+          })
+          setSuggestions(alts)
+        } else {
+          setSuggestions([])
+        }
+      } catch {
+        // Silently fail — conflicts are advisory
+      } finally {
+        setCheckingConflicts(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [teamId, date, startTime, endTime, venueId, editEvent?.id])
+
+  function handleSelectSuggestion(startISO: string, endISO: string) {
+    const start = new Date(startISO)
+    const end = new Date(endISO)
+    setStartTime(start.toTimeString().slice(0, 5))
+    setEndTime(end.toTimeString().slice(0, 5))
+  }
 
   function handleSubmit() {
     const finalTitle = title.trim() || autoTitle
@@ -220,6 +281,16 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
+
+        {/* Conflict warnings */}
+        <div className="mb-4">
+          <ConflictBanner
+            conflicts={conflicts}
+            suggestions={suggestions}
+            onSelectSuggestion={handleSelectSuggestion}
+            loading={checkingConflicts}
+          />
+        </div>
 
         {/* Notes */}
         <label className="block text-sm font-medium text-gray mb-2">Notes (optional)</label>
