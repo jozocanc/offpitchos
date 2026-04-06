@@ -99,6 +99,12 @@ function LoginForm() {
             <p className="text-red text-sm">{error}</p>
           )}
 
+          <div className="flex justify-end">
+            <a href="/forgot-password" className="text-xs text-gray hover:text-green transition-colors">
+              Forgot password?
+            </a>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

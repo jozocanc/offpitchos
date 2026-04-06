@@ -47,6 +47,18 @@ export default async function DashboardPage() {
         .in('status', ['pending', 'escalated'])
     : { count: 0 }
 
+  // Fetch today's upcoming events with details
+  const { data: todayEvents } = profile?.club_id
+    ? await supabase
+        .from('events')
+        .select('id, title, start_time, end_time, event_type, status, venue, teams(name, age_group)')
+        .eq('club_id', profile.club_id)
+        .gte('start_time', todayStart.toISOString())
+        .lte('start_time', todayEnd.toISOString())
+        .order('start_time', { ascending: true })
+        .limit(10)
+    : { data: null }
+
   const displayName = profile?.display_name ?? user.email?.split('@')[0] ?? 'there'
   const isNewClub = (teamCount ?? 0) <= 1
 
@@ -79,6 +91,57 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* Today's schedule */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Today&apos;s Schedule</h2>
+          <Link href="/dashboard/schedule" className="text-xs font-bold text-green hover:opacity-80 transition-opacity">
+            View all
+          </Link>
+        </div>
+        {!todayEvents || todayEvents.length === 0 ? (
+          <div className="bg-dark-secondary rounded-2xl p-6 text-center border border-white/5">
+            <p className="text-gray text-sm">No events scheduled for today.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {todayEvents.map(event => {
+              const start = new Date(event.start_time)
+              const end = new Date(event.end_time)
+              const timeStr = `${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+              const team = event.teams as unknown as { name: string; age_group: string } | null
+              const isCancelled = event.status === 'cancelled'
+
+              return (
+                <Link
+                  key={event.id}
+                  href="/dashboard/schedule"
+                  className={`bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-center gap-4 hover:border-green/20 transition-colors block ${isCancelled ? 'opacity-50' : ''}`}
+                >
+                  <div className="text-center shrink-0 w-14">
+                    <p className="text-green font-bold text-sm">{start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`font-medium text-sm truncate ${isCancelled ? 'line-through' : ''}`}>{event.title}</p>
+                      {isCancelled && <span className="text-xs text-red font-bold">Cancelled</span>}
+                    </div>
+                    <p className="text-gray text-xs mt-0.5">
+                      {timeStr}
+                      {team && <span> &middot; {team.name} ({team.age_group})</span>}
+                      {event.venue && <span> &middot; {event.venue}</span>}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium bg-white/5 text-gray px-2 py-1 rounded-full shrink-0 capitalize">
+                    {event.event_type}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Quick actions for new clubs */}
       {isNewClub && (
         <div>
@@ -88,19 +151,19 @@ export default async function DashboardPage() {
               href="/dashboard/teams"
               title="Add a team"
               description="Create additional teams in your club."
-              icon="⚽"
+              icon="+"
             />
             <QuickAction
               href="/dashboard/coaches"
               title="Invite a coach"
               description="Bring your coaching staff onto OffPitchOS."
-              icon="📋"
+              icon="+"
             />
             <QuickAction
               href="/dashboard/schedule"
               title="Create a schedule"
               description="Set up practices, games, and events for your teams."
-              icon="📅"
+              icon="+"
             />
           </div>
         </div>

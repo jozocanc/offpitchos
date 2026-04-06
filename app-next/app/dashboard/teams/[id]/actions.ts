@@ -127,3 +127,27 @@ export async function removeMember(teamId: string, userId: string) {
 
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
+
+export async function revokeParentInvite(inviteId: string, teamId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile?.club_id) throw new Error('No club found')
+
+  const { error } = await supabase
+    .from('invites')
+    .update({ status: 'revoked' })
+    .eq('id', inviteId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to revoke invite: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+}

@@ -5,6 +5,7 @@ import GenerateInviteButton from './generate-invite-button'
 import CopyLink from './copy-link'
 import TeamActions from './team-actions'
 import RemoveMemberButton from './remove-member-button'
+import RevokeInviteButton from './revoke-invite-button'
 
 interface Member {
   user_id: string
@@ -177,11 +178,14 @@ export default async function TeamDetailPage({
                 {parentInvites.map(invite => (
                   <div key={invite.id} className="space-y-2">
                     <CopyLink url={`${baseUrl}/join/${invite.token}`} />
-                    {invite.expires_at && (
-                      <p className="text-gray text-xs pl-1">
-                        Expires {new Date(invite.expires_at).toLocaleDateString()}
-                      </p>
-                    )}
+                    <div className="flex items-center justify-between pl-1">
+                      {invite.expires_at && (
+                        <p className="text-gray text-xs">
+                          Expires {new Date(invite.expires_at).toLocaleDateString()}
+                        </p>
+                      )}
+                      <RevokeInviteButton inviteId={invite.id} teamId={team.id} />
+                    </div>
                   </div>
                 ))}
               </div>
