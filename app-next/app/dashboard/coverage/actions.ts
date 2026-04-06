@@ -263,6 +263,45 @@ export async function declineCoverage(requestId: string) {
 export async function assignCoverage(requestId: string, coachProfileId: string) {
   const { supabase } = await getUserProfile()
 
+  // Check if the assigned coach has a conflicting event
+  const { data: requestInfo } = await supabase
+    .from('coverage_requests')
+    .select('event_id')
+    .eq('id', requestId)
+    .single()
+
+  if (requestInfo) {
+    const { data: event } = await supabase
+      .from('events')
+      .select('start_time, end_time, club_id')
+      .eq('id', requestInfo.event_id)
+      .single()
+
+    if (event) {
+      const { data: coachTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('profile_id', coachProfileId)
+        .eq('role', 'coach')
+
+      if (coachTeams && coachTeams.length > 0) {
+        const teamIds = coachTeams.map(t => t.team_id)
+        const { data: conflicts } = await supabase
+          .from('events')
+          .select('id, title')
+          .eq('club_id', event.club_id)
+          .in('team_id', teamIds)
+          .eq('status', 'scheduled')
+          .lt('start_time', event.end_time)
+          .gt('end_time', event.start_time)
+
+        if (conflicts && conflicts.length > 0) {
+          throw new Error(`${conflicts[0].title} conflicts — this coach is already busy at that time.`)
+        }
+      }
+    }
+  }
+
   const { data: request, error } = await supabase
     .from('coverage_requests')
     .update({
