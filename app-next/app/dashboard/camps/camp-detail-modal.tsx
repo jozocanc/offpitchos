@@ -1,0 +1,167 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { setCampDetails, getCampRegistrations, togglePayment } from './actions'
+
+interface Camp {
+  eventId: string
+  title: string
+  detailId: string | null
+  feeCents: number
+  capacity: number | null
+}
+
+interface Registration {
+  id: string
+  payment_status: string
+  created_at: string
+  players: { first_name: string; last_name: string; teams: { name: string } | null } | null
+}
+
+function formatCurrency(cents: number): string {
+  return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+}
+
+export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose: () => void }) {
+  const [fee, setFee] = useState(String(camp.feeCents / 100))
+  const [capacity, setCapacity] = useState(camp.capacity ? String(camp.capacity) : '')
+  const [registrations, setRegistrations] = useState<Registration[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getCampRegistrations(camp.eventId)
+      .then(data => setRegistrations(data.registrations as Registration[]))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [camp.eventId])
+
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      const feeCents = Math.round(parseFloat(fee || '0') * 100)
+      const cap = capacity ? parseInt(capacity) : null
+      if (feeCents < 0) throw new Error('Fee cannot be negative')
+      if (cap !== null && cap < 1) throw new Error('Capacity must be at least 1')
+
+      await setCampDetails({ eventId: camp.eventId, feeCents, capacity: cap })
+      onClose()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTogglePayment(regId: string) {
+    try {
+      await togglePayment(regId)
+      setRegistrations(prev =>
+        prev.map(r => r.id === regId
+          ? { ...r, payment_status: r.payment_status === 'paid' ? 'unpaid' : 'paid' }
+          : r
+        )
+      )
+    } catch {}
+  }
+
+  const paidCount = registrations.filter(r => r.payment_status === 'paid').length
+  const feeCents = Math.round(parseFloat(fee || '0') * 100)
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-6">{camp.title}</h2>
+
+        {/* Fee & Capacity */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray mb-2">Fee ($)</label>
+            <input
+              type="number"
+              value={fee}
+              onChange={e => setFee(e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray mb-2">Capacity</label>
+            <input
+              type="number"
+              value={capacity}
+              onChange={e => setCapacity(e.target.value)}
+              min="1"
+              placeholder="Unlimited"
+              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 mb-6"
+        >
+          {saving ? 'Saving...' : 'Save Details'}
+        </button>
+
+        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+
+        {/* Registrations */}
+        <div className="border-t border-white/5 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-white">Registrations ({registrations.length})</h3>
+            {feeCents > 0 && (
+              <span className="text-xs text-green">
+                {formatCurrency(paidCount * feeCents)} / {formatCurrency(registrations.length * feeCents)}
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-gray">Loading...</p>
+          ) : registrations.length === 0 ? (
+            <p className="text-sm text-gray">No registrations yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {registrations.map(reg => (
+                <div key={reg.id} className="flex items-center justify-between bg-dark rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-sm text-white">
+                      {reg.players?.first_name} {reg.players?.last_name}
+                    </p>
+                    <p className="text-xs text-gray">{(reg.players?.teams as any)?.name ?? ''}</p>
+                  </div>
+                  <button
+                    onClick={() => handleTogglePayment(reg.id)}
+                    className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${
+                      reg.payment_status === 'paid'
+                        ? 'bg-green/10 text-green'
+                        : 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                    }`}
+                  >
+                    {reg.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-6 bg-dark border border-white/10 text-gray font-medium py-3 rounded-xl hover:text-white transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
