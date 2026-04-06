@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { autoAssignCoverage } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
+import { sendEmailToProfiles } from '@/lib/email'
 
 // ---------- Helpers ----------
 
@@ -64,6 +65,7 @@ async function notifyClubCoaches(
   await service.from('notifications').insert(notifications)
   const coachIds = coaches.map(c => c.id)
   await sendPushToProfiles(coachIds, { title: 'OffPitchOS', message, url: '/dashboard/coverage', tag: type })
+  sendEmailToProfiles(coachIds, 'OffPitchOS — Coverage', message, 'https://offpitchos.com/dashboard/coverage')
 }
 
 async function notifySpecificProfiles(
@@ -84,6 +86,7 @@ async function notifySpecificProfiles(
 
   await service.from('notifications').insert(notifications)
   await sendPushToProfiles(profileIds, { title: 'OffPitchOS', message, url: '/dashboard/coverage', tag: type })
+  sendEmailToProfiles(profileIds, 'OffPitchOS — Coverage', message, 'https://offpitchos.com/dashboard/coverage')
 }
 
 async function getDocProfileId(clubId: string): Promise<string | null> {

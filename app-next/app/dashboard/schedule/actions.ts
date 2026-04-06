@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { checkAndEscalateTimeouts } from '../coverage/actions'
 import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
+import { sendEmailToProfiles } from '@/lib/email'
 
 // ---------- Types ----------
 
@@ -79,6 +80,7 @@ async function notifyTeamMembers(
   await service.from('notifications').insert(notifications)
   const memberIds = members.map(m => m.profile_id)
   await sendPushToProfiles(memberIds, { title: 'OffPitchOS', message, url: '/dashboard/schedule', tag: type })
+  sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
 }
 
 // ---------- Actions ----------

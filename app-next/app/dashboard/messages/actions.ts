@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
+import { sendEmailToProfiles } from '@/lib/email'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -90,6 +91,7 @@ export async function createAnnouncement(input: {
 
     await service.from('notifications').insert(notifications)
     await sendPushToProfiles(recipientIds, { title: 'OffPitchOS', message: `New: ${input.title}`, url: '/dashboard/messages', tag: 'announcement' })
+    sendEmailToProfiles(recipientIds, `OffPitchOS — ${input.title}`, message, 'https://offpitchos.com/dashboard/messages')
   }
 
   revalidatePath('/dashboard/messages')
@@ -132,6 +134,7 @@ export async function createReply(announcementId: string, body: string) {
       message: `${replier?.display_name ?? 'Someone'} replied to: ${announcement.title}`,
     })
     await sendPushToProfiles([announcement.author_id], { title: 'OffPitchOS', message: `Reply on: ${announcement.title}`, url: '/dashboard/messages', tag: 'announcement_reply' })
+    sendEmailToProfiles([announcement.author_id], `OffPitchOS — Reply on: ${announcement.title}`, `${replier?.display_name ?? 'Someone'} replied to: ${announcement.title}`, 'https://offpitchos.com/dashboard/messages')
   }
 
   revalidatePath('/dashboard/messages')
