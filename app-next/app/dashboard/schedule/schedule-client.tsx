@@ -10,6 +10,7 @@ import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent } from './actions'
+import VoiceCommand from './voice-command'
 
 interface Event {
   id: string
@@ -135,12 +136,15 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           </div>
 
           {canEdit && (
-            <button
-              onClick={handleAddNew}
-              className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
-            >
-              + Add Event
-            </button>
+            <div className="flex items-center gap-2">
+              <VoiceCommand />
+              <button
+                onClick={handleAddNew}
+                className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
+              >
+                + Add Event
+              </button>
+            </div>
           )}
         </div>
       </div>
