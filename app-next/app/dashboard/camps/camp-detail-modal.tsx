@@ -32,7 +32,7 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
 
   useEffect(() => {
     getCampRegistrations(camp.eventId)
-      .then(data => setRegistrations(data.registrations as Registration[]))
+      .then(data => setRegistrations(data.registrations as unknown as Registration[]))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [camp.eventId])

@@ -179,7 +179,7 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
           title: event.title,
           startTime: input.newStartTime,
           endTime: input.newEndTime,
-          venueId: event.venues?.id ?? null,
+          venueId: (event.venues as any)?.[0]?.id ?? null,
           notes: null,
           updateFuture: false,
         })

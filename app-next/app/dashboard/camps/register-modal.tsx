@@ -33,7 +33,7 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
   useEffect(() => {
     getParentPlayers()
       .then(data => {
-        setPlayers(data as Player[])
+        setPlayers(data as unknown as Player[])
         if (data.length > 0) setSelectedPlayerId(data[0].id)
       })
       .catch(() => {})
