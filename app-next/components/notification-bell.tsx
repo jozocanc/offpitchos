@@ -51,16 +51,20 @@ export default function NotificationBell() {
   }, [])
 
   async function loadNotifications() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('notifications')
-      .select('id, event_id, type, message, read, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, event_id, type, message, read, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20)
 
-    if (data) {
-      setNotifications(data)
-      setUnreadCount(data.filter(n => !n.read).length)
+      if (data) {
+        setNotifications(data)
+        setUnreadCount(data.filter(n => !n.read).length)
+      }
+    } catch (err) {
+      console.error('Failed to load notifications:', err)
     }
   }
 
