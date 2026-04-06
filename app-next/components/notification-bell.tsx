@@ -23,20 +23,8 @@ export default function NotificationBell() {
   useEffect(() => {
     loadNotifications()
 
-    // Real-time subscription for new notifications
-    const supabase = createClient()
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications' },
-        (payload) => {
-          const newNotif = payload.new as Notification
-          setNotifications(prev => [newNotif, ...prev].slice(0, 20))
-          setUnreadCount(prev => prev + 1)
-        }
-      )
-      .subscribe()
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(loadNotifications, 30000)
 
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -45,8 +33,8 @@ export default function NotificationBell() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => {
+      clearInterval(interval)
       document.removeEventListener('mousedown', handleClickOutside)
-      supabase.removeChannel(channel)
     }
   }, [])
 
