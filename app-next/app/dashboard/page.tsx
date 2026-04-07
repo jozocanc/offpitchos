@@ -61,18 +61,23 @@ export default async function DashboardPage() {
   const myTeams = (myTeamsRaw ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
 
   // Fetch today's upcoming events with details
-  const { data: todayEvents } = profile?.club_id
+  const { data: todayEvents, error: todayEventsError } = profile?.club_id
     ? await supabase
         .from('events')
-        .select('id, title, start_time, end_time, event_type, status, venue, teams(name, age_group)')
+        .select('id, title, start_time, end_time, type, status, teams(name, age_group)')
         .eq('club_id', profile.club_id)
         .gte('start_time', todayStart.toISOString())
         .lte('start_time', todayEnd.toISOString())
         .order('start_time', { ascending: true })
         .limit(10)
-    : { data: null }
+    : { data: null, error: null }
 
-  const displayName = profile?.display_name ?? user.email?.split('@')[0] ?? 'there'
+  if (todayEventsError) console.error('todayEvents error:', todayEventsError)
+
+  const displayName = profile?.display_name
+    ?? user.user_metadata?.full_name
+    ?? user.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
+    ?? 'there'
   const isNewClub = (teamCount ?? 0) <= 1
 
   return (
@@ -168,11 +173,10 @@ export default async function DashboardPage() {
                     <p className="text-gray text-xs mt-0.5">
                       {timeStr}
                       {team && <span> &middot; {team.name} ({team.age_group})</span>}
-                      {event.venue && <span> &middot; {event.venue}</span>}
                     </p>
                   </div>
                   <span className="text-xs font-medium bg-white/5 text-gray px-2 py-1 rounded-full shrink-0 capitalize">
-                    {event.event_type}
+                    {event.type}
                   </span>
                 </Link>
               )
