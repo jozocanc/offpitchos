@@ -86,7 +86,14 @@ export default function VenuesSection() {
   return (
     <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">Venues</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold">Venues</h2>
+          {venues.length > 0 && (
+            <span className="text-xs font-semibold bg-white/5 text-gray border border-white/10 rounded-full px-2 py-0.5">
+              {venues.length}
+            </span>
+          )}
+        </div>
         <button
           onClick={openAdd}
           className="bg-green text-dark font-bold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity text-sm"
@@ -96,7 +103,11 @@ export default function VenuesSection() {
       </div>
 
       {venues.length === 0 ? (
-        <p className="text-gray text-sm">No venues saved yet. Add your first venue to use when scheduling events.</p>
+        <div className="bg-dark rounded-xl border border-dashed border-white/10 px-4 py-8 text-center">
+          <div className="text-3xl mb-2">📍</div>
+          <p className="text-white text-sm font-medium">No venues saved yet</p>
+          <p className="text-gray text-xs mt-1">Add your first venue to use when scheduling events.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {venues.map(venue => (

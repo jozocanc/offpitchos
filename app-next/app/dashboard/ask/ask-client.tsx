@@ -10,12 +10,35 @@ interface ChatMessage {
   created_at: string
 }
 
+function formatTimestamp(iso: string): string {
+  const date = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHr = Math.floor(diffMs / 3600000)
+  const diffDay = Math.floor(diffMs / 86400000)
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffHr < 24) return `${diffHr}h ago`
+  if (diffDay < 7) return `${diffDay}d ago`
+  return date.toLocaleDateString()
+}
+
 export default function AskClient({ chatHistory, userRole }: { chatHistory: ChatMessage[]; userRole: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>(chatHistory)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  async function handleCopy(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(prev => (prev === id ? null : prev)), 1500)
+    } catch {}
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -76,20 +99,28 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
         )}
 
         {messages.map(msg => (
-          <div key={msg.id} className="space-y-3">
+          <div key={msg.id} className="space-y-2">
             {/* User question */}
-            <div className="flex justify-end">
+            <div className="flex flex-col items-end">
               <div className="bg-green/10 border border-green/20 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
                 <p className="text-white text-sm">{msg.question}</p>
               </div>
+              <span className="text-[10px] text-gray mt-1 mr-1">{formatTimestamp(msg.created_at)}</span>
             </div>
 
             {/* AI answer */}
             {msg.answer ? (
-              <div className="flex justify-start">
+              <div className="flex flex-col items-start group">
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[80%]">
                   <p className="text-white/90 text-sm whitespace-pre-wrap">{msg.answer}</p>
                 </div>
+                <button
+                  onClick={() => handleCopy(msg.id, msg.answer)}
+                  className="text-[10px] text-gray hover:text-white mt-1 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Copy answer"
+                >
+                  {copiedId === msg.id ? '✓ Copied' : 'Copy'}
+                </button>
               </div>
             ) : (
               <div className="flex justify-start">
@@ -115,23 +146,32 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="flex gap-3 pt-4 border-t border-white/5">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Ask about schedule, teams, events..."
-          maxLength={500}
-          disabled={loading}
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray focus:outline-none focus:border-green/50 disabled:opacity-50 transition-colors"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || loading}
-          className="px-5 py-3 bg-green text-dark font-semibold rounded-xl text-sm hover:bg-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          {loading ? '...' : 'Ask'}
-        </button>
+      <form onSubmit={handleSubmit} className="pt-4 border-t border-white/5">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Ask about schedule, teams, events..."
+            maxLength={500}
+            disabled={loading}
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray focus:outline-none focus:border-green/50 disabled:opacity-50 transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="px-5 py-3 bg-green text-dark font-semibold rounded-xl text-sm hover:bg-green/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? '...' : 'Ask'}
+          </button>
+        </div>
+        {input.length > 0 && (
+          <div className="flex justify-end mt-1.5">
+            <span className={`text-[10px] ${input.length > 450 ? 'text-yellow-400' : 'text-gray'}`}>
+              {input.length} / 500
+            </span>
+          </div>
+        )}
       </form>
     </div>
   )

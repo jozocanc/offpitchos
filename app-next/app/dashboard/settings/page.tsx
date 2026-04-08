@@ -41,6 +41,7 @@ export default async function SettingsPage() {
           displayName={profile?.display_name ?? ''}
           email={user.email ?? ''}
           isDOC={profile?.role === 'doc'}
+          role={profile?.role}
         />
 
         {/* Club invite link */}

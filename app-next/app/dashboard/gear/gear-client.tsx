@@ -32,6 +32,7 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
   // Club-wide totals
   const totalPlayers = teams.reduce((sum, t) => sum + t.playerCount, 0)
   const totalMissing = teams.reduce((sum, t) => sum + t.missingCount, 0)
+  const completionPct = totalPlayers > 0 ? Math.round(((totalPlayers - totalMissing) / totalPlayers) * 100) : 0
 
   // Club-wide jersey aggregation
   const clubJerseys: Record<string, number> = {}
@@ -50,7 +51,7 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
       {/* Club-wide summary */}
       {isDoc && (
         <div className="mb-8">
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
               <p className="text-sm text-gray mb-1">Total Players</p>
               <p className="text-3xl font-black text-white">{totalPlayers}</p>
@@ -65,6 +66,22 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
             </div>
           </div>
 
+          {/* Club-wide completion progress */}
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray font-semibold">Club-wide Completion</p>
+              <p className={`text-sm font-bold ${completionPct === 100 ? 'text-green' : completionPct >= 75 ? 'text-white' : 'text-yellow-400'}`}>
+                {completionPct}%
+              </p>
+            </div>
+            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${completionPct === 100 ? 'bg-green' : completionPct >= 75 ? 'bg-green/70' : 'bg-yellow-400'}`}
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          </div>
+
           {/* Club-wide size breakdown */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <SizeBreakdownCard title="Jersey Sizes (Club)" breakdown={clubJerseys} />
@@ -76,23 +93,40 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
       {/* Per-team breakdown */}
       <h2 className="text-lg font-bold text-white mb-4">By Team</h2>
       <div className="space-y-3">
-        {teams.map(team => (
+        {teams.map(team => {
+          const teamPct = team.playerCount > 0 ? Math.round(((team.playerCount - team.missingCount) / team.playerCount) * 100) : 0
+          const isComplete = team.missingCount === 0 && team.playerCount > 0
+          return (
           <div key={team.teamId} className="bg-dark-secondary border border-white/5 rounded-xl">
             <button
               onClick={() => setExpandedTeam(expandedTeam === team.teamId ? null : team.teamId)}
-              className="w-full flex items-center justify-between p-5 text-left"
+              className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors rounded-xl"
             >
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white">{team.teamName}</h3>
                   <span className="text-xs bg-green/10 text-green px-2 py-0.5 rounded">{team.ageGroup}</span>
+                  {isComplete && (
+                    <span className="text-xs bg-green/15 text-green px-2 py-0.5 rounded font-semibold">✓ Complete</span>
+                  )}
+                  {team.missingCount > 0 && (
+                    <span className="text-xs bg-yellow-400/10 text-yellow-400 px-2 py-0.5 rounded font-semibold">
+                      {team.missingCount} missing
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray mt-1">
-                  {team.playerCount} players &middot; {team.missingCount > 0 ? `${team.missingCount} missing sizes` : 'All sizes in'}
+                  {team.playerCount} players &middot; {teamPct}% sized
                 </p>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mt-2 max-w-md">
+                  <div
+                    className={`h-full rounded-full transition-all ${teamPct === 100 ? 'bg-green' : teamPct >= 75 ? 'bg-green/70' : 'bg-yellow-400'}`}
+                    style={{ width: `${teamPct}%` }}
+                  />
+                </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                className={`text-gray transition-transform ${expandedTeam === team.teamId ? 'rotate-180' : ''}`}>
+                className={`text-gray transition-transform ml-4 shrink-0 ${expandedTeam === team.teamId ? 'rotate-180' : ''}`}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
@@ -117,7 +151,8 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -128,6 +163,7 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
     const order = JERSEY_SIZES
     return order.indexOf(a[0]) - order.indexOf(b[0])
   })
+  const maxCount = Math.max(0, ...sorted.map(([, c]) => c))
 
   return (
     <div className="bg-dark rounded-lg p-3">
@@ -136,11 +172,18 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
         <p className="text-xs text-gray">No data yet</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {sorted.map(([size, count]) => (
-            <span key={size} className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 text-white">
-              {size}: <span className="font-bold text-green">{count}</span>
-            </span>
-          ))}
+          {sorted.map(([size, count]) => {
+            const isTop = count === maxCount && maxCount > 0
+            return (
+              <span
+                key={size}
+                title={isTop ? 'Most popular size' : undefined}
+                className={`text-xs rounded px-2 py-1 border ${isTop ? 'bg-green/15 border-green/30 text-white' : 'bg-white/5 border-white/10 text-white'}`}
+              >
+                {size}: <span className="font-bold text-green">{count}</span>
+              </span>
+            )
+          })}
         </div>
       )}
     </div>

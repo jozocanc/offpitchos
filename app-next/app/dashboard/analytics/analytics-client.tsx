@@ -141,7 +141,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip {...chartTooltipStyle} labelFormatter={formatDate} />
+                  <Tooltip {...chartTooltipStyle} labelFormatter={(label) => formatDate(String(label))} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="present" stackId="a" fill="#00ff87" radius={[0, 0, 0, 0]} name="Present" />
                   <Bar dataKey="late" stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} name="Late" />
@@ -162,7 +162,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip {...chartTooltipStyle} labelFormatter={formatDate} />
+                  <Tooltip {...chartTooltipStyle} labelFormatter={(label) => formatDate(String(label))} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
                   <Area type="monotone" dataKey="scheduled" stroke="#00ff87" fill="rgba(0,255,135,0.1)" strokeWidth={2} name="Scheduled" />
                   <Area type="monotone" dataKey="cancelled" stroke="#f87171" fill="rgba(248,113,113,0.1)" strokeWidth={2} name="Cancelled" />
