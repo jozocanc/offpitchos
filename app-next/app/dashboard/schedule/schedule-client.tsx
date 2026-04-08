@@ -11,6 +11,7 @@ import CantAttendModal from './cant-attend-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, getPastEvents } from './actions'
 import VoiceCommand from './voice-command'
+import { useToast } from '@/components/toast'
 
 interface Event {
   id: string
@@ -57,6 +58,7 @@ interface ScheduleClientProps {
 }
 
 export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId, initialTeamFilter = null }: ScheduleClientProps) {
+  const { toast } = useToast()
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
   const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
   const [filterType, setFilterType] = useState<EventType | null>(null)
@@ -101,7 +103,12 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   function handleCancel(eventId: string) {
     if (!confirm('Cancel this event? Coaches and parents will be notified.')) return
     startTransition(async () => {
-      await cancelEvent(eventId)
+      try {
+        await cancelEvent(eventId)
+        toast('Event cancelled · parents notified', 'success')
+      } catch {
+        toast('Failed to cancel event', 'error')
+      }
     })
   }
 

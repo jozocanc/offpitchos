@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { inviteCoach } from './actions'
+import { useToast } from '@/components/toast'
 
 interface Team {
   id: string
@@ -10,6 +11,7 @@ interface Team {
 }
 
 export default function InviteCoachForm({ teams }: { teams: Team[] }) {
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [teamId, setTeamId] = useState('')
@@ -27,12 +29,14 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
     formData.set('email', email)
     if (teamId) formData.set('teamId', teamId)
 
+    const invitedEmail = email.trim()
     startTransition(async () => {
       try {
         await inviteCoach(formData)
         setEmail('')
         setTeamId('')
         setOpen(false)
+        toast(`Invite sent to ${invitedEmail}`, 'success')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }

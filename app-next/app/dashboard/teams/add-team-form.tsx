@@ -3,8 +3,10 @@
 import { useState, useTransition } from 'react'
 import { AGE_GROUPS } from '@/lib/constants'
 import { addTeam } from './actions'
+import { useToast } from '@/components/toast'
 
 export default function AddTeamForm() {
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [teamName, setTeamName] = useState('')
   const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[0])
@@ -22,12 +24,14 @@ export default function AddTeamForm() {
     formData.set('teamName', teamName)
     formData.set('ageGroup', ageGroup)
 
+    const addedName = teamName.trim()
     startTransition(async () => {
       try {
         await addTeam(formData)
         setTeamName('')
         setAgeGroup(String(AGE_GROUPS[0]))
         setOpen(false)
+        toast(`${addedName} added`, 'success')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
