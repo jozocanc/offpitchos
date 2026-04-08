@@ -20,19 +20,14 @@ async function getUserProfile() {
 }
 
 export async function getAskPageData() {
-  const { profile, supabase } = await getUserProfile()
+  const { profile } = await getUserProfile()
 
-  // Fetch user's own chat history (last 50)
-  const { data: chatHistory } = await supabase
-    .from('ai_chats')
-    .select('id, question, answer, created_at')
-    .eq('profile_id', profile.id)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
+  // Ask Ref always starts with a fresh conversation. Prior chats are still
+  // persisted to ai_chats (for the DOC AI Log), but we don't restore them
+  // into the chat UI across page loads.
   return {
     userRole: profile.role,
-    chatHistory: (chatHistory ?? []).reverse(),
+    chatHistory: [] as { id: string; question: string; answer: string; created_at: string }[],
   }
 }
 

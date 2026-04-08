@@ -71,9 +71,9 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-full">
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto space-y-6 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-4">
         {messages.length === 0 && !loading && (
           <div className="text-center text-gray mt-20">
             <div className="text-4xl mb-4">⚽</div>
