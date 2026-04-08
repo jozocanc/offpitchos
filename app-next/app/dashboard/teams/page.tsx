@@ -13,6 +13,7 @@ interface Team {
   member_count: number
   coach_count: number
   player_count: number
+  attendance_rate: number
   next_event: { title: string; start_time: string } | null
 }
 
@@ -75,11 +76,34 @@ export default async function TeamsPage() {
         .order('start_time', { ascending: true })
         .limit(1)
 
+      // Attendance rate (last 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: recentTeamEvents } = await supabase
+        .from('events')
+        .select('id')
+        .eq('team_id', team.id)
+        .eq('status', 'scheduled')
+        .gte('start_time', thirtyDaysAgo)
+        .lte('start_time', now)
+
+      let attendanceRate = 0
+      const recentIds = (recentTeamEvents ?? []).map(e => e.id)
+      if (recentIds.length > 0) {
+        const { data: att } = await supabase
+          .from('attendance')
+          .select('status')
+          .in('event_id', recentIds)
+        const total = att?.length ?? 0
+        const present = att?.filter(a => a.status === 'present' || a.status === 'late').length ?? 0
+        attendanceRate = total > 0 ? Math.round((present / total) * 100) : 0
+      }
+
       return {
         ...team,
         member_count: memberCount ?? 0,
         coach_count: coachCount ?? 0,
         player_count: playerCount ?? 0,
+        attendance_rate: attendanceRate,
         next_event: nextEvents?.[0] ?? null,
       }
     })
@@ -112,40 +136,77 @@ export default async function TeamsPage() {
 }
 
 function TeamCard({ team }: { team: Team }) {
+  const rateColor = team.attendance_rate >= 80 ? 'text-green' : team.attendance_rate >= 60 ? 'text-yellow-400' : 'text-red-400'
+
   return (
-    <Link
-      href={`/dashboard/teams/${team.id}`}
-      className="bg-dark-secondary rounded-2xl p-6 border border-white/5 hover:border-green/20 transition-colors block"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-bold text-lg leading-tight">{team.name}</h3>
-        <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full shrink-0 ml-2">
-          {team.age_group}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 text-gray text-sm flex-wrap">
-        {team.player_count > 0 && (
-          <span>{team.player_count} player{team.player_count !== 1 ? 's' : ''}</span>
-        )}
-        {team.coach_count > 0 && (
-          <>
-            {team.player_count > 0 && <span className="text-white/10">|</span>}
-            <span>{team.coach_count} coach{team.coach_count !== 1 ? 'es' : ''}</span>
-          </>
-        )}
-        {team.player_count === 0 && team.coach_count === 0 && (
-          <span>{team.member_count} member{team.member_count !== 1 ? 's' : ''}</span>
-        )}
-      </div>
-      {team.next_event && (
-        <div className="mt-3 pt-3 border-t border-white/5">
-          <p className="text-xs text-gray">
-            Next: <span className="text-white">{team.next_event.title}</span>
-            {' '}&middot;{' '}
-            {new Date(team.next_event.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-          </p>
+    <div className="bg-dark-secondary rounded-2xl border border-white/5 hover:border-green/20 transition-colors flex flex-col h-full">
+      <Link href={`/dashboard/teams/${team.id}`} className="block p-6 flex-1">
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="font-bold text-lg leading-tight">{team.name}</h3>
+          <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full shrink-0 ml-2">
+            {team.age_group}
+          </span>
         </div>
-      )}
-    </Link>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="text-center">
+            <p className="text-lg font-bold text-white">{team.player_count}</p>
+            <p className="text-[10px] text-gray uppercase tracking-wider">Players</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-white">{team.coach_count}</p>
+            <p className="text-[10px] text-gray uppercase tracking-wider">Coaches</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-lg font-bold ${rateColor}`}>{team.attendance_rate}%</p>
+            <p className="text-[10px] text-gray uppercase tracking-wider">Attendance</p>
+          </div>
+        </div>
+
+        {/* Attendance bar */}
+        <div className="w-full bg-white/5 rounded-full h-1.5 mb-3">
+          <div
+            className={`h-1.5 rounded-full transition-all ${team.attendance_rate >= 80 ? 'bg-green' : team.attendance_rate >= 60 ? 'bg-yellow-400' : 'bg-red-400'}`}
+            style={{ width: `${team.attendance_rate}%` }}
+          />
+        </div>
+
+        {/* Next event */}
+        <div className="pt-3 border-t border-white/5">
+          {team.next_event ? (
+            <p className="text-xs text-gray">
+              Next: <span className="text-white">{team.next_event.title}</span>
+              {' '}&middot;{' '}
+              {new Date(team.next_event.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+            </p>
+          ) : (
+            <p className="text-xs text-gray/50">No upcoming events</p>
+          )}
+        </div>
+      </Link>
+
+      {/* Quick actions */}
+      <div className="flex border-t border-white/5 text-xs">
+        <Link
+          href={`/dashboard/teams/${team.id}`}
+          className="flex-1 text-center py-2.5 text-gray hover:text-green hover:bg-white/[0.02] transition-colors rounded-bl-2xl"
+        >
+          Roster
+        </Link>
+        <Link
+          href={`/dashboard/schedule?team=${team.id}`}
+          className="flex-1 text-center py-2.5 text-gray hover:text-green hover:bg-white/[0.02] transition-colors border-x border-white/5"
+        >
+          Schedule
+        </Link>
+        <Link
+          href={`/dashboard/schedule?team=${team.id}`}
+          className="flex-1 text-center py-2.5 text-gray hover:text-green hover:bg-white/[0.02] transition-colors rounded-br-2xl"
+        >
+          Attendance
+        </Link>
+      </div>
+    </div>
   )
 }

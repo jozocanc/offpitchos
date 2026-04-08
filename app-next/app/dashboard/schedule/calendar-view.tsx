@@ -103,24 +103,23 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                     className="border-l border-white/5 relative cursor-pointer hover:bg-white/[0.02] transition-colors"
                     onClick={() => onAddAtDate(day.toISOString().split('T')[0])}
                   >
-                    {getEventsForSlot(events, day, hour).map(event => (
-                      <button
-                        key={event.id}
-                        onClick={e => { e.stopPropagation(); onEdit(event.id) }}
-                        className={`absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-xs font-medium truncate text-left ${
-                          event.status === 'cancelled'
-                            ? 'bg-red/20 text-red line-through'
-                            : 'bg-green/20 text-green hover:bg-green/30'
-                        } transition-colors`}
-                        style={{
-                          top: `${(new Date(event.start_time).getMinutes() / 60) * 100}%`,
-                          height: `${Math.max(25, getEventDurationPercent(event) * 64)}px`,
-                        }}
-                        title={`${event.title} — ${event.teams?.[0]?.age_group}`}
-                      >
-                        {event.teams?.[0]?.age_group} {EVENT_TYPE_LABELS[event.type as EventType]?.[0] ?? ''}
-                      </button>
-                    ))}
+                    {getEventsForSlot(events, day, hour).map(event => {
+                      const colors = getEventColors(event.type, event.status)
+                      return (
+                        <button
+                          key={event.id}
+                          onClick={e => { e.stopPropagation(); onEdit(event.id) }}
+                          className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 text-xs font-medium truncate text-left ${colors} transition-colors`}
+                          style={{
+                            top: `${(new Date(event.start_time).getMinutes() / 60) * 100}%`,
+                            height: `${Math.max(25, getEventDurationPercent(event) * 64)}px`,
+                          }}
+                          title={`${event.title} — ${event.teams?.[0]?.age_group}`}
+                        >
+                          {event.title}
+                        </button>
+                      )
+                    })}
                   </div>
                 ))}
               </div>
@@ -150,6 +149,19 @@ function getEventsForSlot(events: Event[], day: Date, hour: number): Event[] {
     const start = new Date(event.start_time)
     return isSameDay(start, day) && start.getHours() === hour
   })
+}
+
+function getEventColors(type: string, status: string): string {
+  if (status === 'cancelled') return 'bg-red/20 text-red line-through'
+  switch (type) {
+    case 'game': return 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+    case 'tournament': return 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+    case 'camp': return 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+    case 'tryout': return 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+    case 'meeting': return 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+    case 'practice':
+    default: return 'bg-green/20 text-green hover:bg-green/30'
+  }
 }
 
 function getEventDurationPercent(event: Event): number {

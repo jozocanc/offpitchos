@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import CampDetailModal from './camp-detail-modal'
 import RegisterModal from './register-modal'
 
@@ -43,11 +44,26 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
   const totalCollected = camps.reduce((sum, c) => sum + c.collectedRevenue, 0)
   const totalRegistered = camps.reduce((sum, c) => sum + c.registeredCount, 0)
 
+  const outstanding = totalExpected - totalCollected
+  const collectionPct = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
+
   return (
     <div>
+      {/* Header with Create button */}
+      {isDoc && (
+        <div className="flex justify-end mb-6">
+          <Link
+            href="/dashboard/schedule"
+            className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
+          >
+            + Create Camp
+          </Link>
+        </div>
+      )}
+
       {/* Revenue summary (DOC only) */}
       {isDoc && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
             <p className="text-sm text-gray mb-1">Total Registrations</p>
             <p className="text-3xl font-black text-white">{totalRegistered}</p>
@@ -59,6 +75,17 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
             <p className="text-sm text-gray mb-1">Collected</p>
             <p className="text-3xl font-black text-white">{formatCurrency(totalCollected)}</p>
+            {totalExpected > 0 && (
+              <div className="w-full bg-white/5 rounded-full h-1.5 mt-2">
+                <div className="bg-green h-1.5 rounded-full transition-all" style={{ width: `${collectionPct}%` }} />
+              </div>
+            )}
+          </div>
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
+            <p className="text-sm text-gray mb-1">Outstanding</p>
+            <p className={`text-3xl font-black ${outstanding > 0 ? 'text-yellow-400' : 'text-green'}`}>
+              {formatCurrency(outstanding)}
+            </p>
           </div>
         </div>
       )}
@@ -134,15 +161,32 @@ function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
         {camp.venue && <p className="text-xs text-gray mt-0.5">{camp.venue}</p>}
         <div className="flex items-center gap-4 mt-2 text-xs text-gray">
           {isDoc && <span>{camp.registeredCount}{camp.capacity ? `/${camp.capacity}` : ''} registered</span>}
-          {isDoc && fillPct !== null && <span>{fillPct}% full</span>}
           {camp.feeCents > 0 && <span>{formatCurrency(camp.feeCents)} / player</span>}
           {isDoc && camp.feeCents > 0 && (
             <span className="text-green">{formatCurrency(camp.collectedRevenue)} collected</span>
+          )}
+          {isDoc && camp.expectedRevenue > 0 && camp.collectedRevenue < camp.expectedRevenue && (
+            <span className="text-yellow-400">{formatCurrency(camp.expectedRevenue - camp.collectedRevenue)} outstanding</span>
           )}
           {isParent && camp.capacity && (
             <span>{camp.capacity - camp.registeredCount} spots left</span>
           )}
         </div>
+        {/* Capacity progress bar */}
+        {fillPct !== null && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-[10px] text-gray mb-1">
+              <span>{fillPct}% full</span>
+              {camp.capacity && <span>{camp.capacity - camp.registeredCount} spots left</span>}
+            </div>
+            <div className="w-full bg-white/5 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${fillPct >= 90 ? 'bg-red-400' : fillPct >= 70 ? 'bg-yellow-400' : 'bg-green'}`}
+                style={{ width: `${fillPct}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex gap-2">
         {isDoc && (

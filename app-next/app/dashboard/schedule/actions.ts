@@ -307,6 +307,28 @@ export async function deleteEvent(eventId: string) {
   revalidatePath('/dashboard')
 }
 
+export async function getPastEvents() {
+  const { profile, supabase } = await getUserProfile()
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const thirtyDaysAgo = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  const { data: events } = await supabase
+    .from('events')
+    .select(`
+      id, team_id, type, title, start_time, end_time,
+      venue_id, recurrence_group, notes, status,
+      teams ( name, age_group ),
+      venues ( name )
+    `)
+    .eq('club_id', profile.club_id!)
+    .gte('start_time', thirtyDaysAgo.toISOString())
+    .lt('start_time', todayStart.toISOString())
+    .order('start_time', { ascending: false })
+
+  return events ?? []
+}
+
 export async function getScheduleData() {
   const { profile, supabase } = await getUserProfile()
 

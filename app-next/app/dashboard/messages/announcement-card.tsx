@@ -22,7 +22,13 @@ interface AnnouncementCardProps {
 
 export default function AnnouncementCard({ announcement, userProfileId, userRole }: AnnouncementCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [hasBeenRead, setHasBeenRead] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  function handleExpand() {
+    setExpanded(!expanded)
+    if (!hasBeenRead) setHasBeenRead(true)
+  }
 
   const author = Array.isArray(announcement.author) ? announcement.author[0] : announcement.author
   const team = Array.isArray(announcement.teams) ? announcement.teams[0] : announcement.teams
@@ -58,11 +64,20 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
     ? announcement.body.slice(0, 150) + '...'
     : announcement.body
 
+  const fullDate = new Date(announcement.created_at).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
+
   return (
-    <div className={`bg-dark-secondary rounded-xl p-4 border ${announcement.pinned ? 'border-green/20' : 'border-white/5'} transition-colors`}>
+    <div className={`bg-dark-secondary rounded-xl p-4 border ${announcement.pinned ? 'border-green/20' : 'border-white/5'} hover:border-green/10 transition-colors`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex-1 min-w-0 cursor-pointer select-none" onClick={handleExpand}>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
+            {/* Unread dot */}
+            {!hasBeenRead && (
+              <span className="w-2 h-2 rounded-full bg-green shrink-0" />
+            )}
             {team ? (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
                 {team.age_group ?? team.name}
@@ -75,15 +90,20 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
             {announcement.pinned && (
               <span className="text-xs text-green" title="Pinned">Pinned</span>
             )}
-            <span className="text-xs text-gray">{timeAgo(announcement.created_at)}</span>
+            <span className="text-xs text-gray" title={fullDate}>{timeAgo(announcement.created_at)}</span>
           </div>
           <p className="font-bold text-white">{announcement.title}</p>
           <p className="text-gray text-sm mt-1">
             {expanded ? announcement.body : preview}
           </p>
-          <p className="text-xs text-gray mt-2">
-            {author?.display_name ?? 'Unknown'} &middot; {replyCount} repl{replyCount !== 1 ? 'ies' : 'y'}
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-xs text-gray">
+              {author?.display_name ?? 'Unknown'} &middot; {replyCount} repl{replyCount !== 1 ? 'ies' : 'y'}
+            </p>
+            <span className={`text-xs transition-transform ${expanded ? 'rotate-180' : ''}`}>
+              ▾
+            </span>
+          </div>
         </div>
 
         <div className="flex gap-2 shrink-0">

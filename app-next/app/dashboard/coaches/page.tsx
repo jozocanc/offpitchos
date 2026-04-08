@@ -10,6 +10,10 @@ import RevokeButton from './revoke-button'
 interface Coach {
   user_id: string
   display_name: string | null
+  email: string | null
+  teams: string[]
+  eventsCount: number
+  attendanceRate: number
 }
 
 interface Invite {
@@ -34,12 +38,67 @@ export default async function CoachesPage() {
 
   const clubId = profile?.club_id ?? ''
 
-  // Fetch current coaches
-  const { data: coaches } = await supabase
+  // Fetch current coaches with enriched data
+  const { data: coachesRaw } = await supabase
     .from('profiles')
     .select('user_id, display_name')
     .eq('club_id', clubId)
-    .eq('role', 'coach') as { data: Coach[] | null }
+    .eq('role', 'coach')
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const now = new Date().toISOString()
+
+  const coaches: Coach[] = await Promise.all(
+    (coachesRaw ?? []).map(async (coach) => {
+      // Get email from auth (via user metadata in profiles or team_members)
+      const { data: userData } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', coach.user_id)
+        .single()
+
+      // Get teams assigned to this coach
+      const { data: teamMemberships } = await supabase
+        .from('team_members')
+        .select('teams(name)')
+        .eq('user_id', coach.user_id)
+        .eq('role', 'coach')
+
+      const teamNames = (teamMemberships ?? [])
+        .map((tm: any) => {
+          const t = Array.isArray(tm.teams) ? tm.teams[0] : tm.teams
+          return t?.name
+        })
+        .filter(Boolean) as string[]
+
+      // Get events created by this coach (last 30 days)
+      const { count: eventsCount } = await supabase
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', coach.user_id)
+        .gte('start_time', thirtyDaysAgo)
+        .lte('start_time', now)
+
+      // Get attendance marked by this coach
+      const { data: markedAttendance } = await supabase
+        .from('attendance')
+        .select('status')
+        .eq('marked_by', coach.user_id)
+
+      const totalMarked = markedAttendance?.length ?? 0
+      const presentMarked = markedAttendance?.filter(a => a.status === 'present' || a.status === 'late').length ?? 0
+      const attendanceRate = totalMarked > 0 ? Math.round((presentMarked / totalMarked) * 100) : 0
+
+      return {
+        user_id: coach.user_id,
+        display_name: coach.display_name,
+        email: null as string | null, // email not directly accessible from profiles
+        teams: teamNames,
+        eventsCount: eventsCount ?? 0,
+        attendanceRate,
+      }
+    })
+  )
 
   // Fetch pending coach invites
   const { data: invitesRaw } = await supabase
@@ -85,16 +144,45 @@ export default async function CoachesPage() {
             {coaches.map(coach => (
               <div
                 key={coach.user_id}
-                className="bg-dark-secondary rounded-2xl p-5 border border-white/5 flex items-center gap-4"
+                className="bg-dark-secondary rounded-2xl p-5 border border-white/5 hover:border-green/20 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-green/20 flex items-center justify-center shrink-0">
-                  <span className="text-green font-bold text-sm">
-                    {(coach.display_name ?? 'C').charAt(0).toUpperCase()}
-                  </span>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-11 h-11 rounded-full bg-green/20 flex items-center justify-center shrink-0">
+                    <span className="text-green font-bold">
+                      {(coach.display_name ?? 'C').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{coach.display_name ?? 'Unknown'}</p>
+                    <p className="text-gray text-xs">Coach</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold">{coach.display_name ?? 'Unknown'}</p>
-                  <p className="text-gray text-xs">Coach</p>
+
+                {/* Teams */}
+                {coach.teams.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {coach.teams.map(team => (
+                      <span key={team} className="text-xs bg-green/10 text-green px-2 py-0.5 rounded-full">
+                        {team}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray/50 mb-4">No teams assigned</p>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
+                  <div>
+                    <p className="text-lg font-bold text-white">{coach.eventsCount}</p>
+                    <p className="text-[10px] text-gray uppercase tracking-wider">Events (30d)</p>
+                  </div>
+                  <div>
+                    <p className={`text-lg font-bold ${coach.attendanceRate >= 80 ? 'text-green' : coach.attendanceRate >= 60 ? 'text-yellow-400' : 'text-white'}`}>
+                      {coach.attendanceRate > 0 ? `${coach.attendanceRate}%` : '—'}
+                    </p>
+                    <p className="text-[10px] text-gray uppercase tracking-wider">Att. Rate</p>
+                  </div>
                 </div>
               </div>
             ))}

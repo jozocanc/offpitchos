@@ -9,7 +9,7 @@ import CalendarView from './calendar-view'
 import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
 import AttendanceModal from './attendance-modal'
-import { cancelEvent } from './actions'
+import { cancelEvent, getPastEvents } from './actions'
 import VoiceCommand from './voice-command'
 
 interface Event {
@@ -63,12 +63,27 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [cantAttendEventId, setCantAttendEventId] = useState<string | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
+  const [showPast, setShowPast] = useState(false)
+  const [pastEvents, setPastEvents] = useState<Event[]>([])
+  const [loadingPast, setLoadingPast] = useState(false)
   const [, startTransition] = useTransition()
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
 
+  async function togglePast() {
+    if (!showPast && pastEvents.length === 0) {
+      setLoadingPast(true)
+      const past = await getPastEvents()
+      setPastEvents(past as Event[])
+      setLoadingPast(false)
+    }
+    setShowPast(!showPast)
+  }
+
+  const allEvents = showPast ? [...pastEvents, ...events] : events
+
   // Apply filters
-  const filtered = events.filter(e => {
+  const filtered = allEvents.filter(e => {
     if (filterTeam && e.team_id !== filterTeam) return false
     if (filterType && e.type !== filterType) return false
     return true
@@ -115,6 +130,17 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Past toggle */}
+          <button
+            onClick={togglePast}
+            className={`px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+              showPast ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-gray hover:text-white'
+            }`}
+            disabled={loadingPast}
+          >
+            {loadingPast ? 'Loading...' : showPast ? 'Hide Past' : 'Show Past'}
+          </button>
+
           {/* View toggle */}
           <div className="flex bg-dark rounded-xl border border-white/10 overflow-hidden">
             <button

@@ -50,7 +50,7 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
             <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
               {event.teams?.[0]?.age_group}
             </span>
-            <span className="text-xs font-medium bg-white/5 text-gray px-2 py-0.5 rounded-full">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTypeBadgeColors(event.type)}`}>
               {EVENT_TYPE_LABELS[event.type as EventType] ?? event.type}
             </span>
             {isCancelled && (
@@ -134,6 +134,18 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
       )}
     </div>
   )
+}
+
+function getTypeBadgeColors(type: string): string {
+  switch (type) {
+    case 'game': return 'bg-blue-500/10 text-blue-400'
+    case 'tournament': return 'bg-purple-500/10 text-purple-400'
+    case 'camp': return 'bg-orange-500/10 text-orange-400'
+    case 'tryout': return 'bg-yellow-500/10 text-yellow-400'
+    case 'meeting': return 'bg-gray-500/10 text-gray-400'
+    case 'practice':
+    default: return 'bg-green/10 text-green'
+  }
 }
 
 function formatTime(date: Date): string {
