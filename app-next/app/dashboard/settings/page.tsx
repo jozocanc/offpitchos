@@ -45,20 +45,22 @@ export default async function SettingsPage() {
         />
 
         {/* Club invite link */}
-        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-          <h2 className="text-lg font-bold mb-2">Club Coaches Link</h2>
-          <p className="text-gray text-sm mb-4">
-            Use the Coaches page to generate invite links for specific coaches or teams.
-          </p>
-          <a
-            href="/dashboard/coaches"
-            className="inline-block text-sm font-bold text-green hover:underline"
-          >
-            Go to Coaches page →
-          </a>
-        </section>
+        {profile?.role === 'doc' && (
+          <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
+            <h2 className="text-lg font-bold mb-2">Club Coaches Link</h2>
+            <p className="text-gray text-sm mb-4">
+              Use the Coaches page to generate invite links for specific coaches or teams.
+            </p>
+            <a
+              href="/dashboard/coaches"
+              className="inline-block text-sm font-bold text-green hover:underline"
+            >
+              Go to Coaches page →
+            </a>
+          </section>
+        )}
 
-        <VenuesSection />
+        {profile?.role === 'doc' && <VenuesSection />}
 
         {profile?.role === 'doc' && <StripeConnect />}
 

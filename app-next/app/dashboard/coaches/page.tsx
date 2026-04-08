@@ -10,7 +10,6 @@ import RevokeButton from './revoke-button'
 interface Coach {
   user_id: string
   display_name: string | null
-  email: string | null
   teams: string[]
   eventsCount: number
   attendanceRate: number
@@ -50,13 +49,6 @@ export default async function CoachesPage() {
 
   const coaches: Coach[] = await Promise.all(
     (coachesRaw ?? []).map(async (coach) => {
-      // Get email from auth (via user metadata in profiles or team_members)
-      const { data: userData } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('user_id', coach.user_id)
-        .single()
-
       // Get teams assigned to this coach
       const { data: teamMemberships } = await supabase
         .from('team_members')
@@ -92,7 +84,6 @@ export default async function CoachesPage() {
       return {
         user_id: coach.user_id,
         display_name: coach.display_name,
-        email: null as string | null, // email not directly accessible from profiles
         teams: teamNames,
         eventsCount: eventsCount ?? 0,
         attendanceRate,
