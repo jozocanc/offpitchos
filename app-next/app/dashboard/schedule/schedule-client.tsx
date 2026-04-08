@@ -53,11 +53,12 @@ interface ScheduleClientProps {
     profiles: any
   }>
   userProfileId: string
+  initialTeamFilter?: string | null
 }
 
-export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId }: ScheduleClientProps) {
+export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId, initialTeamFilter = null }: ScheduleClientProps) {
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
-  const [filterTeam, setFilterTeam] = useState<string | null>(null)
+  const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
   const [filterType, setFilterType] = useState<EventType | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editEvent, setEditEvent] = useState<Event | null>(null)

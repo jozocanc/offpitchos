@@ -4,8 +4,13 @@ import ScheduleClient from './schedule-client'
 
 export const metadata: Metadata = { title: 'Schedule' }
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ team?: string }>
+}) {
   const data = await getScheduleData()
+  const { team: initialTeam } = await searchParams
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -16,6 +21,7 @@ export default async function SchedulePage() {
         userRole={data.userRole}
         coverageRequests={data.coverageRequests}
         userProfileId={data.userProfileId}
+        initialTeamFilter={initialTeam ?? null}
       />
     </div>
   )
