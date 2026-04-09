@@ -11,14 +11,28 @@ interface Team {
   age_group: string
 }
 
+interface AudienceCounts {
+  parents: number
+  coaches: number
+}
+
 interface MessagesClientProps {
   announcements: any[]
   teams: Team[]
   userRole: string
   userProfileId: string
+  audienceByTeam: Record<string, AudienceCounts>
+  clubWideAudience: AudienceCounts
 }
 
-export default function MessagesClient({ announcements, teams, userRole, userProfileId }: MessagesClientProps) {
+export default function MessagesClient({
+  announcements,
+  teams,
+  userRole,
+  userProfileId,
+  audienceByTeam,
+  clubWideAudience,
+}: MessagesClientProps) {
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -87,6 +101,8 @@ export default function MessagesClient({ announcements, teams, userRole, userPro
         <NewAnnouncementModal
           teams={teams}
           userRole={userRole}
+          audienceByTeam={audienceByTeam}
+          clubWideAudience={clubWideAudience}
           onClose={() => setModalOpen(false)}
         />
       )}

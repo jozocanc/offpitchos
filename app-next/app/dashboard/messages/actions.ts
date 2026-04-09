@@ -23,11 +23,19 @@ async function getUserProfile() {
   return { user, profile, supabase }
 }
 
+export interface CreateAnnouncementResult {
+  announcementId: string
+  parentCount: number
+  coachCount: number
+  totalRecipients: number
+  audienceLabel: string
+}
+
 export async function createAnnouncement(input: {
   teamId: string | null
   title: string
   body: string
-}) {
+}): Promise<CreateAnnouncementResult> {
   const { profile, supabase } = await getUserProfile()
 
   if (!input.title.trim() || !input.body.trim()) {
@@ -60,6 +68,7 @@ export async function createAnnouncement(input: {
   const message = `${authorName} posted: ${input.title.trim()}`
 
   let recipientIds: string[] = []
+  let audienceLabel = 'Club-wide'
 
   if (input.teamId) {
     const { data: members } = await service
@@ -70,6 +79,13 @@ export async function createAnnouncement(input: {
     recipientIds = (members ?? [])
       .map(m => m.profile_id)
       .filter(id => id !== profile.id)
+
+    const { data: team } = await service
+      .from('teams')
+      .select('name')
+      .eq('id', input.teamId)
+      .single()
+    audienceLabel = team?.name ?? 'Team'
   } else {
     const { data: members } = await service
       .from('profiles')
@@ -81,7 +97,20 @@ export async function createAnnouncement(input: {
       .filter(id => id !== profile.id)
   }
 
+  // Count recipients by role for the delivery confirmation
+  let parentCount = 0
+  let coachCount = 0
   if (recipientIds.length > 0) {
+    const { data: recipientProfiles } = await service
+      .from('profiles')
+      .select('role')
+      .in('id', recipientIds)
+
+    for (const p of recipientProfiles ?? []) {
+      if (p.role === 'parent') parentCount++
+      else if (p.role === 'coach' || p.role === 'doc') coachCount++
+    }
+
     const notifications = recipientIds.map(pid => ({
       profile_id: pid,
       announcement_id: announcement.id,
@@ -95,6 +124,33 @@ export async function createAnnouncement(input: {
   }
 
   revalidatePath('/dashboard/messages')
+
+  return {
+    announcementId: announcement.id,
+    parentCount,
+    coachCount,
+    totalRecipients: recipientIds.length,
+    audienceLabel,
+  }
+}
+
+/**
+ * Marks the current user's notification for an announcement as read.
+ * Called when the user expands an announcement card so read receipts
+ * are accurate on the author's view.
+ */
+export async function markAnnouncementRead(announcementId: string) {
+  const { profile, supabase } = await getUserProfile()
+
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('profile_id', profile.id)
+    .eq('announcement_id', announcementId)
+    .eq('read', false)
+
+  // Intentionally no revalidatePath — read state is a client-side concern,
+  // no need to refetch the whole page on every open.
 }
 
 export async function createReply(announcementId: string, body: string) {
@@ -187,14 +243,20 @@ export async function deleteReply(replyId: string) {
   revalidatePath('/dashboard/messages')
 }
 
+export interface AudienceCounts {
+  parents: number
+  coaches: number
+}
+
 export async function getMessagesData() {
   const { profile, supabase } = await getUserProfile()
+  const service = createServiceClient()
 
   const { data: announcements } = await supabase
     .from('announcements')
     .select(`
-      id, team_id, title, body, pinned, created_at,
-      author:profiles!announcements_author_id_fkey ( display_name ),
+      id, team_id, title, body, pinned, created_at, author_id,
+      author:profiles!announcements_author_id_fkey ( id, display_name ),
       teams ( name, age_group ),
       announcement_replies ( id )
     `)
@@ -208,11 +270,94 @@ export async function getMessagesData() {
     .eq('club_id', profile.club_id!)
     .order('age_group')
 
+  // Read receipts: for each announcement, count total notifications and how
+  // many are read. Uses service client so the author sees every recipient's
+  // status regardless of RLS scope.
+  const announcementIds = (announcements ?? []).map(a => a.id)
+  const readStatsByAnnouncement = new Map<string, { total: number; read: number }>()
+  if (announcementIds.length > 0) {
+    const { data: notifRows } = await service
+      .from('notifications')
+      .select('announcement_id, read')
+      .eq('type', 'announcement_posted')
+      .in('announcement_id', announcementIds)
+
+    for (const row of notifRows ?? []) {
+      if (!row.announcement_id) continue
+      const entry = readStatsByAnnouncement.get(row.announcement_id) ?? { total: 0, read: 0 }
+      entry.total += 1
+      if (row.read) entry.read += 1
+      readStatsByAnnouncement.set(row.announcement_id, entry)
+    }
+  }
+
+  // Whether the *current user* has read each announcement — drives the
+  // real unread dot shown to recipients.
+  const ownReadByAnnouncement = new Map<string, boolean>()
+  if (announcementIds.length > 0) {
+    const { data: myNotifs } = await supabase
+      .from('notifications')
+      .select('announcement_id, read')
+      .eq('profile_id', profile.id)
+      .eq('type', 'announcement_posted')
+      .in('announcement_id', announcementIds)
+
+    for (const row of myNotifs ?? []) {
+      if (!row.announcement_id) continue
+      ownReadByAnnouncement.set(row.announcement_id, !!row.read)
+    }
+  }
+
+  const announcementsWithStats = (announcements ?? []).map(a => {
+    const stats = readStatsByAnnouncement.get(a.id) ?? { total: 0, read: 0 }
+    // If the user isn't the author and has no notification row, treat it as
+    // already-read (e.g. coach sees their own team's posts by another coach).
+    const ownRead = ownReadByAnnouncement.has(a.id) ? !!ownReadByAnnouncement.get(a.id) : true
+    return {
+      ...a,
+      read_count: stats.read,
+      total_recipients: stats.total,
+      own_read: ownRead,
+    }
+  })
+
+  // Audience counts per team + club-wide, used by the compose modal to
+  // preview who will receive a new announcement.
+  const audienceByTeam: Record<string, AudienceCounts> = {}
+  let clubWide: AudienceCounts = { parents: 0, coaches: 0 }
+
+  const teamIds = (teams ?? []).map(t => t.id)
+  if (teamIds.length > 0) {
+    const { data: memberships } = await service
+      .from('team_members')
+      .select('team_id, role')
+      .in('team_id', teamIds)
+
+    for (const m of memberships ?? []) {
+      if (!audienceByTeam[m.team_id]) audienceByTeam[m.team_id] = { parents: 0, coaches: 0 }
+      if (m.role === 'parent') audienceByTeam[m.team_id].parents += 1
+      else if (m.role === 'coach') audienceByTeam[m.team_id].coaches += 1
+    }
+  }
+
+  const { data: clubProfiles } = await service
+    .from('profiles')
+    .select('role')
+    .eq('club_id', profile.club_id)
+    .neq('id', profile.id)
+
+  for (const p of clubProfiles ?? []) {
+    if (p.role === 'parent') clubWide.parents += 1
+    else if (p.role === 'coach' || p.role === 'doc') clubWide.coaches += 1
+  }
+
   return {
-    announcements: announcements ?? [],
+    announcements: announcementsWithStats,
     teams: teams ?? [],
     userRole: profile.role,
     userProfileId: profile.id,
+    audienceByTeam,
+    clubWideAudience: clubWide,
   }
 }
 

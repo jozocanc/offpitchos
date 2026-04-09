@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { togglePin, deleteAnnouncement } from './actions'
+import { togglePin, deleteAnnouncement, markAnnouncementRead } from './actions'
 import ReplyThread from './reply-thread'
 
 interface AnnouncementCardProps {
@@ -15,6 +15,9 @@ interface AnnouncementCardProps {
     author: any
     teams: any
     announcement_replies: any[]
+    read_count?: number
+    total_recipients?: number
+    own_read?: boolean
   }
   userProfileId: string
   userRole: string
@@ -22,12 +25,20 @@ interface AnnouncementCardProps {
 
 export default function AnnouncementCard({ announcement, userProfileId, userRole }: AnnouncementCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const [hasBeenRead, setHasBeenRead] = useState(false)
+  const [locallyRead, setLocallyRead] = useState(announcement.own_read ?? true)
   const [isPending, startTransition] = useTransition()
 
   function handleExpand() {
-    setExpanded(!expanded)
-    if (!hasBeenRead) setHasBeenRead(true)
+    const nextExpanded = !expanded
+    setExpanded(nextExpanded)
+    // On first open of an unread card, mark read on the server
+    if (nextExpanded && !locallyRead) {
+      setLocallyRead(true)
+      // Fire and forget — the user's local state already shows as read
+      markAnnouncementRead(announcement.id).catch(() => {
+        // Silent — if this fails, the next page load will reflect actual state
+      })
+    }
   }
 
   const author = Array.isArray(announcement.author) ? announcement.author[0] : announcement.author
@@ -35,6 +46,9 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const replyCount = announcement.announcement_replies?.length ?? 0
   const isDoc = userRole === 'doc'
   const isAuthor = author?.id === userProfileId
+  const readCount = announcement.read_count ?? 0
+  const totalRecipients = announcement.total_recipients ?? 0
+  const showReadReceipt = isAuthor && totalRecipients > 0
 
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime()
@@ -74,9 +88,9 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 cursor-pointer select-none" onClick={handleExpand}>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            {/* Unread dot */}
-            {!hasBeenRead && (
-              <span className="w-2 h-2 rounded-full bg-green shrink-0" />
+            {/* Real unread dot — only shows for non-authors who haven't opened this */}
+            {!locallyRead && !isAuthor && (
+              <span className="w-2 h-2 rounded-full bg-green shrink-0" title="Unread" />
             )}
             {team ? (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
@@ -96,10 +110,24 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
           <p className="text-gray text-sm mt-1">
             {expanded ? announcement.body : preview}
           </p>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <p className="text-xs text-gray">
               {author?.display_name ?? 'Unknown'} &middot; {replyCount} repl{replyCount !== 1 ? 'ies' : 'y'}
             </p>
+            {showReadReceipt && (
+              <>
+                <span className="text-xs text-gray">·</span>
+                <p
+                  className={`text-xs font-semibold ${
+                    readCount === totalRecipients ? 'text-green' : 'text-gray'
+                  }`}
+                  title={`${readCount} of ${totalRecipients} recipients have opened this announcement`}
+                >
+                  {readCount === totalRecipients && readCount > 0 ? '✓ ' : ''}
+                  {readCount} of {totalRecipients} seen
+                </p>
+              </>
+            )}
             <span className={`text-xs transition-transform ${expanded ? 'rotate-180' : ''}`}>
               ▾
             </span>

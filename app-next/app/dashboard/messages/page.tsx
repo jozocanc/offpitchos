@@ -14,6 +14,8 @@ export default async function MessagesPage() {
         teams={data.teams}
         userRole={data.userRole}
         userProfileId={data.userProfileId}
+        audienceByTeam={data.audienceByTeam}
+        clubWideAudience={data.clubWideAudience}
       />
     </div>
   )

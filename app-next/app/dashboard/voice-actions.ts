@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
 import { cancelEvent, updateEvent, createEvent, restoreEvent } from './schedule/actions'
 import { createCoverageRequest } from './coverage/actions'
+import { createAnnouncement } from './messages/actions'
 import { ROLES } from '@/lib/constants'
 
 const anthropic = new Anthropic({
@@ -95,6 +96,19 @@ const tools: Anthropic.Messages.Tool[] = [
       required: ['eventId'],
     },
   },
+  {
+    name: 'send_announcement',
+    description: 'Post a new announcement to a specific team or to the entire club. Use when the user says things like "tell U14 parents ...", "send an announcement to ...", "let the team know ...", "message all parents ...", or "post to the club ...". Extract the audience (team name OR club-wide) and the message content from the transcript.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        teamId: { type: 'string', description: 'UUID of the team to send to. Omit for a club-wide announcement.' },
+        title: { type: 'string', description: 'Short title derived from the user message (max 60 chars). Example: "Indoor practice tonight".' },
+        body: { type: 'string', description: 'The full announcement body — what the user wants to tell the audience. Be faithful to the transcript; do not add information.' },
+      },
+      required: ['title', 'body'],
+    },
+  },
 ]
 
 function getTimezoneOffsetString(timeZone: string, atDate: Date): string {
@@ -169,6 +183,7 @@ Rules:
 - When updating time, preserve the event duration unless told otherwise.
 - When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "U14 Boys Practice" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
 - When the user says they themselves cannot make an event ("I can't make", "I'm sick", "I can't cover my U14 practice tonight", "need a replacement for my practice"), call request_coverage with the matching eventId. This will trigger the coverage flow and auto-assign a replacement. Do NOT cancel the event — coverage is different from cancellation.
+- When the user wants to send a message to a team or the whole club ("tell U14 parents ...", "send an announcement to ...", "let the team know ...", "message all parents ..."), call send_announcement. Match the team fuzzy (e.g. "U14 parents" → U14 Boys team). If the user says "all teams", "the whole club", "everyone", or does not name a team, omit teamId for a club-wide post. Build a short sensible title from the message.
 - Only use tools when you're confident about the match. If multiple options could match, ask which one.
 - When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
@@ -320,6 +335,22 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
         })
         const venue = venues.find(v => v.id === input.venueId)
         return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches)}` }
+      }
+
+      case 'send_announcement': {
+        const result = await createAnnouncement({
+          teamId: input.teamId ?? null,
+          title: String(input.title ?? '').slice(0, 120),
+          body: String(input.body ?? ''),
+        })
+        const parts: string[] = []
+        if (result.parentCount > 0) parts.push(`${result.parentCount} ${result.parentCount === 1 ? 'parent' : 'parents'}`)
+        if (result.coachCount > 0) parts.push(`${result.coachCount} ${result.coachCount === 1 ? 'coach' : 'coaches'}`)
+        const audienceSuffix = parts.length > 0 ? ` Sent to ${parts.join(' and ')}.` : ''
+        return {
+          success: true,
+          message: `Posted to ${result.audienceLabel}.${audienceSuffix}`,
+        }
       }
 
       case 'request_coverage': {
