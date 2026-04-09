@@ -59,6 +59,67 @@ export async function inviteCoach(formData: FormData) {
   revalidatePath('/dashboard/coaches')
 }
 
+export async function resendInvite(inviteId: string): Promise<{ emailSent: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') {
+    throw new Error('Only the Director of Coaching can resend invites')
+  }
+
+  // Fetch the invite to know email/role + scope it to this club
+  const { data: invite, error: fetchError } = await supabase
+    .from('invites')
+    .select('id, email, role, token, status')
+    .eq('id', inviteId)
+    .eq('club_id', profile.club_id)
+    .single()
+
+  if (fetchError || !invite) throw new Error('Invite not found')
+  if (invite.status !== 'pending') throw new Error('Only pending invites can be resent')
+
+  // Bump created_at so the "older than 3 days" attention signal clears for a fresh window
+  await supabase
+    .from('invites')
+    .update({ created_at: new Date().toISOString() })
+    .eq('id', invite.id)
+
+  // For coach invites with an email, re-send the invite email.
+  // Parent invites don't currently send email (token is shared manually),
+  // so for them we just bump the timestamp and consider it "resent".
+  let emailSent = false
+  if (invite.role === 'coach' && invite.email) {
+    const { data: club } = await supabase
+      .from('clubs')
+      .select('name')
+      .eq('id', profile.club_id)
+      .single()
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    try {
+      await sendCoachInviteEmail({
+        to: invite.email,
+        clubName: club?.name ?? 'your club',
+        joinUrl: `${baseUrl}/join/${invite.token}`,
+      })
+      emailSent = true
+    } catch (err) {
+      console.error('Resend invite email failed (non-blocking):', err)
+    }
+  }
+
+  revalidatePath('/dashboard/coaches')
+  revalidatePath('/dashboard')
+  return { emailSent }
+}
+
 export async function revokeInvite(inviteId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

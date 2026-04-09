@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { getAttentionList, type AttentionItem, type AttentionResult } from './attention-actions'
+import { requestMissingSizes } from './gear/actions'
+import { resendInvite } from './coaches/actions'
+import { useToast } from '@/components/toast'
 
 function formatRelative(iso: string): string {
   const then = new Date(iso).getTime()
@@ -43,6 +46,9 @@ export default function AttentionPanel() {
   const [data, setData] = useState<AttentionResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingSignal, setPendingSignal] = useState<string | null>(null)
+  const [completedSignals, setCompletedSignals] = useState<Set<string>>(new Set())
+  const { toast } = useToast()
 
   const load = useCallback(async (forceRefresh = false) => {
     setLoading(true)
@@ -57,6 +63,42 @@ export default function AttentionPanel() {
       setLoading(false)
     }
   }, [])
+
+  const handleGearRequest = useCallback(async (signalId: string) => {
+    if (pendingSignal) return
+    setPendingSignal(signalId)
+    try {
+      const result = await requestMissingSizes()
+      if (result.alreadyComplete) {
+        toast('All sizes already submitted', 'success')
+      } else if (result.parentsNotified === 0) {
+        toast('No parents with notifications enabled', 'error')
+      } else {
+        toast(`Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'}`, 'success')
+      }
+      setCompletedSignals(prev => new Set(prev).add(signalId))
+    } catch (err: any) {
+      toast(err?.message ?? 'Failed to send request', 'error')
+    } finally {
+      setPendingSignal(null)
+    }
+  }, [pendingSignal, toast])
+
+  const handleResendInvite = useCallback(async (signalId: string, inviteId: string) => {
+    if (pendingSignal) return
+    setPendingSignal(signalId)
+    try {
+      const result = await resendInvite(inviteId)
+      toast(result.emailSent ? 'Invite email resent' : 'Invite refreshed', 'success')
+      setCompletedSignals(prev => new Set(prev).add(signalId))
+      // Refresh after a short delay so the toast is visible
+      setTimeout(() => load(true), 600)
+    } catch (err: any) {
+      toast(err?.message ?? 'Failed to resend invite', 'error')
+    } finally {
+      setPendingSignal(null)
+    }
+  }, [pendingSignal, toast, load])
 
   useEffect(() => {
     load(false)
@@ -129,11 +171,30 @@ export default function AttentionPanel() {
         <div className="space-y-2">
           {data.items.map(item => {
             const style = URGENCY_STYLES[item.urgency] ?? URGENCY_STYLES.routine
+            const isCompleted = completedSignals.has(item.id)
+            const isPending = pendingSignal === item.id
+
+            // Determine quick action based on signal type
+            const isGearMissing = item.id === 'gear-missing'
+            const isInvite = item.id.startsWith('invite-')
+            const hasQuickAction = isGearMissing || isInvite
+
+            let quickActionHandler: (() => void) | null = null
+            let quickActionLabel = ''
+            if (isGearMissing) {
+              quickActionHandler = () => handleGearRequest(item.id)
+              quickActionLabel = isCompleted ? '✓ Sent' : isPending ? 'Sending…' : 'Send request'
+            } else if (isInvite) {
+              const inviteId = item.id.replace('invite-', '')
+              quickActionHandler = () => handleResendInvite(item.id, inviteId)
+              quickActionLabel = isCompleted ? '✓ Resent' : isPending ? 'Resending…' : 'Resend'
+            }
+
             return (
               <Link
                 key={item.id}
                 href={item.actionHref || '/dashboard'}
-                className={`bg-dark-secondary rounded-xl p-4 border transition-all flex items-start gap-3 group ${style.border}`}
+                className={`bg-dark-secondary rounded-xl p-4 border transition-all flex items-start gap-3 group ${style.border} ${isCompleted ? 'opacity-60' : ''}`}
               >
                 <span className={`inline-block w-2 h-2 rounded-full mt-2 shrink-0 ${style.dot}`} />
                 <div className="flex-1 min-w-0">
@@ -145,9 +206,29 @@ export default function AttentionPanel() {
                   </div>
                   <p className="text-gray text-sm">{item.description}</p>
                 </div>
-                <span className="text-xs font-bold text-green opacity-60 group-hover:opacity-100 transition-opacity shrink-0 self-center">
-                  {item.actionLabel} →
-                </span>
+                <div className="flex items-center gap-2 shrink-0 self-center">
+                  {hasQuickAction && quickActionHandler && (
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        quickActionHandler!()
+                      }}
+                      disabled={isPending || isCompleted}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed ${
+                        isCompleted
+                          ? 'bg-green/15 text-green border border-green/30'
+                          : 'bg-green text-dark hover:opacity-90 disabled:opacity-60'
+                      }`}
+                    >
+                      {quickActionLabel}
+                    </button>
+                  )}
+                  <span className="text-xs font-bold text-green opacity-60 group-hover:opacity-100 transition-opacity">
+                    {item.actionLabel} →
+                  </span>
+                </div>
               </Link>
             )
           })}
