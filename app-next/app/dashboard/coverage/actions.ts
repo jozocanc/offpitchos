@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { autoAssignCoverage } from './auto-assign'
+import { autoAssignCoverage, rankCoverageCandidates, type RankedCandidate } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 
@@ -103,7 +103,18 @@ async function getDocProfileId(clubId: string): Promise<string | null> {
 
 // ---------- Actions ----------
 
-export async function createCoverageRequest(eventId: string, unavailableCoachId: string) {
+export interface CreateCoverageResult {
+  requestId: string
+  autoAssigned: boolean
+  coveringCoachName?: string
+  reason?: string
+  eventTitle: string
+}
+
+export async function createCoverageRequest(
+  eventId: string,
+  unavailableCoachId: string,
+): Promise<CreateCoverageResult> {
   const { user, profile, supabase } = await getUserProfile()
   const timeoutMinutes = await getClubTimeoutMinutes(profile.club_id!)
   const timeoutAt = new Date(Date.now() + timeoutMinutes * 60 * 1000)
@@ -148,7 +159,8 @@ export async function createCoverageRequest(eventId: string, unavailableCoachId:
 
   if (result.assigned) {
     // Auto-assigned! Notify the covering coach, unavailable coach, and DOC
-    const message = `${result.coachName} has been auto-assigned to cover ${event.title} on ${dateStr} at ${timeStr}`
+    const reasonSuffix = result.reason ? ` — ${result.reason}` : ''
+    const message = `${result.coachName} is covering ${event.title} on ${dateStr} at ${timeStr}${reasonSuffix}`
 
     const { data: assignedRequest } = await supabase
       .from('coverage_requests')
@@ -186,6 +198,43 @@ export async function createCoverageRequest(eventId: string, unavailableCoachId:
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/coverage')
   revalidatePath('/dashboard')
+
+  return {
+    requestId: request.id,
+    autoAssigned: result.assigned,
+    coveringCoachName: result.coachName,
+    reason: result.reason,
+    eventTitle: event.title,
+  }
+}
+
+/**
+ * Rank available coaches for an existing coverage request. Used by the
+ * DOC's "Assign" modal to surface the best candidates at the top.
+ */
+export async function getAssignmentSuggestions(requestId: string): Promise<RankedCandidate[]> {
+  const { profile, supabase } = await getUserProfile()
+
+  if (profile.role !== 'doc') {
+    throw new Error('Only the Director of Coaching can view assignment suggestions')
+  }
+
+  const { data: request, error } = await supabase
+    .from('coverage_requests')
+    .select('event_id, unavailable_coach_id, club_id')
+    .eq('id', requestId)
+    .single()
+
+  if (error || !request) throw new Error('Coverage request not found')
+
+  const ranked = await rankCoverageCandidates(
+    request.event_id,
+    request.club_id,
+    request.unavailable_coach_id,
+  )
+
+  // Return top 5 so the modal has some fallback options
+  return ranked.slice(0, 5)
 }
 
 export async function acceptCoverage(requestId: string) {

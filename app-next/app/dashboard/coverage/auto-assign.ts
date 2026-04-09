@@ -1,17 +1,31 @@
 import { createServiceClient } from '@/lib/supabase/service'
 
-interface RankedCoach {
+export interface RankedCandidate {
   profileId: string
   displayName: string
   score: number
+  reason: string
+  sameTeam: boolean
+  recentCoverages: number
 }
 
-export async function autoAssignCoverage(
-  requestId: string,
+function buildReason(sameTeam: boolean, recentCoverages: number): string {
+  if (sameTeam && recentCoverages === 0) return 'Same team · lightest load this month'
+  if (sameTeam) return `Same team · ${recentCoverages} recent coverage${recentCoverages === 1 ? '' : 's'}`
+  if (recentCoverages === 0) return 'Lightest load this month'
+  return `${recentCoverages} recent coverage${recentCoverages === 1 ? '' : 's'}`
+}
+
+/**
+ * Rank available coaches for a coverage request using the same scoring the
+ * auto-assign flow uses. Returned list is sorted best → worst. Empty array
+ * means no available candidates (all coaches busy or none exist).
+ */
+export async function rankCoverageCandidates(
   eventId: string,
   clubId: string,
-  unavailableCoachId: string
-): Promise<{ assigned: boolean; coachName?: string }> {
+  unavailableCoachId: string,
+): Promise<RankedCandidate[]> {
   const service = createServiceClient()
 
   // Get event details
@@ -21,7 +35,7 @@ export async function autoAssignCoverage(
     .eq('id', eventId)
     .single()
 
-  if (!event) return { assigned: false }
+  if (!event) return []
 
   // Get all coaches in the club except the unavailable one
   const { data: allCoaches } = await service
@@ -31,7 +45,7 @@ export async function autoAssignCoverage(
     .eq('role', 'coach')
     .neq('id', unavailableCoachId)
 
-  if (!allCoaches || allCoaches.length === 0) return { assigned: false }
+  if (!allCoaches || allCoaches.length === 0) return []
 
   // Find coaches with conflicting events at the same time (exclude the event being covered)
   const { data: conflictingEvents } = await service
@@ -61,12 +75,9 @@ export async function autoAssignCoverage(
 
   // Filter to available coaches
   const availableCoaches = allCoaches.filter(c => !busyCoachIds.has(c.id))
+  if (availableCoaches.length === 0) return []
 
-  if (availableCoaches.length === 0) return { assigned: false }
-
-  // Rank coaches
-  // 1. Coaches on the same team get +10 points (they know the players)
-  // 2. Fewer recent coverage assignments = higher score (spread the load)
+  // Same-team bonus
   const { data: teamMembers } = await service
     .from('team_members')
     .select('profile_id')
@@ -75,7 +86,7 @@ export async function autoAssignCoverage(
 
   const sameTeamCoachIds = new Set((teamMembers ?? []).map(m => m.profile_id))
 
-  // Count recent coverage assignments (last 30 days)
+  // Count recent coverage assignments (last 30 days) — load balance
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const { data: recentCoverage } = await service
     .from('coverage_requests')
@@ -92,22 +103,41 @@ export async function autoAssignCoverage(
     }
   }
 
-  const ranked: RankedCoach[] = availableCoaches.map(c => {
+  const ranked: RankedCandidate[] = availableCoaches.map(c => {
+    const sameTeam = sameTeamCoachIds.has(c.id)
+    const recentCoverages = coverageCount[c.id] ?? 0
+
     let score = 0
-    // Same team bonus
-    if (sameTeamCoachIds.has(c.id)) score += 10
-    // Fewer recent coverages = higher score (max 5 bonus points)
-    const count = coverageCount[c.id] ?? 0
-    score += Math.max(0, 5 - count)
-    return { profileId: c.id, displayName: c.display_name, score }
+    if (sameTeam) score += 10
+    score += Math.max(0, 5 - recentCoverages)
+
+    return {
+      profileId: c.id,
+      displayName: c.display_name ?? 'Coach',
+      score,
+      reason: buildReason(sameTeam, recentCoverages),
+      sameTeam,
+      recentCoverages,
+    }
   })
 
-  // Sort by score descending
   ranked.sort((a, b) => b.score - a.score)
+  return ranked
+}
+
+export async function autoAssignCoverage(
+  requestId: string,
+  eventId: string,
+  clubId: string,
+  unavailableCoachId: string
+): Promise<{ assigned: boolean; coachName?: string; reason?: string }> {
+  const ranked = await rankCoverageCandidates(eventId, clubId, unavailableCoachId)
+  if (ranked.length === 0) return { assigned: false }
 
   const bestMatch = ranked[0]
+  const service = createServiceClient()
 
-  // Auto-assign
+  // Atomic assign — only succeeds if the request is still pending
   const { error } = await service
     .from('coverage_requests')
     .update({
@@ -126,5 +156,5 @@ export async function autoAssignCoverage(
     response: 'accepted',
   })
 
-  return { assigned: true, coachName: bestMatch.displayName }
+  return { assigned: true, coachName: bestMatch.displayName, reason: bestMatch.reason }
 }

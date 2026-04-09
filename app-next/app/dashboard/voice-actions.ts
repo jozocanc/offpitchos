@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
 import { cancelEvent, updateEvent, createEvent, restoreEvent } from './schedule/actions'
+import { createCoverageRequest } from './coverage/actions'
 import { ROLES } from '@/lib/constants'
 
 const anthropic = new Anthropic({
@@ -83,6 +84,17 @@ const tools: Anthropic.Messages.Tool[] = [
       required: ['teamId', 'type', 'title', 'startTime', 'endTime'],
     },
   },
+  {
+    name: 'request_coverage',
+    description: 'The CURRENT USER is saying they cannot attend/coach a specific event and needs someone to cover for them. Use when the user says things like "I can\'t make", "I won\'t be at", "I need coverage for", "I\'m sick and can\'t cover", "please find a replacement for my X practice". Match the event from the Upcoming Events list. The system will automatically try to find and assign a replacement coach.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        eventId: { type: 'string', description: 'The UUID of the event the current user cannot attend' },
+      },
+      required: ['eventId'],
+    },
+  },
 ]
 
 function getTimezoneOffsetString(timeZone: string, atDate: Date): string {
@@ -156,6 +168,7 @@ Rules:
 - "Tonight" means today's date. "Tomorrow" means tomorrow. Interpret relative dates from the current date/time.
 - When updating time, preserve the event duration unless told otherwise.
 - When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "U14 Boys Practice" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
+- When the user says they themselves cannot make an event ("I can't make", "I'm sick", "I can't cover my U14 practice tonight", "need a replacement for my practice"), call request_coverage with the matching eventId. This will trigger the coverage flow and auto-assign a replacement. Do NOT cancel the event — coverage is different from cancellation.
 - Only use tools when you're confident about the match. If multiple options could match, ask which one.
 - When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
@@ -307,6 +320,24 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
         })
         const venue = venues.find(v => v.id === input.venueId)
         return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches)}` }
+      }
+
+      case 'request_coverage': {
+        const event = events.find(e => e.id === input.eventId)
+        if (!event) return { success: false, message: 'Could not find that event.' }
+
+        const result = await createCoverageRequest(input.eventId, profile.id)
+        if (result.autoAssigned && result.coveringCoachName) {
+          const reasonTail = result.reason ? ` (${result.reason.toLowerCase()})` : ''
+          return {
+            success: true,
+            message: `Done — ${result.coveringCoachName} is covering "${result.eventTitle}" for you${reasonTail}. Parents notified.`,
+          }
+        }
+        return {
+          success: true,
+          message: `Sent coverage request for "${result.eventTitle}" to the other coaches. You'll get a notification when someone accepts.`,
+        }
       }
 
       case 'create_event': {
