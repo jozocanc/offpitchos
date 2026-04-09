@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { executeVoiceCommand } from '@/app/dashboard/voice-actions'
+import { executeVoiceCommand, undoCancelEvent, type VoiceCommandResult } from '@/app/dashboard/voice-actions'
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'result'
 
@@ -13,7 +13,8 @@ interface VoiceCommandProps {
 export default function VoiceCommand({ userRole }: VoiceCommandProps) {
   const [state, setState] = useState<VoiceState>('idle')
   const [transcript, setTranscript] = useState('')
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [result, setResult] = useState<VoiceCommandResult | null>(null)
+  const [undoing, setUndoing] = useState(false)
   const recognitionRef = useRef<any>(null)
   const transcriptRef = useRef('')
   const router = useRouter()
@@ -22,7 +23,21 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
     setState('idle')
     setTranscript('')
     setResult(null)
+    setUndoing(false)
   }, [])
+
+  const handleUndo = useCallback(async (eventId: string) => {
+    setUndoing(true)
+    try {
+      const res = await undoCancelEvent(eventId)
+      setResult(res)
+      if (res.success) router.refresh()
+    } catch {
+      setResult({ success: false, message: 'Could not undo. Try again.' })
+    } finally {
+      setUndoing(false)
+    }
+  }, [router])
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -80,12 +95,13 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
     recognitionRef.current?.stop()
   }, [])
 
-  // Auto-dismiss result after 6s
+  // Auto-dismiss result after 6s (12s when there's an Undo button so the user has time)
   useEffect(() => {
     if (state !== 'result') return
-    const t = setTimeout(dismiss, 6000)
+    const delay = result?.undoEventId ? 12000 : 6000
+    const t = setTimeout(dismiss, delay)
     return () => clearTimeout(t)
-  }, [state, dismiss])
+  }, [state, result, dismiss])
 
   // Gate to DOC + coach only — hooks must run before this early return
   if (userRole === 'parent') return null
@@ -123,12 +139,23 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
                 <span className="mt-0.5 text-base">{result.success ? '✓' : '!'}</span>
                 <p>{result.message}</p>
               </div>
-              <button
-                onClick={dismiss}
-                className="mt-3 text-xs text-gray hover:text-white transition-colors"
-              >
-                Dismiss
-              </button>
+              <div className="mt-3 flex items-center gap-3">
+                {result.undoEventId && (
+                  <button
+                    onClick={() => handleUndo(result.undoEventId!)}
+                    disabled={undoing}
+                    className="text-xs font-bold bg-green/15 text-green hover:bg-green/25 transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50"
+                  >
+                    {undoing ? 'Undoing…' : 'Undo'}
+                  </button>
+                )}
+                <button
+                  onClick={dismiss}
+                  className="text-xs text-gray hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
         </div>

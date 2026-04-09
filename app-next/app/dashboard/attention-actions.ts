@@ -8,6 +8,26 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+// In-memory cache so every dashboard visit doesn't retrigger a Claude call.
+// TTL is short enough that the DOC still sees fresh data, but long enough
+// to cover typical navigation patterns (visit → navigate away → come back).
+const ATTENTION_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+const attentionCache = new Map<string, { data: AttentionResult; expiresAt: number }>()
+
+function readCache(key: string): AttentionResult | null {
+  const entry = attentionCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    attentionCache.delete(key)
+    return null
+  }
+  return entry.data
+}
+
+function writeCache(key: string, data: AttentionResult) {
+  attentionCache.set(key, { data, expiresAt: Date.now() + ATTENTION_CACHE_TTL_MS })
+}
+
 export interface AttentionItem {
   id: string
   title: string
@@ -74,12 +94,19 @@ Return JSON only, no preamble, no markdown. Match this exact schema:
   ]
 }`
 
-export async function getAttentionList(timeZone: string = 'UTC'): Promise<AttentionResult> {
+export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: boolean = false): Promise<AttentionResult> {
   const { profile, supabase } = await getUserProfile()
 
   // Only DOCs get the triaged attention list
   if (profile.role !== 'doc') {
     return { items: [], totalSignals: 0, generatedAt: new Date().toISOString() }
+  }
+
+  // Per-club cache (the data is club-scoped, not user-scoped)
+  const cacheKey = `${profile.club_id}:${timeZone}`
+  if (!forceRefresh) {
+    const cached = readCache(cacheKey)
+    if (cached) return cached
   }
 
   const now = new Date()
@@ -175,11 +202,13 @@ export async function getAttentionList(timeZone: string = 'UTC'): Promise<Attent
 
   if (signalParts.length === 1) {
     // Only the header — no signals at all
-    return {
+    const empty: AttentionResult = {
       items: [],
       totalSignals: 0,
       generatedAt: now.toISOString(),
     }
+    writeCache(cacheKey, empty)
+    return empty
   }
 
   const signalsText = signalParts.join('\n')
@@ -229,9 +258,11 @@ export async function getAttentionList(timeZone: string = 'UTC'): Promise<Attent
     console.error('[attention] Claude call failed:', err)
   }
 
-  return {
+  const result: AttentionResult = {
     items,
     totalSignals,
     generatedAt: now.toISOString(),
   }
+  writeCache(cacheKey, result)
+  return result
 }

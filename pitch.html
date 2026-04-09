@@ -274,6 +274,77 @@
       cursor: default;
     }
 
+    /* Closing contact slide */
+    .contact {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .contact h1 {
+      margin-bottom: 48px;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .contact-card {
+      background: var(--dark-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 32px 28px;
+    }
+
+    .contact-card.featured {
+      border-color: var(--green);
+      box-shadow: 0 0 40px rgba(0, 255, 135, 0.15);
+    }
+
+    .contact-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    .contact-value {
+      font-size: clamp(18px, 1.6vw, 24px);
+      font-weight: 700;
+      color: var(--white);
+      word-break: break-word;
+    }
+
+    .contact-card a.contact-value {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    .contact-card a.contact-value:hover {
+      opacity: 0.8;
+    }
+
+    .contact-signoff {
+      margin-top: 48px;
+      font-size: clamp(18px, 1.5vw, 22px);
+      color: var(--gray);
+      font-style: italic;
+      max-width: 600px;
+    }
+
+    .contact-signoff strong {
+      color: var(--green);
+      font-style: normal;
+      font-weight: 800;
+    }
+
     /* Voice demo (slide 3) */
     .voice-demo {
       margin-top: 40px;
@@ -419,6 +490,112 @@
       color: var(--green);
       font-weight: 900;
     }
+
+    /* ============================================================
+       Mobile (≤720px) — switch from fixed-slide deck to scrollable
+       ============================================================ */
+    @media (max-width: 720px) {
+      html, body {
+        overflow: auto;
+        height: auto;
+      }
+
+      .deck {
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        scroll-snap-type: y mandatory;
+      }
+
+      .slide {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        padding: 80px 22px 80px 22px;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        scroll-snap-align: start;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+
+      .slide:last-child { border-bottom: none; }
+
+      .brand {
+        top: 22px;
+        left: 22px;
+        font-size: 14px;
+      }
+
+      .meta {
+        bottom: 22px;
+        left: 22px;
+        right: 22px;
+        font-size: 10px;
+      }
+
+      h1 {
+        font-size: clamp(30px, 8vw, 46px);
+        margin-bottom: 18px;
+        letter-spacing: -1px;
+      }
+
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        margin-bottom: 14px;
+      }
+
+      .body {
+        font-size: 15px;
+      }
+
+      .tagline {
+        font-size: 14px;
+      }
+
+      /* Stack multi-column grids */
+      .compare,
+      .pricing,
+      .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .compare-col { padding: 20px; }
+      .compare-col .verdict { font-size: 22px; margin-bottom: 14px; }
+      .tier { padding: 24px 20px; }
+      .contact-card { padding: 22px 20px; }
+      .contact-value { font-size: 16px; }
+      .contact-signoff { margin-top: 24px; font-size: 15px; }
+
+      /* Voice demo card */
+      .voice-demo {
+        margin-top: 22px;
+        padding: 20px;
+        border-radius: 18px;
+      }
+      .voice-demo .mic { width: 36px; height: 36px; }
+      .voice-demo .mic svg { width: 18px; height: 18px; }
+      .voice-demo .command { font-size: 16px; }
+      .voice-demo .arrow { margin: 10px 0 10px 50px; }
+      .voice-demo .results { margin-left: 50px; }
+      .voice-demo .results li { font-size: 14px; }
+
+      .ask-list { margin-top: 22px; }
+      .ask-list li {
+        font-size: 15px;
+        padding: 12px 0;
+        gap: 12px;
+      }
+
+      .help { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -434,7 +611,7 @@
       </p>
       <div class="meta">
         <span>Pitch</span>
-        <span><span id="current">1</span> / <span id="total">4</span></span>
+        <span><span id="current">1</span> / <span id="total">7</span></span>
       </div>
     </section>
 
@@ -449,7 +626,7 @@
       <p class="tagline">Built for directors and the programs they run.</p>
       <div class="meta">
         <span>Let me show you →</span>
-        <span><span class="cur">2</span> / <span class="tot">6</span></span>
+        <span><span class="cur">2</span> / <span class="tot">7</span></span>
       </div>
     </section>
 
@@ -483,7 +660,7 @@
 
       <div class="meta">
         <span>In under 3 seconds</span>
-        <span><span class="cur">3</span> / <span class="tot">6</span></span>
+        <span><span class="cur">3</span> / <span class="tot">7</span></span>
       </div>
     </section>
 
@@ -518,7 +695,7 @@
 
       <div class="meta">
         <span>The difference is automation</span>
-        <span><span class="cur">4</span> / <span class="tot">6</span></span>
+        <span><span class="cur">4</span> / <span class="tot">7</span></span>
       </div>
     </section>
 
@@ -532,7 +709,7 @@
       </p>
       <div class="meta">
         <span>Let's talk about it</span>
-        <span><span class="cur">5</span> / <span class="tot">6</span></span>
+        <span><span class="cur">5</span> / <span class="tot">7</span></span>
       </div>
     </section>
 
@@ -551,7 +728,34 @@
 
       <div class="meta">
         <span>Let's do this</span>
-        <span><span class="cur">6</span> / <span class="tot">6</span></span>
+        <span><span class="cur">6</span> / <span class="tot">7</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: CLOSING / CONTACT -->
+    <section class="slide contact" data-index="7">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Let's Talk</div>
+      <h1>Built by directors, <span class="accent">for directors.</span></h1>
+
+      <div class="contact-grid">
+        <div class="contact-card featured">
+          <div class="contact-label">Email</div>
+          <a class="contact-value" href="mailto:jozo.cancar27@gmail.com">jozo.cancar27@gmail.com</a>
+        </div>
+        <div class="contact-card">
+          <div class="contact-label">Web</div>
+          <a class="contact-value" href="https://offpitchos.com">offpitchos.com</a>
+        </div>
+      </div>
+
+      <p class="contact-signoff">
+        Ready when you are. <strong>Jozo Cancar</strong> — co-founder.
+      </p>
+
+      <div class="meta">
+        <span>Thank you</span>
+        <span><span class="cur">7</span> / <span class="tot">7</span></span>
       </div>
     </section>
 
@@ -607,15 +811,25 @@
       }
     })
 
-    // Click to advance
-    document.querySelector('.deck').addEventListener('click', (e) => {
-      // Don't advance if clicking an interactive element
-      if (e.target.closest('a, button')) return
-      next()
-    })
+    // Detect mobile — on mobile we let the page scroll naturally instead of
+    // switching slides via click/keys.
+    const isMobile = window.matchMedia('(max-width: 720px)').matches
+
+    if (!isMobile) {
+      // Click to advance (desktop only)
+      document.querySelector('.deck').addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) return
+        next()
+      })
+    }
 
     // Start at slide 1
     show(0)
+
+    // On mobile, make every slide visible (not just the active one)
+    if (isMobile) {
+      slides.forEach(s => s.classList.add('active'))
+    }
   </script>
 </body>
 </html>

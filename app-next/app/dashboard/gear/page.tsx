@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default async function GearPage() {
-  const { teams, userRole } = await getGearData()
+  const { teams, userRole, lastRequestedAt, lastRequestedParentCount, respondedSinceRequest } = await getGearData()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -16,7 +16,13 @@ export default async function GearPage() {
         <p className="text-sm text-gray mt-1">Player sizes and gear order summaries.</p>
       </div>
 
-      <GearClient teams={teams} userRole={userRole} />
+      <GearClient
+        teams={teams}
+        userRole={userRole}
+        lastRequestedAt={lastRequestedAt}
+        lastRequestedParentCount={lastRequestedParentCount}
+        respondedSinceRequest={respondedSinceRequest}
+      />
     </div>
   )
 }

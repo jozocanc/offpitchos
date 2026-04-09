@@ -26,7 +26,32 @@ interface TeamGearSummary {
   players: Player[]
 }
 
-export default function GearClient({ teams, userRole }: { teams: TeamGearSummary[]; userRole: string }) {
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime()
+  const now = Date.now()
+  const diffSec = Math.max(0, Math.round((now - then) / 1000))
+  if (diffSec < 60) return 'just now'
+  const diffMin = Math.round(diffSec / 60)
+  if (diffMin < 60) return `${diffMin} min ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.round(diffHr / 24)
+  return `${diffDay}d ago`
+}
+
+export default function GearClient({
+  teams,
+  userRole,
+  lastRequestedAt,
+  lastRequestedParentCount,
+  respondedSinceRequest,
+}: {
+  teams: TeamGearSummary[]
+  userRole: string
+  lastRequestedAt: string | null
+  lastRequestedParentCount: number
+  respondedSinceRequest: number
+}) {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [requesting, setRequesting] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -113,32 +138,65 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
     <div>
       {/* DOC action bar */}
       {isDoc && (
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          <button
-            onClick={handleRequestSizes}
-            disabled={requesting || totalMissing === 0}
-            className="bg-green text-dark font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-            title={totalMissing === 0 ? 'All sizes already submitted' : `Request sizes from parents with ${totalMissing} missing`}
-          >
-            {requesting ? (
-              <>
-                <span className="inline-block w-2 h-2 bg-dark/60 rounded-full animate-pulse" />
-                Sending…
-              </>
-            ) : (
-              <>
-                📨 Request sizes from parents
-                {totalMissing > 0 && <span className="bg-dark/20 text-dark px-1.5 py-0.5 rounded text-[10px] font-bold">{totalMissing}</span>}
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleCopyOrder}
-            disabled={totalPlayers - totalMissing === 0}
-            className="bg-white/5 text-white border border-white/10 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {copied ? '✓ Copied' : '📋 Copy order to clipboard'}
-          </button>
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRequestSizes}
+              disabled={requesting || totalMissing === 0}
+              className="bg-green text-dark font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              title={totalMissing === 0 ? 'All sizes already submitted' : `Request sizes from parents with ${totalMissing} missing`}
+            >
+              {requesting ? (
+                <>
+                  <span className="inline-block w-2 h-2 bg-dark/60 rounded-full animate-pulse" />
+                  Sending…
+                </>
+              ) : (
+                <>
+                  📨 Request sizes from parents
+                  {totalMissing > 0 && <span className="bg-dark/20 text-dark px-1.5 py-0.5 rounded text-[10px] font-bold">{totalMissing}</span>}
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCopyOrder}
+              disabled={totalPlayers - totalMissing === 0}
+              className="bg-white/5 text-white border border-white/10 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {copied ? '✓ Copied' : '📋 Copy order to clipboard'}
+            </button>
+          </div>
+
+          {/* Last-request status bar */}
+          {lastRequestedAt && (
+            <div className="mt-3 bg-dark-secondary border border-white/5 rounded-xl px-4 py-3 flex flex-wrap items-center gap-4 text-sm">
+              <span className="text-gray">
+                Last requested <span className="text-white font-semibold">{formatRelative(lastRequestedAt)}</span>
+              </span>
+              {lastRequestedParentCount > 0 && (
+                <>
+                  <span className="w-px h-4 bg-white/10" />
+                  <span className="text-gray">
+                    Responses:{' '}
+                    <span className={`font-bold ${respondedSinceRequest >= lastRequestedParentCount ? 'text-green' : 'text-yellow-400'}`}>
+                      {respondedSinceRequest} of {lastRequestedParentCount}
+                    </span>{' '}
+                    {respondedSinceRequest === 1 ? 'parent' : 'parents'}
+                  </span>
+                  <div className="flex-1 min-w-[80px] max-w-[200px] h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        respondedSinceRequest >= lastRequestedParentCount ? 'bg-green' : 'bg-yellow-400'
+                      }`}
+                      style={{
+                        width: `${Math.min(100, Math.round((respondedSinceRequest / lastRequestedParentCount) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

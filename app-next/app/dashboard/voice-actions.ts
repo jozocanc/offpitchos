@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
-import { cancelEvent, updateEvent } from './schedule/actions'
+import { cancelEvent, updateEvent, createEvent, restoreEvent } from './schedule/actions'
 import { ROLES } from '@/lib/constants'
 
 const anthropic = new Anthropic({
@@ -60,6 +60,27 @@ const tools: Anthropic.Messages.Tool[] = [
         venueId: { type: 'string', description: 'The UUID of the new venue' },
       },
       required: ['eventId', 'venueId'],
+    },
+  },
+  {
+    name: 'create_event',
+    description: 'Create a NEW scheduled event (practice, game, tournament, camp, tryout, meeting) for a team. Use when someone says to add, schedule, or create a new event that does not exist yet.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        teamId: { type: 'string', description: 'UUID of the team this event is for (match by name or age group from the Teams list)' },
+        type: {
+          type: 'string',
+          enum: ['practice', 'game', 'tournament', 'camp', 'tryout', 'meeting'],
+          description: 'The event type',
+        },
+        title: { type: 'string', description: 'Short human-readable title, e.g. "U14 Boys Practice"' },
+        startTime: { type: 'string', description: 'Start time as ISO 8601 WITH the user timezone offset, e.g. "2026-04-12T18:00:00-04:00"' },
+        endTime: { type: 'string', description: 'End time as ISO 8601 WITH the user timezone offset. If not specified by the user, default to 90 minutes after startTime.' },
+        venueId: { type: 'string', description: 'Optional UUID of the venue. Omit if not specified or if no matching venue exists.' },
+        notes: { type: 'string', description: 'Optional notes for the event.' },
+      },
+      required: ['teamId', 'type', 'title', 'startTime', 'endTime'],
     },
   },
 ]
@@ -134,7 +155,8 @@ Rules:
 - Match events by team name, event type, date, and time. Use fuzzy matching (e.g. "U14" matches a team with "U14" in its name or age group).
 - "Tonight" means today's date. "Tomorrow" means tomorrow. Interpret relative dates from the current date/time.
 - When updating time, preserve the event duration unless told otherwise.
-- Only use tools when you're confident about the match. If multiple events could match, ask which one.
+- When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "U14 Boys Practice" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
+- Only use tools when you're confident about the match. If multiple options could match, ask which one.
 - When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
 CRITICAL — Timezone handling:
@@ -143,7 +165,28 @@ CRITICAL — Timezone handling:
 - Example: if the user's offset is -04:00 and they want 3:00 PM on April 10, return "2026-04-10T15:00:00-04:00" — NOT "2026-04-10T15:00:00" and NOT "2026-04-10T15:00:00Z".
 - The user's current offset is given in the context below. Use it verbatim.`
 
-export async function executeVoiceCommand(transcript: string, timeZone: string = 'UTC'): Promise<{ success: boolean; message: string }> {
+export interface VoiceCommandResult {
+  success: boolean
+  message: string
+  undoEventId?: string
+}
+
+export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResult> {
+  try {
+    const counts = await restoreEvent(eventId)
+    const total = counts.parents + counts.coaches
+    return {
+      success: true,
+      message: total > 0
+        ? `Restored. Notified ${total} ${total === 1 ? 'person' : 'people'} the event is back on.`
+        : 'Restored.',
+    }
+  } catch (err: any) {
+    return { success: false, message: `Could not restore: ${err?.message ?? 'unknown error'}` }
+  }
+}
+
+export async function executeVoiceCommand(transcript: string, timeZone: string = 'UTC'): Promise<VoiceCommandResult> {
   if (!transcript.trim()) return { success: false, message: 'No command received.' }
 
   const { profile, supabase } = await getUserProfile()
@@ -206,6 +249,8 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
   }
   if (typeof input.newStartTime === 'string') input.newStartTime = ensureOffset(input.newStartTime)
   if (typeof input.newEndTime === 'string') input.newEndTime = ensureOffset(input.newEndTime)
+  if (typeof input.startTime === 'string') input.startTime = ensureOffset(input.startTime)
+  if (typeof input.endTime === 'string') input.endTime = ensureOffset(input.endTime)
 
   const formatNotified = (parents: number, coaches: number): string => {
     if (parents === 0 && coaches === 0) return 'No one needed to be notified.'
@@ -221,7 +266,11 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
         const counts = await cancelEvent(input.eventId)
         const event = events.find(e => e.id === input.eventId)
         const name = event?.title ?? 'Event'
-        return { success: true, message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches)}` }
+        return {
+          success: true,
+          message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches)}`,
+          undoEventId: input.eventId,
+        }
       }
 
       case 'update_event_time': {
@@ -258,6 +307,30 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
         })
         const venue = venues.find(v => v.id === input.venueId)
         return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches)}` }
+      }
+
+      case 'create_event': {
+        // Validate the team exists in this club
+        const team = teams.find(t => t.id === input.teamId)
+        if (!team) return { success: false, message: 'Could not find that team.' }
+
+        await createEvent({
+          teamId: input.teamId,
+          type: input.type,
+          title: String(input.title ?? `${team.name} ${input.type}`).slice(0, 120),
+          startTime: input.startTime,
+          endTime: input.endTime,
+          venueId: input.venueId ?? null,
+          notes: input.notes ?? null,
+          recurring: { enabled: false, days: [], endDate: '' },
+        })
+
+        const start = new Date(input.startTime)
+        const timeStr = start.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+        const dateStr = start.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
+        const venueName = input.venueId ? venues.find(v => v.id === input.venueId)?.name : null
+        const venuePart = venueName ? ` at ${venueName}` : ''
+        return { success: true, message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. Parents will be notified.` }
       }
 
       default:

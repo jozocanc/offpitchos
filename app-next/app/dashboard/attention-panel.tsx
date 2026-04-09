@@ -4,6 +4,20 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { getAttentionList, type AttentionItem, type AttentionResult } from './attention-actions'
 
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime()
+  const now = Date.now()
+  const diffSec = Math.max(0, Math.round((now - then) / 1000))
+  if (diffSec < 30) return 'just now'
+  if (diffSec < 60) return `${diffSec}s ago`
+  const diffMin = Math.round(diffSec / 60)
+  if (diffMin < 60) return `${diffMin} min ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.round(diffHr / 24)
+  return `${diffDay}d ago`
+}
+
 const URGENCY_STYLES: Record<AttentionItem['urgency'], { dot: string; label: string; labelColor: string; border: string }> = {
   critical: {
     dot: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]',
@@ -30,12 +44,12 @@ export default function AttentionPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false) => {
     setLoading(true)
     setError(null)
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const result = await getAttentionList(timeZone)
+      const result = await getAttentionList(timeZone, forceRefresh)
       setData(result)
     } catch {
       setError('Could not load attention list.')
@@ -45,8 +59,15 @@ export default function AttentionPanel() {
   }, [])
 
   useEffect(() => {
-    load()
+    load(false)
   }, [load])
+
+  // Re-render once a minute so "Updated X ago" stays current without re-fetching
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick(n => n + 1), 60000)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <div className="mb-10">
@@ -58,14 +79,21 @@ export default function AttentionPanel() {
             <span className="text-sm font-bold text-green">— {data.items.length}</span>
           )}
         </h2>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="text-xs text-gray hover:text-white transition-colors disabled:opacity-50"
-          aria-label="Refresh attention list"
-        >
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <div className="flex items-center gap-3">
+          {data && (
+            <span className="text-xs text-gray">
+              Updated {formatRelative(data.generatedAt)}
+            </span>
+          )}
+          <button
+            onClick={() => load(true)}
+            disabled={loading}
+            className="text-xs text-gray hover:text-white transition-colors disabled:opacity-50"
+            aria-label="Refresh attention list"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {loading && !data && (

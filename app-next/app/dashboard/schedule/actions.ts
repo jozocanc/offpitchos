@@ -301,6 +301,31 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
   }
 }
 
+export async function restoreEvent(eventId: string): Promise<NotifyCounts> {
+  const { supabase } = await getUserProfile()
+
+  const { data: event, error } = await supabase
+    .from('events')
+    .update({ status: 'scheduled' })
+    .eq('id', eventId)
+    .select('title, team_id')
+    .single()
+
+  if (error) throw new Error(`Failed to restore event: ${error.message}`)
+
+  const counts = await notifyTeamMembers(
+    eventId,
+    event.team_id,
+    'event_updated',
+    `Event restored: ${event.title}`,
+  )
+
+  revalidatePath('/dashboard/schedule')
+  revalidatePath('/dashboard')
+
+  return counts
+}
+
 export async function cancelEvent(eventId: string): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 

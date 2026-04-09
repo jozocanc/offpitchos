@@ -33,7 +33,15 @@ interface TeamGearSummary {
   players: { id: string; firstName: string; lastName: string; jerseySize: string | null; shortsSize: string | null }[]
 }
 
-export async function getGearData(): Promise<{ teams: TeamGearSummary[]; userRole: string }> {
+export interface GearData {
+  teams: TeamGearSummary[]
+  userRole: string
+  lastRequestedAt: string | null
+  lastRequestedParentCount: number
+  respondedSinceRequest: number
+}
+
+export async function getGearData(): Promise<GearData> {
   const { profile, supabase } = await getUserProfile()
 
   const { data: teams } = await supabase
@@ -84,7 +92,39 @@ export async function getGearData(): Promise<{ teams: TeamGearSummary[]; userRol
     }
   })
 
-  return { teams: teamSummaries, userRole: profile.role }
+  // Last-requested tracking + response progress
+  const { data: settings } = await supabase
+    .from('club_settings')
+    .select('last_gear_size_request_at, last_gear_size_request_parent_count')
+    .eq('club_id', profile.club_id)
+    .maybeSingle()
+
+  const lastRequestedAt = settings?.last_gear_size_request_at ?? null
+  const lastRequestedParentCount = settings?.last_gear_size_request_parent_count ?? 0
+
+  let respondedSinceRequest = 0
+  if (lastRequestedAt) {
+    // Count distinct parents whose kids had a row update since the request AND
+    // whose kids now have both sizes filled.
+    const { data: updatedPlayers } = await supabase
+      .from('players')
+      .select('parent_id')
+      .eq('club_id', profile.club_id)
+      .not('jersey_size', 'is', null)
+      .not('shorts_size', 'is', null)
+      .gt('updated_at', lastRequestedAt)
+
+    const parentSet = new Set((updatedPlayers ?? []).map(p => p.parent_id))
+    respondedSinceRequest = parentSet.size
+  }
+
+  return {
+    teams: teamSummaries,
+    userRole: profile.role,
+    lastRequestedAt,
+    lastRequestedParentCount,
+    respondedSinceRequest,
+  }
 }
 
 export async function updatePlayerSize(playerId: string, jerseySize: string | null, shortsSize: string | null) {
@@ -160,9 +200,7 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
       const kidNames = kids.map(k => `${k.first_name} ${k.last_name}`).join(' and ')
       const firstKidId = kids[0].id
       const title = 'Gear sizes needed'
-      const message = kids.length === 1
-        ? `Please submit jersey and shorts sizes for ${kidNames}.`
-        : `Please submit jersey and shorts sizes for ${kidNames}.`
+      const message = `Please submit jersey and shorts sizes for ${kidNames}.`
 
       await sendPushToProfiles([parent.id], {
         title,
@@ -179,6 +217,20 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
       )
     })
   )
+
+  // Persist the request so we can show "last requested X ago" and track responses
+  await service
+    .from('club_settings')
+    .upsert(
+      {
+        club_id: profile.club_id,
+        last_gear_size_request_at: new Date().toISOString(),
+        last_gear_size_request_parent_count: parentProfiles.length,
+      },
+      { onConflict: 'club_id' }
+    )
+
+  revalidatePath('/dashboard/gear')
 
   return {
     parentsNotified: parentProfiles.length,
