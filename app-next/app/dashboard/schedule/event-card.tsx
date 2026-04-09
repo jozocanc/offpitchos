@@ -12,9 +12,10 @@ interface EventCardProps {
     end_time: string
     status: string
     notes: string | null
+    address: string | null
     recurrence_group: string | null
     teams: { name: string; age_group: string }[] | null
-    venues: { name: string }[] | null
+    venues: { name: string; address: string | null }[] | null
   }
   onEdit: (eventId: string) => void
   onCancel: (eventId: string) => void
@@ -84,14 +85,38 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
             {event.title}
           </p>
           <p className="text-gray text-sm mt-1">{timeStr}</p>
-          {event.venues?.[0]?.name && (
-            <p className="text-gray text-sm flex items-center gap-1">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-              </svg>
-              {event.venues[0].name}
-            </p>
-          )}
+          {(() => {
+            const venueName = event.venues?.[0]?.name ?? null
+            const effectiveAddress = event.address || event.venues?.[0]?.address || null
+            if (!venueName && !effectiveAddress) return null
+            const mapsHref = effectiveAddress
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(effectiveAddress)}`
+              : null
+            return (
+              <div className="text-gray text-sm mt-1">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>{venueName ?? 'Location'}</span>
+                  {mapsHref && (
+                    <a
+                      href={mapsHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="ml-1 text-xs font-semibold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2 py-0.5 transition-colors"
+                    >
+                      Open in Maps →
+                    </a>
+                  )}
+                </div>
+                {effectiveAddress && (
+                  <p className="text-xs text-gray/80 mt-0.5 pl-[18px]">{effectiveAddress}</p>
+                )}
+              </div>
+            )
+          })()}
           {event.notes && (
             <p className="text-gray text-xs mt-2 italic">{event.notes}</p>
           )}

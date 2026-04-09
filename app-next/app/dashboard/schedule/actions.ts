@@ -18,6 +18,7 @@ interface CreateEventInput {
   startTime: string
   endTime: string
   venueId: string | null
+  address?: string | null
   notes: string | null
   recurring: {
     enabled: boolean
@@ -32,6 +33,7 @@ interface UpdateEventInput {
   startTime: string
   endTime: string
   venueId: string | null
+  address?: string | null
   notes: string | null
   updateFuture: boolean // true = edit all future in series
 }
@@ -133,6 +135,7 @@ export async function createEvent(input: CreateEventInput) {
         start_time: input.startTime,
         end_time: input.endTime,
         venue_id: input.venueId,
+        address: input.address?.trim() || null,
         notes: input.notes?.trim() || null,
         status: 'scheduled',
         created_by: user.id,
@@ -142,7 +145,11 @@ export async function createEvent(input: CreateEventInput) {
 
     if (error) throw new Error(`Failed to create event: ${error.message}`)
 
-    await notifyTeamMembers(event.id, input.teamId, 'event_created', `New event: ${input.title.trim()}`)
+    const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
+    const createdMessage = locationLabel
+      ? `New event: ${input.title.trim()} at ${locationLabel}`
+      : `New event: ${input.title.trim()}`
+    await notifyTeamMembers(event.id, input.teamId, 'event_created', createdMessage)
   } else {
     // Recurring — generate individual events
     const recurrenceGroup = crypto.randomUUID()
@@ -161,6 +168,7 @@ export async function createEvent(input: CreateEventInput) {
       start_time: string
       end_time: string
       venue_id: string | null
+      address: string | null
       notes: string | null
       status: string
       created_by: string
@@ -187,6 +195,7 @@ export async function createEvent(input: CreateEventInput) {
           start_time: eventStart.toISOString(),
           end_time: eventEnd.toISOString(),
           venue_id: input.venueId,
+          address: input.address?.trim() || null,
           notes: input.notes?.trim() || null,
           status: 'scheduled',
           created_by: user.id,
@@ -220,6 +229,31 @@ export async function createEvent(input: CreateEventInput) {
   revalidatePath('/dashboard')
 }
 
+async function resolveLocationLabel(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  venueId: string | null,
+  address: string | null | undefined,
+): Promise<string | null> {
+  // Returns a human-readable "Venue name, Address" string (or just one, or null)
+  let venueName: string | null = null
+  let addr: string | null = address?.trim() || null
+
+  if (venueId) {
+    const { data: venue } = await supabase
+      .from('venues')
+      .select('name, address')
+      .eq('id', venueId)
+      .single()
+    venueName = venue?.name ?? null
+    if (!addr) addr = venue?.address ?? null
+  }
+
+  if (venueName && addr) return `${venueName}, ${addr}`
+  if (venueName) return venueName
+  if (addr) return addr
+  return null
+}
+
 export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
@@ -228,6 +262,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
     start_time: input.startTime,
     end_time: input.endTime,
     venue_id: input.venueId,
+    address: input.address?.trim() || null,
     notes: input.notes?.trim() || null,
   }
 
@@ -266,17 +301,23 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
             start_time: feStart.toISOString(),
             end_time: feEnd.toISOString(),
             venue_id: input.venueId,
+            address: input.address?.trim() || null,
             notes: input.notes?.trim() || null,
           })
           .eq('id', fe.id)
       }
     }
 
+    const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
+    const futureMessage = locationLabel
+      ? `Schedule updated: ${input.title.trim()} — now at ${locationLabel} (this and future events)`
+      : `Schedule updated: ${input.title.trim()} (this and future events)`
+
     const counts = await notifyTeamMembers(
       input.eventId,
       event.team_id,
       'event_updated',
-      `Schedule updated: ${input.title.trim()} (this and future events)`
+      futureMessage,
     )
 
     revalidatePath('/dashboard/schedule')
@@ -293,7 +334,12 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
 
     if (error) throw new Error(`Failed to update event: ${error.message}`)
 
-    const counts = await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', `Event updated: ${input.title.trim()}`)
+    const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
+    const singleMessage = locationLabel
+      ? `Event updated: ${input.title.trim()} — now at ${locationLabel}`
+      : `Event updated: ${input.title.trim()}`
+
+    const counts = await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', singleMessage)
 
     revalidatePath('/dashboard/schedule')
     revalidatePath('/dashboard')
@@ -370,9 +416,9 @@ export async function getPastEvents() {
     .from('events')
     .select(`
       id, team_id, type, title, start_time, end_time,
-      venue_id, recurrence_group, notes, status,
+      venue_id, address, recurrence_group, notes, status,
       teams ( name, age_group ),
-      venues ( name )
+      venues ( name, address )
     `)
     .eq('club_id', profile.club_id!)
     .gte('start_time', thirtyDaysAgo.toISOString())
@@ -393,9 +439,9 @@ export async function getScheduleData() {
     .from('events')
     .select(`
       id, team_id, type, title, start_time, end_time,
-      venue_id, recurrence_group, notes, status,
+      venue_id, address, recurrence_group, notes, status,
       teams ( name, age_group ),
-      venues ( name )
+      venues ( name, address )
     `)
     .eq('club_id', profile.club_id!)
     .gte('start_time', todayStart.toISOString())

@@ -27,6 +27,7 @@ interface EventData {
   start_time: string
   end_time: string
   venue_id: string | null
+  address: string | null
   notes: string | null
   recurrence_group: string | null
 }
@@ -48,6 +49,10 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
   const [startTime, setStartTime] = useState(editEvent ? formatTimeInput(new Date(editEvent.start_time)) : '')
   const [endTime, setEndTime] = useState(editEvent ? formatTimeInput(new Date(editEvent.end_time)) : '')
   const [venueId, setVenueId] = useState(editEvent?.venue_id ?? '')
+  const [address, setAddress] = useState(
+    editEvent?.address ?? (editEvent?.venue_id ? (venues.find(v => v.id === editEvent.venue_id)?.address ?? '') : '')
+  )
+  const [addressTouched, setAddressTouched] = useState(!!editEvent?.address)
   const [notes, setNotes] = useState(editEvent?.notes ?? '')
   const [recurringEnabled, setRecurringEnabled] = useState(false)
   const [recurringDays, setRecurringDays] = useState<number[]>([])
@@ -154,6 +159,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             startTime: startISO,
             endTime: endISO,
             venueId: venueId || null,
+            address: address.trim() || null,
             notes: notes.trim() || null,
             updateFuture,
           })
@@ -165,6 +171,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             startTime: startISO,
             endTime: endISO,
             venueId: venueId || null,
+            address: address.trim() || null,
             notes: notes.trim() || null,
             recurring: {
               enabled: recurringEnabled,
@@ -273,14 +280,37 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
         <label className="block text-sm font-medium text-gray mb-2">Venue</label>
         <select
           value={venueId}
-          onChange={e => setVenueId(e.target.value)}
-          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-4"
+          onChange={e => {
+            const newVenueId = e.target.value
+            setVenueId(newVenueId)
+            // Auto-fill the address from the selected venue, but don't clobber a manual edit
+            if (!addressTouched) {
+              const v = venues.find(vv => vv.id === newVenueId)
+              setAddress(v?.address ?? '')
+            }
+          }}
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-3"
         >
           <option value="">No venue selected</option>
           {venues.map(v => (
             <option key={v.id} value={v.id}>{v.name}</option>
           ))}
         </select>
+
+        {/* Address */}
+        <label className="block text-sm font-medium text-gray mb-2">
+          Address <span className="text-gray/70 font-normal">(optional · opens in Google Maps)</span>
+        </label>
+        <input
+          type="text"
+          value={address}
+          onChange={e => {
+            setAddress(e.target.value)
+            setAddressTouched(true)
+          }}
+          placeholder="e.g. 1700 Bayshore Blvd, Tampa, FL"
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
+        />
 
         {/* Conflict warnings */}
         <div className="mb-4">

@@ -11,9 +11,10 @@ interface Event {
   end_time: string
   status: string
   notes: string | null
+  address: string | null
   recurrence_group: string | null
   teams: { name: string; age_group: string }[] | null
-  venues: { name: string }[] | null
+  venues: { name: string; address: string | null }[] | null
 }
 
 interface AgendaViewProps {
