@@ -1,7 +1,11 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
+import AttentionPanel from './attention-panel'
+
+const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -17,7 +21,15 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  const userRole = profile?.role ?? 'parent'
+  // Respect the admin role switcher (same logic as layout)
+  let userRole = profile?.role ?? 'parent'
+  if (user.email === ADMIN_EMAIL) {
+    const cookieStore = await cookies()
+    const viewAs = cookieStore.get('viewAsRole')?.value
+    if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
+      userRole = viewAs
+    }
+  }
 
   // Count teams in the club
   const { count: teamCount } = profile?.club_id
@@ -89,6 +101,9 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-gray mt-1 text-sm">Here&apos;s what&apos;s happening with your club today.</p>
       </div>
+
+      {/* AI-prioritized attention list (DOC only) */}
+      {userRole === 'doc' && <AttentionPanel />}
 
       {/* Stat cards */}
       <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-10`}>

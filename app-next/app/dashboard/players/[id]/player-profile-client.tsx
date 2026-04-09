@@ -1,6 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import FeedbackForm from './feedback-form'
+import { submitPlayerSize } from './actions'
+import { useToast } from '@/components/toast'
+
+const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
 
 interface Feedback {
   id: string
@@ -38,15 +43,101 @@ const CATEGORY_EMOJI: Record<string, string> = {
   general: '📝',
 }
 
-export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, userRole, playerId }: {
+function GearSizesEditor({
+  playerId,
+  initialJersey,
+  initialShorts,
+  isParent,
+}: {
+  playerId: string
+  initialJersey: string | null
+  initialShorts: string | null
+  isParent: boolean
+}) {
+  const { toast } = useToast()
+  const [jersey, setJersey] = useState(initialJersey ?? '')
+  const [shorts, setShorts] = useState(initialShorts ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const hasChanges = jersey !== (initialJersey ?? '') || shorts !== (initialShorts ?? '')
+  const isIncomplete = !jersey || !shorts
+
+  async function handleSave() {
+    if (!hasChanges || saving) return
+    setSaving(true)
+    try {
+      await submitPlayerSize(playerId, jersey || null, shorts || null)
+      toast(isParent ? 'Sizes submitted · thank you!' : 'Sizes updated', 'success')
+    } catch (err: any) {
+      toast(err?.message ?? 'Failed to save sizes', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={`mt-5 pt-5 border-t border-white/5 ${isParent && isIncomplete ? 'bg-yellow-400/5 -mx-6 px-6 pt-4 pb-4 mt-5 rounded-b-xl border-t-yellow-400/20' : ''}`}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-bold text-white flex items-center gap-2">
+          Gear sizes
+          {isParent && isIncomplete && (
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-yellow-400/15 text-yellow-400 px-2 py-0.5 rounded-full">
+              Needed
+            </span>
+          )}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="block">
+          <span className="text-xs text-gray">Jersey</span>
+          <select
+            value={jersey}
+            onChange={e => setJersey(e.target.value)}
+            className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+          >
+            <option value="">—</option>
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs text-gray">Shorts</span>
+          <select
+            value={shorts}
+            onChange={e => setShorts(e.target.value)}
+            className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+          >
+            <option value="">—</option>
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges || saving}
+          className="bg-green text-dark font-bold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Saving…' : hasChanges ? 'Save' : 'Saved'}
+        </button>
+      </div>
+      {isParent && (
+        <p className="text-xs text-gray mt-3">
+          Your director uses these sizes to order gear for the club. Please keep them up to date.
+        </p>
+      )}
+    </div>
+  )
+}
+
+export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, userRole, playerId, isParent }: {
   player: Player
   feedback: Feedback[]
   recentEvents: RecentEvent[]
   categoryAverages: Record<string, { avg: number; count: number }>
   userRole: string
   playerId: string
+  isParent: boolean
 }) {
   const canAddFeedback = userRole === 'doc' || userRole === 'coach'
+  const canEditSize = isParent || userRole === 'doc' || userRole === 'coach'
   const team = player.teams as any
 
   return (
@@ -64,13 +155,22 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
               {player.position && <span>· {player.position}</span>}
             </div>
           </div>
-          {player.jersey_size && (
+          {!canEditSize && player.jersey_size && (
             <div className="text-right text-xs text-gray">
               <p>Jersey: {player.jersey_size}</p>
               {player.shorts_size && <p>Shorts: {player.shorts_size}</p>}
             </div>
           )}
         </div>
+
+        {canEditSize && (
+          <GearSizesEditor
+            playerId={playerId}
+            initialJersey={player.jersey_size}
+            initialShorts={player.shorts_size}
+            isParent={isParent}
+          />
+        )}
 
         {/* Category averages */}
         {Object.keys(categoryAverages).length > 0 && (

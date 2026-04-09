@@ -40,6 +40,7 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
 
   return (
     <div
+      data-event-id={event.id}
       className={`bg-dark-secondary rounded-xl p-4 border border-white/5 ${
         isCancelled ? 'opacity-50' : 'hover:border-green/20'
       } transition-colors`}

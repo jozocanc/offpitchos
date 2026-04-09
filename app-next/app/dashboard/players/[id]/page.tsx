@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { player, feedback, recentEvents, categoryAverages, userRole, userProfileId } = await getPlayerProfile(id)
+  const { player, feedback, recentEvents, categoryAverages, userRole, isParent } = await getPlayerProfile(id)
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -19,6 +19,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         categoryAverages={categoryAverages}
         userRole={userRole}
         playerId={id}
+        isParent={isParent}
       />
     </div>
   )

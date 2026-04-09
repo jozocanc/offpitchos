@@ -20,17 +20,19 @@ async function getUserProfile() {
 }
 
 export async function getPlayerProfile(playerId: string) {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   // Get player info
   const { data: player } = await supabase
     .from('players')
-    .select('id, first_name, last_name, jersey_number, position, date_of_birth, notes, jersey_size, shorts_size, team_id, teams(name, age_group)')
+    .select('id, first_name, last_name, jersey_number, position, date_of_birth, notes, jersey_size, shorts_size, team_id, parent_id, teams(name, age_group)')
     .eq('id', playerId)
     .eq('club_id', profile.club_id)
     .single()
 
   if (!player) throw new Error('Player not found')
+
+  const isParent = player.parent_id === user.id
 
   // Get feedback history
   const { data: feedback } = await supabase
@@ -69,7 +71,45 @@ export async function getPlayerProfile(playerId: string) {
     categoryAverages,
     userRole: profile.role,
     userProfileId: profile.id,
+    isParent,
   }
+}
+
+export async function submitPlayerSize(
+  playerId: string,
+  jerseySize: string | null,
+  shortsSize: string | null,
+) {
+  const { user, profile, supabase } = await getUserProfile()
+
+  // Verify the caller is either the parent of this player OR staff (doc/coach in this club)
+  const { data: player } = await supabase
+    .from('players')
+    .select('parent_id, club_id')
+    .eq('id', playerId)
+    .single()
+
+  if (!player) throw new Error('Player not found')
+
+  const isParent = player.parent_id === user.id
+  const isStaff = (profile.role === 'doc' || profile.role === 'coach') && player.club_id === profile.club_id
+
+  if (!isParent && !isStaff) {
+    throw new Error('You are not authorized to update this player')
+  }
+
+  const { error } = await supabase
+    .from('players')
+    .update({
+      jersey_size: jerseySize || null,
+      shorts_size: shortsSize || null,
+    })
+    .eq('id', playerId)
+
+  if (error) throw new Error(`Failed to update size: ${error.message}`)
+
+  revalidatePath(`/dashboard/players/${playerId}`)
+  revalidatePath('/dashboard/gear')
 }
 
 export async function addFeedback(input: {

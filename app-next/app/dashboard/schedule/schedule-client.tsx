@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { ROLES } from '@/lib/constants'
 import type { EventType } from '@/lib/constants'
 import Filters from './filters'
@@ -10,7 +10,6 @@ import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, getPastEvents } from './actions'
-import VoiceCommand from './voice-command'
 import { useToast } from '@/components/toast'
 
 interface Event {
@@ -55,9 +54,10 @@ interface ScheduleClientProps {
   }>
   userProfileId: string
   initialTeamFilter?: string | null
+  initialHighlight?: string | null
 }
 
-export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId, initialTeamFilter = null }: ScheduleClientProps) {
+export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId, initialTeamFilter = null, initialHighlight = null }: ScheduleClientProps) {
   const { toast } = useToast()
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
   const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
@@ -72,6 +72,22 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [, startTransition] = useTransition()
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
+
+  // Scroll to and flash-highlight an event when arriving via "Needs your attention"
+  useEffect(() => {
+    if (!initialHighlight) return
+    // Ensure we're in agenda view (calendar view doesn't render event cards the same way)
+    setView('agenda')
+    // Wait a tick for layout + mount
+    const t = setTimeout(() => {
+      const el = document.querySelector(`[data-event-id="${initialHighlight}"]`) as HTMLElement | null
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('attention-highlight')
+      setTimeout(() => el.classList.remove('attention-highlight'), 3200)
+    }, 100)
+    return () => clearTimeout(t)
+  }, [initialHighlight])
 
   async function togglePast() {
     if (!showPast && pastEvents.length === 0) {
@@ -170,15 +186,12 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           </div>
 
           {canEdit && (
-            <div className="flex items-center gap-2">
-              <VoiceCommand />
-              <button
-                onClick={handleAddNew}
-                className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
-              >
-                + Add Event
-              </button>
-            </div>
+            <button
+              onClick={handleAddNew}
+              className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
+            >
+              + Add Event
+            </button>
           )}
         </div>
       </div>

@@ -54,12 +54,17 @@ async function getUserProfile() {
   return { user, profile, supabase }
 }
 
+export interface NotifyCounts {
+  parents: number
+  coaches: number
+}
+
 async function notifyTeamMembers(
   eventId: string,
   teamId: string,
   type: 'event_created' | 'event_updated' | 'event_cancelled',
   message: string
-) {
+): Promise<NotifyCounts> {
   const service = createServiceClient()
 
   // Get all team members (coaches + parents)
@@ -68,7 +73,9 @@ async function notifyTeamMembers(
     .select('profile_id')
     .eq('team_id', teamId)
 
-  if (!members || members.length === 0) return
+  if (!members || members.length === 0) return { parents: 0, coaches: 0 }
+
+  const memberIds = members.map(m => m.profile_id)
 
   const notifications = members.map(m => ({
     profile_id: m.profile_id,
@@ -78,9 +85,23 @@ async function notifyTeamMembers(
   }))
 
   await service.from('notifications').insert(notifications)
-  const memberIds = members.map(m => m.profile_id)
   await sendPushToProfiles(memberIds, { title: 'OffPitchOS', message, url: '/dashboard/schedule', tag: type })
   sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
+
+  // Count by role so the caller can report "notified N parents and M coaches"
+  const { data: profiles } = await service
+    .from('profiles')
+    .select('role')
+    .in('id', memberIds)
+
+  let parents = 0
+  let coaches = 0
+  for (const p of profiles ?? []) {
+    if (p.role === 'parent') parents++
+    else if (p.role === 'coach' || p.role === 'doc') coaches++
+  }
+
+  return { parents, coaches }
 }
 
 // ---------- Actions ----------
@@ -199,7 +220,7 @@ export async function createEvent(input: CreateEventInput) {
   revalidatePath('/dashboard')
 }
 
-export async function updateEvent(input: UpdateEventInput) {
+export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
   const updates = {
@@ -251,12 +272,16 @@ export async function updateEvent(input: UpdateEventInput) {
       }
     }
 
-    await notifyTeamMembers(
+    const counts = await notifyTeamMembers(
       input.eventId,
       event.team_id,
       'event_updated',
       `Schedule updated: ${input.title.trim()} (this and future events)`
     )
+
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard')
+    return counts
   } else {
     // Single event update
     const { data: event, error } = await supabase
@@ -268,14 +293,15 @@ export async function updateEvent(input: UpdateEventInput) {
 
     if (error) throw new Error(`Failed to update event: ${error.message}`)
 
-    await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', `Event updated: ${input.title.trim()}`)
-  }
+    const counts = await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', `Event updated: ${input.title.trim()}`)
 
-  revalidatePath('/dashboard/schedule')
-  revalidatePath('/dashboard')
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard')
+    return counts
+  }
 }
 
-export async function cancelEvent(eventId: string) {
+export async function cancelEvent(eventId: string): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
   const { data: event, error } = await supabase
@@ -287,10 +313,12 @@ export async function cancelEvent(eventId: string) {
 
   if (error) throw new Error(`Failed to cancel event: ${error.message}`)
 
-  await notifyTeamMembers(eventId, event.team_id, 'event_cancelled', `Event cancelled: ${event.title}`)
+  const counts = await notifyTeamMembers(eventId, event.team_id, 'event_cancelled', `Event cancelled: ${event.title}`)
 
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard')
+
+  return counts
 }
 
 export async function deleteEvent(eventId: string) {

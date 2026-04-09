@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Sidebar from '@/components/sidebar'
 import { ToastProvider } from '@/components/toast'
+import VoiceCommand from '@/components/voice-command'
 
 const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
 
@@ -44,6 +45,7 @@ export default async function DashboardLayout({
         <main className="flex-1 overflow-auto">
           {children}
         </main>
+        <VoiceCommand userRole={effectiveRole} />
       </ToastProvider>
     </div>
   )

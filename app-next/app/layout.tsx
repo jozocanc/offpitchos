@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AccessGate from "@/components/access-gate";
@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://offpitchos.com"),
   manifest: "/manifest.json",
-  themeColor: "#0A1628",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -24,6 +23,10 @@ export const metadata: Metadata = {
     description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
     siteName: "OffPitchOS",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A1628",
 };
 
 export default function RootLayout({

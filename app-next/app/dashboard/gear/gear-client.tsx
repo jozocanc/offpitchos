@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { updatePlayerSize } from './actions'
+import { updatePlayerSize, requestMissingSizes } from './actions'
+import { useToast } from '@/components/toast'
 
 const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
 const SHORTS_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
@@ -27,6 +28,9 @@ interface TeamGearSummary {
 
 export default function GearClient({ teams, userRole }: { teams: TeamGearSummary[]; userRole: string }) {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
+  const [requesting, setRequesting] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
   const isDoc = userRole === 'doc'
 
   // Club-wide totals
@@ -46,8 +50,98 @@ export default function GearClient({ teams, userRole }: { teams: TeamGearSummary
     }
   }
 
+  async function handleRequestSizes() {
+    if (requesting) return
+    setRequesting(true)
+    try {
+      const result = await requestMissingSizes()
+      if (result.alreadyComplete) {
+        toast('All sizes already submitted · nothing to request', 'success')
+      } else if (result.parentsNotified === 0) {
+        toast('No parents with notifications enabled were found', 'error')
+      } else {
+        toast(`Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'} (${result.kidsNeedingSizes} ${result.kidsNeedingSizes === 1 ? 'kid' : 'kids'})`, 'success')
+      }
+    } catch (err: any) {
+      toast(err?.message ?? 'Failed to request sizes', 'error')
+    } finally {
+      setRequesting(false)
+    }
+  }
+
+  function handleCopyOrder() {
+    const lines: string[] = []
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    lines.push(`OffPitchOS club gear order — ${today}`)
+    lines.push('')
+
+    const sortedSizes = Object.keys({ ...clubJerseys, ...clubShorts })
+    const order = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
+    sortedSizes.sort((a, b) => order.indexOf(a) - order.indexOf(b))
+
+    const jerseyTotal = Object.values(clubJerseys).reduce((s, n) => s + n, 0)
+    lines.push(`JERSEYS (${jerseyTotal} total)`)
+    for (const size of order) {
+      if (clubJerseys[size]) lines.push(`  ${size} × ${clubJerseys[size]}`)
+    }
+    lines.push('')
+
+    const shortsTotal = Object.values(clubShorts).reduce((s, n) => s + n, 0)
+    lines.push(`SHORTS (${shortsTotal} total)`)
+    for (const size of order) {
+      if (clubShorts[size]) lines.push(`  ${size} × ${clubShorts[size]}`)
+    }
+
+    if (totalMissing > 0) {
+      lines.push('')
+      lines.push(`⚠ ${totalMissing} player${totalMissing === 1 ? '' : 's'} still missing sizes — not included above.`)
+    }
+
+    const text = lines.join('\n')
+
+    try {
+      navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast('Order copied to clipboard', 'success')
+    } catch {
+      toast('Copy failed — try again', 'error')
+    }
+  }
+
   return (
     <div>
+      {/* DOC action bar */}
+      {isDoc && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <button
+            onClick={handleRequestSizes}
+            disabled={requesting || totalMissing === 0}
+            className="bg-green text-dark font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            title={totalMissing === 0 ? 'All sizes already submitted' : `Request sizes from parents with ${totalMissing} missing`}
+          >
+            {requesting ? (
+              <>
+                <span className="inline-block w-2 h-2 bg-dark/60 rounded-full animate-pulse" />
+                Sending…
+              </>
+            ) : (
+              <>
+                📨 Request sizes from parents
+                {totalMissing > 0 && <span className="bg-dark/20 text-dark px-1.5 py-0.5 rounded text-[10px] font-bold">{totalMissing}</span>}
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleCopyOrder}
+            disabled={totalPlayers - totalMissing === 0}
+            className="bg-white/5 text-white border border-white/10 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {copied ? '✓ Copied' : '📋 Copy order to clipboard'}
+          </button>
+        </div>
+      )}
+
       {/* Club-wide summary */}
       {isDoc && (
         <div className="mb-8">

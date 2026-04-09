@@ -7,10 +7,10 @@ export const metadata: Metadata = { title: 'Schedule' }
 export default async function SchedulePage({
   searchParams,
 }: {
-  searchParams: Promise<{ team?: string }>
+  searchParams: Promise<{ team?: string; highlight?: string }>
 }) {
   const data = await getScheduleData()
-  const { team: initialTeam } = await searchParams
+  const { team: initialTeam, highlight: initialHighlight } = await searchParams
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -22,6 +22,7 @@ export default async function SchedulePage({
         coverageRequests={data.coverageRequests}
         userProfileId={data.userProfileId}
         initialTeamFilter={initialTeam ?? null}
+        initialHighlight={initialHighlight ?? null}
       />
     </div>
   )

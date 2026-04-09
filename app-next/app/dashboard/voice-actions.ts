@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
-import { cancelEvent, updateEvent } from './actions'
+import { cancelEvent, updateEvent } from './schedule/actions'
 import { ROLES } from '@/lib/constants'
 
 const anthropic = new Anthropic({
@@ -64,9 +64,40 @@ const tools: Anthropic.Messages.Tool[] = [
   },
 ]
 
-function buildContext(events: any[], teams: any[], venues: any[]): string {
+function getTimezoneOffsetString(timeZone: string, atDate: Date): string {
+  // Returns offset for `timeZone` at `atDate` as "+HH:MM" or "-HH:MM"
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'longOffset',
+      year: 'numeric',
+    })
+    const parts = dtf.formatToParts(atDate)
+    const tzName = parts.find(p => p.type === 'timeZoneName')?.value ?? 'GMT+00:00'
+    // tzName is like "GMT-04:00" or "GMT+05:30" or "GMT" (for UTC)
+    const match = tzName.match(/GMT([+-])(\d{2}):?(\d{2})?/)
+    if (!match) return '+00:00'
+    return `${match[1]}${match[2]}:${match[3] ?? '00'}`
+  } catch {
+    return '+00:00'
+  }
+}
+
+function buildContext(events: any[], teams: any[], venues: any[], timeZone: string): string {
   const now = new Date()
-  let text = `Current date/time: ${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}\n\n`
+  const offset = getTimezoneOffsetString(timeZone, now)
+  const zonedNow = now.toLocaleString('en-US', {
+    timeZone,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+  let text = `User timezone: ${timeZone} (UTC offset ${offset})\n`
+  text += `Current date/time (in user timezone): ${zonedNow}\n\n`
 
   text += `## Teams\n`
   for (const t of teams) {
@@ -80,13 +111,11 @@ function buildContext(events: any[], teams: any[], venues: any[]): string {
 
   text += `\n## Upcoming Events\n`
   for (const e of events) {
-    const start = new Date(e.start_time)
-    const end = new Date(e.end_time)
-    const dateStr = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    const timeStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    const endStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    const venue = e.venues?.name ?? 'TBD'
-    const team = e.teams?.name ?? 'Club'
+    const dateStr = new Date(e.start_time).toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
+    const timeStr = new Date(e.start_time).toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+    const endStr = new Date(e.end_time).toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+    const venue = e.venues?.[0]?.name ?? e.venues?.name ?? 'TBD'
+    const team = e.teams?.[0]?.name ?? e.teams?.name ?? 'Club'
     const status = e.status === 'cancelled' ? ' [CANCELLED]' : ''
     text += `- ID: ${e.id} | ${dateStr} ${timeStr}-${endStr} | ${e.title} (${e.type}) | ${team} | at ${venue}${status}\n`
   }
@@ -106,9 +135,15 @@ Rules:
 - "Tonight" means today's date. "Tomorrow" means tomorrow. Interpret relative dates from the current date/time.
 - When updating time, preserve the event duration unless told otherwise.
 - Only use tools when you're confident about the match. If multiple events could match, ask which one.
-- When you successfully execute a tool, respond with a short confirmation message describing what you did.`
+- When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
-export async function executeVoiceCommand(transcript: string): Promise<{ success: boolean; message: string }> {
+CRITICAL — Timezone handling:
+- All times in the schedule data below are shown in the USER'S LOCAL TIMEZONE.
+- When calling update_event_time, ALWAYS include the user's UTC offset in the ISO 8601 string.
+- Example: if the user's offset is -04:00 and they want 3:00 PM on April 10, return "2026-04-10T15:00:00-04:00" — NOT "2026-04-10T15:00:00" and NOT "2026-04-10T15:00:00Z".
+- The user's current offset is given in the context below. Use it verbatim.`
+
+export async function executeVoiceCommand(transcript: string, timeZone: string = 'UTC'): Promise<{ success: boolean; message: string }> {
   if (!transcript.trim()) return { success: false, message: 'No command received.' }
 
   const { profile, supabase } = await getUserProfile()
@@ -138,7 +173,7 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
   const teams = teamsRes.data ?? []
   const venues = venuesRes.data ?? []
 
-  const context = buildContext(events, teams, venues)
+  const context = buildContext(events, teams, venues, timeZone)
 
   // Call Claude with tools
   const response = await anthropic.messages.create({
@@ -161,20 +196,39 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
 
   const input = toolUse.input as Record<string, any>
 
+  // Safety net: if Claude forgot the offset, append the user's offset to naive ISO strings
+  const naiveIsoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
+  const userOffset = getTimezoneOffsetString(timeZone, now)
+  const ensureOffset = (iso: string | undefined): string | undefined => {
+    if (!iso) return iso
+    if (naiveIsoRegex.test(iso)) return iso + userOffset
+    return iso
+  }
+  if (typeof input.newStartTime === 'string') input.newStartTime = ensureOffset(input.newStartTime)
+  if (typeof input.newEndTime === 'string') input.newEndTime = ensureOffset(input.newEndTime)
+
+  const formatNotified = (parents: number, coaches: number): string => {
+    if (parents === 0 && coaches === 0) return 'No one needed to be notified.'
+    const parts: string[] = []
+    if (parents > 0) parts.push(`${parents} ${parents === 1 ? 'parent' : 'parents'}`)
+    if (coaches > 0) parts.push(`${coaches} ${coaches === 1 ? 'coach' : 'coaches'}`)
+    return `Notified ${parts.join(' and ')}.`
+  }
+
   try {
     switch (toolUse.name) {
       case 'cancel_event': {
-        await cancelEvent(input.eventId)
+        const counts = await cancelEvent(input.eventId)
         const event = events.find(e => e.id === input.eventId)
         const name = event?.title ?? 'Event'
-        return { success: true, message: `Done — "${name}" has been cancelled and everyone has been notified.` }
+        return { success: true, message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches)}` }
       }
 
       case 'update_event_time': {
         const event = events.find(e => e.id === input.eventId)
         if (!event) return { success: false, message: 'Could not find that event.' }
 
-        await updateEvent({
+        const counts = await updateEvent({
           eventId: input.eventId,
           title: event.title,
           startTime: input.newStartTime,
@@ -186,14 +240,14 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
         const newStart = new Date(input.newStartTime)
         const timeStr = newStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         const dateStr = newStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-        return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. Everyone has been notified.` }
+        return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches)}` }
       }
 
       case 'update_event_venue': {
         const event = events.find(e => e.id === input.eventId)
         if (!event) return { success: false, message: 'Could not find that event.' }
 
-        await updateEvent({
+        const counts = await updateEvent({
           eventId: input.eventId,
           title: event.title,
           startTime: event.start_time,
@@ -203,7 +257,7 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
           updateFuture: false,
         })
         const venue = venues.find(v => v.id === input.venueId)
-        return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. Everyone has been notified.` }
+        return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches)}` }
       }
 
       default:
