@@ -9,6 +9,7 @@ import RevokeInviteButton from './revoke-invite-button'
 import AddPlayerForm from './add-player-form'
 import RemovePlayerButton from './remove-player-button'
 import LinkParentMenu from './link-parent-menu'
+import GroupChatLink from './group-chat-link'
 
 interface Member {
   profile_id: string
@@ -67,7 +68,7 @@ export default async function TeamDetailPage({
 
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, age_group')
+    .select('id, name, age_group, group_chat_link')
     .eq('id', id)
     .eq('club_id', clubId)
     .single()
@@ -190,6 +191,18 @@ export default async function TeamDetailPage({
           {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} />}
         </div>
       </div>
+
+      {/* Group chat link — prominent for parents, compact for DOC */}
+      {(isParent || isDOC) && (
+        <div className="mb-6">
+          <GroupChatLink
+            teamId={team.id}
+            teamName={team.name}
+            currentLink={(team as any).group_chat_link ?? null}
+            isDOC={isDOC}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column: Members */}

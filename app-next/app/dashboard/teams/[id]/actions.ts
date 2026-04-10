@@ -75,6 +75,30 @@ export async function updateTeam(teamId: string, name: string, ageGroup: string)
   revalidatePath('/dashboard/teams')
 }
 
+export async function updateGroupChatLink(teamId: string, link: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can set the group chat link')
+
+  const { error } = await supabase
+    .from('teams')
+    .update({ group_chat_link: link.trim() || null })
+    .eq('id', teamId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to update link: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+}
+
 export async function deleteTeam(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
