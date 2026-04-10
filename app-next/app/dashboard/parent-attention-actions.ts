@@ -152,7 +152,10 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
   const signals: ParentSignal[] = []
 
   // --- Signal 1: Claim your kids ----------------------------------------
-  if (claimable.length > 0) {
+  // Only show if the parent has ZERO claimed kids. Once they've linked at
+  // least one child, the remaining unlinked players on the team belong to
+  // other families — not this parent's problem.
+  if (claimable.length > 0 && myPlayers.length === 0) {
     signals.push({
       id: `claim:${profile.id}`,
       type: 'claim_kids',
