@@ -442,6 +442,23 @@ export async function checkAndEscalateTimeouts() {
   }
 }
 
+// Returns other coaches in the club (excluding the caller). Used by the
+// "Can't Attend" modal so a coach can directly assign a replacement
+// instead of broadcasting to everyone.
+export async function getAvailableCoaches(): Promise<Array<{ id: string; display_name: string | null }>> {
+  const { profile, supabase } = await getUserProfile()
+
+  const { data: coaches } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .eq('club_id', profile.club_id!)
+    .eq('role', 'coach')
+    .neq('id', profile.id)
+    .order('display_name')
+
+  return coaches ?? []
+}
+
 export async function getCoverageData() {
   const { user, profile, supabase } = await getUserProfile()
 
