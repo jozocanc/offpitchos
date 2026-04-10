@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { checkAndEscalateTimeouts } from '../coverage/actions'
 import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
@@ -445,7 +446,7 @@ export async function getPastEvents() {
 }
 
 export async function getScheduleData() {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   // Only load today and future events (past events are rarely needed)
   const todayStart = new Date()
@@ -490,7 +491,7 @@ export async function getScheduleData() {
     teams: teams ?? [],
     venues: venues ?? [],
     coverageRequests: coverageRequests ?? [],
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
   }
 }

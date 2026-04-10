@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -249,7 +250,7 @@ export interface AudienceCounts {
 }
 
 export async function getMessagesData() {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
   const service = createServiceClient()
 
   const { data: announcements } = await supabase
@@ -354,7 +355,7 @@ export async function getMessagesData() {
   return {
     announcements: announcementsWithStats,
     teams: teams ?? [],
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
     audienceByTeam,
     clubWideAudience: clubWide,

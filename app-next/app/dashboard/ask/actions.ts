@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { askClubQuestion } from '@/lib/ai'
 
 async function getUserProfile() {
@@ -20,13 +21,13 @@ async function getUserProfile() {
 }
 
 export async function getAskPageData() {
-  const { profile } = await getUserProfile()
+  const { user, profile } = await getUserProfile()
 
   // Ask Ref always starts with a fresh conversation. Prior chats are still
   // persisted to ai_chats (for the DOC AI Log), but we don't restore them
   // into the chat UI across page loads.
   return {
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     chatHistory: [] as { id: string; question: string; answer: string; created_at: string }[],
   }
 }

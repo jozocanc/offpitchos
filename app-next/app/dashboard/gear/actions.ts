@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -42,7 +43,7 @@ export interface GearData {
 }
 
 export async function getGearData(): Promise<GearData> {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   const { data: teams } = await supabase
     .from('teams')
@@ -120,7 +121,7 @@ export async function getGearData(): Promise<GearData> {
 
   return {
     teams: teamSummaries,
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     lastRequestedAt,
     lastRequestedParentCount,
     respondedSinceRequest,

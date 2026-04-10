@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -69,7 +70,7 @@ export async function getPlayerProfile(playerId: string) {
     feedback: feedback ?? [],
     recentEvents: recentEvents ?? [],
     categoryAverages,
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
     isParent,
   }

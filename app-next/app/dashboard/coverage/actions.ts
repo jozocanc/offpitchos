@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { autoAssignCoverage, rankCoverageCandidates, type RankedCandidate } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
@@ -442,7 +443,7 @@ export async function checkAndEscalateTimeouts() {
 }
 
 export async function getCoverageData() {
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   await checkAndEscalateTimeouts()
 
@@ -475,7 +476,7 @@ export async function getCoverageData() {
     requests: requests ?? [],
     responses: responses ?? [],
     coaches: coaches ?? [],
-    userRole: profile.role,
+    userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
   }
 }
