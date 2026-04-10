@@ -17,11 +17,7 @@
       --white: #FFFFFF;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
@@ -38,563 +34,195 @@
                   var(--dark);
     }
 
-    .deck {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-    }
+    .deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
 
     .slide {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: center;
       padding: 8vh 10vw;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(20px);
+      opacity: 0; pointer-events: none; transform: translateY(20px);
       transition: opacity 0.4s ease, transform 0.4s ease;
     }
+    .slide.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
-    .slide.active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-    }
+    .brand { position: absolute; top: 5vh; left: 10vw; font-size: 16px; font-weight: 900; letter-spacing: -0.5px; }
+    .brand .os { color: var(--green); }
 
-    /* Brand tag */
-    .brand {
-      position: absolute;
-      top: 5vh;
-      left: 10vw;
-      font-size: 16px;
-      font-weight: 900;
-      letter-spacing: -0.5px;
-    }
-
-    .brand .os {
-      color: var(--green);
-    }
-
-    /* Slide numbers / progress */
     .meta {
-      position: absolute;
-      bottom: 5vh;
-      left: 10vw;
-      right: 10vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-      color: var(--gray);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      font-weight: 600;
-      pointer-events: none;
-    }
-
-    .progress {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 3px;
-      background: var(--green);
-      box-shadow: 0 0 12px var(--green-glow);
-      transition: width 0.4s ease;
-    }
-
-    /* Typography */
-    h1 {
-      font-size: clamp(40px, 6vw, 88px);
-      font-weight: 900;
-      letter-spacing: -2px;
-      line-height: 1;
-      margin-bottom: 32px;
-      max-width: 16ch;
-    }
-
-    h1 .accent {
-      color: var(--green);
+      position: absolute; bottom: 5vh; left: 10vw; right: 10vw;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--gray); letter-spacing: 0.5px;
+      text-transform: uppercase; font-weight: 600; pointer-events: none;
     }
 
     .eyebrow {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--green);
-      margin-bottom: 24px;
+      font-size: 13px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--green); margin-bottom: 20px;
     }
 
+    h1 {
+      font-size: clamp(28px, 4vw, 56px); font-weight: 900;
+      line-height: 1.1; letter-spacing: -1px; max-width: 900px; margin-bottom: 24px;
+    }
+
+    .accent { color: var(--green); }
+
     .body {
-      font-size: clamp(18px, 1.6vw, 24px);
-      color: var(--gray);
-      line-height: 1.5;
-      max-width: 42ch;
-      font-weight: 400;
+      font-size: clamp(16px, 1.4vw, 22px); color: var(--gray);
+      line-height: 1.6; max-width: 680px;
     }
 
     .tagline {
-      font-size: clamp(16px, 1.3vw, 20px);
-      color: var(--gray);
-      font-style: italic;
-      margin-top: 24px;
+      margin-top: 16px; font-size: clamp(14px, 1.1vw, 18px);
+      color: var(--green); font-weight: 700; letter-spacing: -0.3px;
     }
 
-    /* Pricing table */
-    .pricing {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      margin-top: 48px;
-      max-width: 1000px;
-    }
-
-    .tier {
-      background: var(--dark-secondary);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 32px 28px;
-      position: relative;
-    }
-
-    .tier.featured {
-      border-color: var(--green);
-      box-shadow: 0 0 40px rgba(0, 255, 135, 0.15);
-    }
-
-    .tier.featured::before {
-      content: 'MOST POPULAR';
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--green);
-      color: var(--dark);
-      font-size: 10px;
-      font-weight: 800;
-      padding: 6px 12px;
-      border-radius: 999px;
-      letter-spacing: 1px;
-    }
-
-    .tier-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--gray);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-    }
-
-    .tier-price {
-      font-size: 48px;
-      font-weight: 900;
-      letter-spacing: -1.5px;
-      color: var(--white);
-      line-height: 1;
-    }
-
-    .tier-price small {
-      font-size: 18px;
-      color: var(--gray);
-      font-weight: 600;
-      margin-left: 4px;
-    }
-
-    .tier-limit {
-      font-size: 14px;
-      color: var(--gray);
-      margin-top: 8px;
-    }
-
-    .pilot-note {
-      margin-top: 32px;
-      font-size: 14px;
-      color: var(--gray);
-      max-width: 700px;
-    }
-
-    .pilot-note strong {
-      color: var(--green);
-    }
-
-    /* Ask slide */
-    .ask-list {
-      list-style: none;
-      margin-top: 32px;
-      max-width: 600px;
-    }
-
-    .ask-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      padding: 16px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: clamp(16px, 1.3vw, 20px);
-      color: var(--white);
-    }
-
-    .ask-list li::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      margin-top: 10px;
-      flex-shrink: 0;
+    .progress {
+      position: absolute; bottom: 0; left: 0; height: 3px;
+      background: var(--green); transition: width 0.3s ease;
       box-shadow: 0 0 12px var(--green-glow);
     }
 
-    /* Solution slide big text */
-    .solution h1 {
-      max-width: 20ch;
-    }
-
-    /* Help text (bottom-right always visible) */
     .help {
-      position: fixed;
-      bottom: 2vh;
-      right: 2vw;
-      font-size: 10px;
-      color: rgba(148, 163, 184, 0.4);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      pointer-events: none;
+      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; color: rgba(148, 163, 184, 0.4); font-weight: 500;
+      pointer-events: none; letter-spacing: 0.3px;
     }
 
-    /* Cursor on active area */
-    .deck {
-      cursor: default;
+    /* Feature grid */
+    .features {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-top: 40px; max-width: 980px;
     }
-
-    /* Closing contact slide */
-    .contact {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
-    .contact h1 {
-      margin-bottom: 48px;
-    }
-
-    .contact-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      max-width: 800px;
-      width: 100%;
-    }
-
-    .contact-card {
+    .feature-card {
       background: var(--dark-secondary);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 32px 28px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 24px;
     }
-
-    .contact-card.featured {
-      border-color: var(--green);
-      box-shadow: 0 0 40px rgba(0, 255, 135, 0.15);
+    .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 {
+      font-size: 15px; font-weight: 800; color: var(--white); margin-bottom: 8px;
     }
+    .feature-card p { font-size: 13px; color: var(--gray); line-height: 1.5; }
 
-    .contact-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--gray);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 12px;
+    /* Three views */
+    .views {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-top: 40px; max-width: 980px;
     }
-
-    .contact-value {
-      font-size: clamp(18px, 1.6vw, 24px);
-      font-weight: 700;
-      color: var(--white);
-      word-break: break-word;
+    .view-card {
+      background: var(--dark-secondary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 28px;
     }
-
-    .contact-card a.contact-value {
-      color: var(--green);
-      text-decoration: none;
+    .view-card.highlight { border-color: var(--green); box-shadow: 0 0 40px rgba(0, 255, 135, 0.12); }
+    .view-card .role {
+      font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--gray); margin-bottom: 10px;
     }
-
-    .contact-card a.contact-value:hover {
-      opacity: 0.8;
+    .view-card.highlight .role { color: var(--green); }
+    .view-card h3 {
+      font-size: clamp(18px, 1.5vw, 22px); font-weight: 900; color: var(--white);
+      margin-bottom: 14px; line-height: 1.2;
     }
-
-    .contact-signoff {
-      margin-top: 48px;
-      font-size: clamp(18px, 1.5vw, 22px);
-      color: var(--gray);
-      font-style: italic;
-      max-width: 600px;
+    .view-card ul { list-style: none; }
+    .view-card li {
+      padding: 7px 0; font-size: 13px; color: var(--gray);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex; align-items: center; gap: 8px;
     }
+    .view-card li:last-child { border-bottom: none; }
+    .view-card li::before { content: '✓'; color: var(--green); font-weight: 900; font-size: 13px; }
 
-    .contact-signoff strong {
-      color: var(--green);
-      font-style: normal;
-      font-weight: 800;
-    }
-
-    /* Voice demo (slide 3) */
+    /* Voice demo */
     .voice-demo {
-      margin-top: 40px;
-      max-width: 640px;
+      margin-top: 40px; max-width: 640px;
       background: var(--dark-secondary);
       border: 1px solid rgba(0, 255, 135, 0.25);
-      border-radius: 24px;
-      padding: 32px 36px;
+      border-radius: 24px; padding: 32px 36px;
       box-shadow: 0 0 60px rgba(0, 255, 135, 0.1);
     }
-
-    .voice-demo .mic-row {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
+    .voice-demo .mic-row { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
     .voice-demo .mic {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--green);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 24px var(--green-glow);
-      flex-shrink: 0;
+      width: 44px; height: 44px; border-radius: 50%; background: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 24px var(--green-glow); flex-shrink: 0;
     }
-
-    .voice-demo .mic svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    .voice-demo .command {
-      font-size: clamp(18px, 1.8vw, 26px);
-      font-weight: 600;
-      color: var(--white);
-      line-height: 1.3;
-    }
-
-    .voice-demo .arrow {
-      font-size: 22px;
-      color: var(--gray);
-      margin: 14px 0 14px 62px;
-      line-height: 1;
-    }
-
-    .voice-demo .results {
-      list-style: none;
-      margin-left: 62px;
-    }
-
+    .voice-demo .mic svg { width: 22px; height: 22px; }
+    .voice-demo .command { font-size: clamp(18px, 1.8vw, 26px); font-weight: 600; color: var(--white); line-height: 1.3; }
+    .voice-demo .arrow { font-size: 22px; color: var(--gray); margin: 14px 0 14px 62px; }
+    .voice-demo .results { list-style: none; margin-left: 62px; }
     .voice-demo .results li {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 9px 0;
-      font-size: clamp(15px, 1.2vw, 18px);
-      color: var(--white);
+      display: flex; align-items: center; gap: 14px; padding: 9px 0;
+      font-size: clamp(15px, 1.2vw, 18px); color: var(--white);
     }
+    .voice-demo .results li .check { color: var(--green); font-weight: 900; font-size: 18px; }
 
-    .voice-demo .results li .check {
-      color: var(--green);
-      font-weight: 900;
-      font-size: 18px;
-    }
-
-    /* Comparison (slide 4) */
-    .compare {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-top: 48px;
-      max-width: 980px;
-    }
-
+    /* Comparison */
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; max-width: 980px; }
     .compare-col {
-      background: var(--dark-secondary);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 32px;
+      background: var(--dark-secondary); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 32px;
     }
+    .compare-col.ours { border-color: var(--green); box-shadow: 0 0 40px rgba(0, 255, 135, 0.12); }
+    .compare-col h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--gray); margin-bottom: 10px; }
+    .compare-col.ours h3 { color: var(--green); }
+    .compare-col .verdict { font-size: clamp(22px, 2.2vw, 32px); font-weight: 900; color: var(--white); margin-bottom: 20px; line-height: 1.1; }
+    .compare-col ul { list-style: none; }
+    .compare-col li { padding: 10px 0; font-size: clamp(14px, 1.1vw, 16px); color: var(--gray); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: flex-start; gap: 10px; }
+    .compare-col li:last-child { border-bottom: none; }
+    .compare-col li::before { content: '—'; color: var(--gray); flex-shrink: 0; }
+    .compare-col.ours li { color: var(--white); }
+    .compare-col.ours li::before { content: '✓'; color: var(--green); font-weight: 900; }
 
-    .compare-col.ours {
-      border-color: var(--green);
-      box-shadow: 0 0 40px rgba(0, 255, 135, 0.12);
+    /* Ask list */
+    .ask-list { list-style: none; margin-top: 36px; max-width: 700px; }
+    .ask-list li {
+      padding: 16px 0; font-size: clamp(16px, 1.3vw, 20px); color: var(--white);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; gap: 14px; font-weight: 600;
     }
+    .ask-list li::before { content: '→'; color: var(--green); font-weight: 900; font-size: 20px; }
 
-    .compare-col h3 {
-      font-size: 13px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--gray);
-      margin-bottom: 10px;
+    /* Contact */
+    .contact-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 40px; max-width: 600px; }
+    .contact-card { background: var(--dark-secondary); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 32px 28px; }
+    .contact-card.featured { border-color: var(--green); box-shadow: 0 0 40px rgba(0, 255, 135, 0.15); }
+    .contact-label { font-size: 12px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; }
+    .contact-value { font-size: clamp(18px, 1.6vw, 24px); font-weight: 700; color: var(--white); word-break: break-word; }
+    .contact-card a.contact-value { color: var(--green); text-decoration: none; }
+    .contact-card a.contact-value:hover { opacity: 0.8; }
+    .contact-signoff { margin-top: 48px; font-size: clamp(18px, 1.5vw, 22px); color: var(--gray); font-style: italic; max-width: 600px; }
+    .contact-signoff strong { color: var(--green); font-style: normal; font-weight: 800; }
+
+    /* Live badge */
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0, 255, 135, 0.1); border: 1px solid rgba(0, 255, 135, 0.3);
+      border-radius: 100px; padding: 8px 20px; margin-top: 24px;
+      font-size: 14px; font-weight: 700; color: var(--green);
     }
-
-    .compare-col.ours h3 {
-      color: var(--green);
+    .live-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 8px var(--green-glow); animation: pulse 2s infinite;
     }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    .compare-col .verdict {
-      font-size: clamp(22px, 2.2vw, 32px);
-      font-weight: 900;
-      color: var(--white);
-      margin-bottom: 20px;
-      line-height: 1.1;
-      letter-spacing: -0.5px;
-    }
-
-    .compare-col ul {
-      list-style: none;
-    }
-
-    .compare-col li {
-      padding: 10px 0;
-      font-size: clamp(14px, 1.1vw, 16px);
-      color: var(--gray);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .compare-col li:last-child {
-      border-bottom: none;
-    }
-
-    .compare-col li::before {
-      content: '—';
-      color: var(--gray);
-      flex-shrink: 0;
-    }
-
-    .compare-col.ours li {
-      color: var(--white);
-    }
-
-    .compare-col.ours li::before {
-      content: '✓';
-      color: var(--green);
-      font-weight: 900;
-    }
-
-    /* ============================================================
-       Mobile (≤720px) — switch from fixed-slide deck to scrollable
-       ============================================================ */
+    /* Mobile */
     @media (max-width: 720px) {
-      html, body {
-        overflow: auto;
-        height: auto;
-      }
-
-      .deck {
-        width: 100%;
-        height: auto;
-        min-height: 100vh;
-        scroll-snap-type: y mandatory;
-      }
-
+      html, body { overflow: auto; height: auto; }
+      .deck { height: auto; overflow: visible; }
       .slide {
-        position: relative;
-        width: 100%;
-        height: auto;
-        min-height: 100vh;
-        padding: 80px 22px 80px 22px;
-        opacity: 1;
-        pointer-events: auto;
-        transform: none;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        scroll-snap-align: start;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        position: relative; opacity: 1; pointer-events: auto;
+        transform: none; min-height: 100dvh; padding: 80px 24px 60px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
-
-      .slide:last-child { border-bottom: none; }
-
-      .brand {
-        top: 22px;
-        left: 22px;
-        font-size: 14px;
-      }
-
-      .meta {
-        bottom: 22px;
-        left: 22px;
-        right: 22px;
-        font-size: 10px;
-      }
-
-      h1 {
-        font-size: clamp(30px, 8vw, 46px);
-        margin-bottom: 18px;
-        letter-spacing: -1px;
-      }
-
-      .eyebrow {
-        font-size: 11px;
-        letter-spacing: 1.5px;
-        margin-bottom: 14px;
-      }
-
-      .body {
-        font-size: 15px;
-      }
-
-      .tagline {
-        font-size: 14px;
-      }
-
-      /* Stack multi-column grids */
-      .compare,
-      .pricing,
-      .contact-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        margin-top: 24px;
-      }
-
-      .compare-col { padding: 20px; }
-      .compare-col .verdict { font-size: 22px; margin-bottom: 14px; }
-      .tier { padding: 24px 20px; }
-      .contact-card { padding: 22px 20px; }
-      .contact-value { font-size: 16px; }
-      .contact-signoff { margin-top: 24px; font-size: 15px; }
-
-      /* Voice demo card */
-      .voice-demo {
-        margin-top: 22px;
-        padding: 20px;
-        border-radius: 18px;
-      }
-      .voice-demo .mic { width: 36px; height: 36px; }
-      .voice-demo .mic svg { width: 18px; height: 18px; }
-      .voice-demo .command { font-size: 16px; }
-      .voice-demo .arrow { margin: 10px 0 10px 50px; }
-      .voice-demo .results { margin-left: 50px; }
-      .voice-demo .results li { font-size: 14px; }
-
-      .ask-list { margin-top: 22px; }
-      .ask-list li {
-        font-size: 15px;
-        padding: 12px 0;
-        gap: 12px;
-      }
-
+      .slide .brand { left: 24px; top: 32px; }
+      .slide .meta { left: 24px; right: 24px; bottom: 24px; }
+      .features, .views, .compare { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
       .help { display: none; }
+      .progress { display: none; }
     }
   </style>
 </head>
@@ -606,31 +234,33 @@
       <div class="eyebrow">The Problem</div>
       <h1>Soccer DOCs spend <span class="accent">10+ hours a week</span> on admin that shouldn't exist.</h1>
       <p class="body">
-        Coach drops out. Parents complain. Gear orders. Sizing spreadsheets. Schedule changes across four different apps.
-        Every one of them requires you to do the work yourself.
+        Coach drops out at 5 PM. Parents texting about gear sizes. Camp fees unpaid. Schedule changes across four different apps.
+        Every one of them requires the DOC to do the work themselves — manually.
       </p>
       <div class="meta">
         <span>Pitch</span>
-        <span><span id="current">1</span> / <span id="total">7</span></span>
+        <span><span id="current">1</span> / <span id="total">9</span></span>
       </div>
     </section>
 
     <!-- SLIDE 2: SOLUTION -->
-    <section class="slide solution" data-index="2">
+    <section class="slide" data-index="2">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">The Solution</div>
       <h1>The AI-driven <span class="accent">operating system</span> that runs your club for you.</h1>
       <p class="body">
-        So you can coach, not admin.
+        One platform for your entire club. Three views — DOC, coaches, parents — each seeing exactly what they need.
+        The system handles the chaos. You coach.
       </p>
-      <p class="tagline">Built for directors and the programs they run.</p>
+      <p class="tagline">Built by directors, for directors. For productive coaches and happy parents.</p>
+      <div class="live-badge"><span class="dot"></span> Live at offpitchos.com</div>
       <div class="meta">
         <span>Let me show you →</span>
-        <span><span class="cur">2</span> / <span class="tot">7</span></span>
+        <span><span class="cur">2</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
-    <!-- SLIDE 3: DEMO / WATCH THIS -->
+    <!-- SLIDE 3: VOICE DEMO -->
     <section class="slide" data-index="3">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">Watch This</div>
@@ -652,20 +282,119 @@
         </div>
         <div class="arrow">↓</div>
         <ul class="results">
-          <li><span class="check">✓</span> Schedule updated</li>
-          <li><span class="check">✓</span> 23 parents notified</li>
-          <li><span class="check">✓</span> Coach reassigned to U12</li>
+          <li><span class="check">✓</span> Schedule updated instantly</li>
+          <li><span class="check">✓</span> Every parent notified (push + email)</li>
+          <li><span class="check">✓</span> Best available coach auto-assigned to U12</li>
+          <li><span class="check">✓</span> Google Maps link included in notification</li>
         </ul>
       </div>
 
       <div class="meta">
-        <span>In under 3 seconds</span>
-        <span><span class="cur">3</span> / <span class="tot">7</span></span>
+        <span>Under 3 seconds, fully automated</span>
+        <span><span class="cur">3</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
-    <!-- SLIDE 4: WHY US -->
+    <!-- SLIDE 4: THREE VIEWS -->
     <section class="slide" data-index="4">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Three Views, One Platform</div>
+      <h1>Everyone sees <span class="accent">exactly what they need.</span></h1>
+
+      <div class="views">
+        <div class="view-card highlight">
+          <div class="role">Director of Coaching</div>
+          <h3>Command center</h3>
+          <ul>
+            <li>AI-prioritized attention panel</li>
+            <li>Voice-driven schedule changes</li>
+            <li>Coverage management + auto-assign</li>
+            <li>Camp creation + payment tracking</li>
+            <li>Gear ordering with size requests</li>
+            <li>Club-wide analytics</li>
+          </ul>
+        </div>
+        <div class="view-card">
+          <div class="role">Coach</div>
+          <h3>Game-day ready</h3>
+          <ul>
+            <li>Coverage inbox (accept/decline/assign)</li>
+            <li>One-tap attendance + inline player notes</li>
+            <li>Player development feedback</li>
+            <li>"Can't Attend" with direct replacement</li>
+            <li>Smart attention signals</li>
+          </ul>
+        </div>
+        <div class="view-card">
+          <div class="role">Parent</div>
+          <h3>Always in the loop</h3>
+          <ul>
+            <li>"My Kids" dashboard with one-tap profiles</li>
+            <li>Schedule with Google Maps links</li>
+            <li>"Can't Attend" — excuse kids + notify coach</li>
+            <li>Message coach directly</li>
+            <li>WhatsApp group chat per team</li>
+            <li>Gear size submission + camp payments</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span>DOC → Coach → Parent, end to end</span>
+        <span><span class="cur">4</span> / <span class="tot">9</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: WHAT'S BUILT -->
+    <section class="slide" data-index="5">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Not a Mockup</div>
+      <h1>This is <span class="accent">live. Right now.</span></h1>
+      <p class="body">
+        Open offpitchos.com on your phone. Install it like an app. No App Store required.
+      </p>
+
+      <div class="features">
+        <div class="feature-card">
+          <div class="icon">📱</div>
+          <h3>Phone App (PWA)</h3>
+          <p>Install from browser. Full-screen, push notifications, works offline. iOS + Android.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🔔</div>
+          <h3>Push + Email</h3>
+          <p>Every schedule change, coverage request, and payment reminder hits the right person instantly.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🧠</div>
+          <h3>AI Triage</h3>
+          <p>When the DOC sits down, everything is already prioritized. Coverage gaps, unmarked attendance, gear missing, unpaid camps.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🗣️</div>
+          <h3>Voice Commands</h3>
+          <p>"Cancel U14 practice tonight." One sentence. Schedule updated, parents notified, coach reassigned.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⚡</div>
+          <h3>Coverage Auto-Assign</h3>
+          <p>Coach can't make it? System ranks replacements by availability, load, and team familiarity. Assigns in seconds.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">💬</div>
+          <h3>WhatsApp Groups</h3>
+          <p>One-tap join link per team. Parents chat on WhatsApp. Admin stays in OffPitchOS. No fragmentation.</p>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span>Built, deployed, working today</span>
+        <span><span class="cur">5</span> / <span class="tot">9</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: WHY US -->
+    <section class="slide" data-index="6">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">Why Us</div>
       <h1>Everyone else makes <span class="accent">you</span> do the work.</h1>
@@ -679,6 +408,8 @@
             <li>Copy-paste messages to parents</li>
             <li>Separate tools for gear, camps, comms</li>
             <li>You notice the problem first</li>
+            <li>No voice, no AI, no automation</li>
+            <li>Parents use GroupMe separately</li>
           </ul>
         </div>
         <div class="compare-col ours">
@@ -687,75 +418,79 @@
           <ul>
             <li>Voice-driven schedule changes</li>
             <li>Auto-notify parents and coaches</li>
-            <li>One platform, one workflow</li>
-            <li>AI flags what needs attention</li>
+            <li>One platform — schedule, camps, gear, comms</li>
+            <li>AI flags what needs attention before you notice</li>
+            <li>Coverage auto-assigned in seconds</li>
+            <li>WhatsApp integrated per team</li>
           </ul>
         </div>
       </div>
 
       <div class="meta">
         <span>The difference is automation</span>
-        <span><span class="cur">4</span> / <span class="tot">7</span></span>
+        <span><span class="cur">6</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
-    <!-- SLIDE 5: PRICING PLACEHOLDER -->
-    <section class="slide" data-index="5">
+    <!-- SLIDE 7: PRICING -->
+    <section class="slide" data-index="7">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">Pricing</div>
       <h1><span class="accent">Still shaping it</span> with our first partners.</h1>
       <p class="body">
         We'd rather price it around what's actually useful to your club than guess.
+        Founding partners get lifetime preferential pricing locked in before launch.
       </p>
       <div class="meta">
         <span>Let's talk about it</span>
-        <span><span class="cur">5</span> / <span class="tot">7</span></span>
+        <span><span class="cur">7</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
-    <!-- SLIDE 6: THE ASK -->
-    <section class="slide" data-index="6">
+    <!-- SLIDE 8: THE ASK -->
+    <section class="slide" data-index="8">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">The Ask</div>
-      <h1>Can we onboard your club <span class="accent">next week?</span></h1>
+      <h1>Can we onboard your club <span class="accent">this week?</span></h1>
 
       <ul class="ask-list">
         <li>Founding club partner — direct line to the founders</li>
-        <li>Every feature you need, built around your workflow</li>
-        <li>Your logo on our landing page as a founding club</li>
+        <li>We set up your teams, rosters, and schedule for you</li>
+        <li>Your coaches and parents are on the app within 24 hours</li>
+        <li>Every feature built around your real workflow</li>
         <li>Lifetime founding-partner pricing when we launch</li>
       </ul>
 
       <div class="meta">
         <span>Let's do this</span>
-        <span><span class="cur">6</span> / <span class="tot">7</span></span>
+        <span><span class="cur">8</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
-    <!-- SLIDE 7: CLOSING / CONTACT -->
-    <section class="slide contact" data-index="7">
+    <!-- SLIDE 9: CONTACT -->
+    <section class="slide contact" data-index="9">
       <div class="brand">OffPitch<span class="os">OS</span></div>
       <div class="eyebrow">Let's Talk</div>
       <h1>Built by directors, <span class="accent">for directors.</span></h1>
 
       <div class="contact-grid">
         <div class="contact-card featured">
-          <div class="contact-label">Email</div>
-          <a class="contact-value" href="mailto:jozo.cancar27@gmail.com">jozo.cancar27@gmail.com</a>
+          <div class="contact-label">Try It Now</div>
+          <a class="contact-value" href="https://offpitchos.com">offpitchos.com</a>
         </div>
         <div class="contact-card">
-          <div class="contact-label">Web</div>
-          <a class="contact-value" href="https://offpitchos.com">offpitchos.com</a>
+          <div class="contact-label">Email</div>
+          <a class="contact-value" href="mailto:jozo.cancar27@gmail.com">jozo.cancar27@gmail.com</a>
         </div>
       </div>
 
       <p class="contact-signoff">
-        Ready when you are. <strong>Jozo Cancar</strong> — co-founder.
+        The product is live. The demo is real. <strong>Let's get your club on it.</strong>
       </p>
 
       <div class="meta">
         <span>Thank you</span>
-        <span><span class="cur">7</span> / <span class="tot">7</span></span>
+        <span><span class="cur">9</span> / <span class="tot">9</span></span>
       </div>
     </section>
 
@@ -776,9 +511,7 @@
 
     function show(index) {
       current = Math.max(0, Math.min(total - 1, index))
-      slides.forEach((s, i) => {
-        s.classList.toggle('active', i === current)
-      })
+      slides.forEach((s, i) => s.classList.toggle('active', i === current))
       progress.style.width = `${((current + 1) / total) * 100}%`
       if (currentEl) currentEl.textContent = current + 1
     }
@@ -787,49 +520,28 @@
     function prev() { show(current - 1) }
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') {
-        e.preventDefault()
-        next()
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        e.preventDefault()
-        prev()
-      } else if (e.key === 'Home') {
-        show(0)
-      } else if (e.key === 'End') {
-        show(total - 1)
-      } else if (/^[1-9]$/.test(e.key)) {
-        const n = parseInt(e.key, 10) - 1
-        if (n < total) show(n)
-      } else if (e.key.toLowerCase() === 'f') {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen?.()
-        } else {
-          document.exitFullscreen?.()
-        }
-      } else if (e.key === 'Escape') {
-        // handled by browser
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); next() }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev() }
+      else if (e.key === 'Home') show(0)
+      else if (e.key === 'End') show(total - 1)
+      else if (/^[1-9]$/.test(e.key)) { const n = parseInt(e.key, 10) - 1; if (n < total) show(n) }
+      else if (e.key.toLowerCase() === 'f') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.()
+        else document.exitFullscreen?.()
       }
     })
 
-    // Detect mobile — on mobile we let the page scroll naturally instead of
-    // switching slides via click/keys.
     const isMobile = window.matchMedia('(max-width: 720px)').matches
-
     if (!isMobile) {
-      // Click to advance (desktop only)
       document.querySelector('.deck').addEventListener('click', (e) => {
         if (e.target.closest('a, button')) return
         next()
       })
     }
 
-    // Start at slide 1
     show(0)
 
-    // On mobile, make every slide visible (not just the active one)
-    if (isMobile) {
-      slides.forEach(s => s.classList.add('active'))
-    }
+    if (isMobile) slides.forEach(s => s.classList.add('active'))
   </script>
 </body>
 </html>
