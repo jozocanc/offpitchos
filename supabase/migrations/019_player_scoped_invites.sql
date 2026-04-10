@@ -15,10 +15,14 @@ ALTER TABLE invites
 
 CREATE INDEX IF NOT EXISTS idx_invites_player_id ON invites(player_id);
 
--- Regenerate the RPC with the new column in the return type. Keeping the
--- same SECURITY DEFINER + pending/expires filter so the join page continues
+-- Regenerate the RPC with the new column in the return type. We have to
+-- DROP first because Postgres won't let CREATE OR REPLACE change the
+-- declared return shape of an existing function. Keeping the same
+-- SECURITY DEFINER + pending/expires filter so the join page continues
 -- to work unauthenticated.
-CREATE OR REPLACE FUNCTION get_invite_by_token(invite_token uuid)
+DROP FUNCTION IF EXISTS get_invite_by_token(uuid);
+
+CREATE FUNCTION get_invite_by_token(invite_token uuid)
 RETURNS TABLE (
   id uuid,
   club_id uuid,
