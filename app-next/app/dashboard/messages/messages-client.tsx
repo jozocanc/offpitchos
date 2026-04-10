@@ -60,7 +60,7 @@ export default function MessagesClient({
             onClick={() => setModalOpen(true)}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
-            + New Announcement
+            {userRole === ROLES.PARENT ? 'Message Coach' : '+ New Announcement'}
           </button>
         )}
       </div>

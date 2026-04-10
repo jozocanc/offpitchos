@@ -46,6 +46,7 @@ export default function NewAnnouncementModal({
   const { toast } = useToast()
 
   const isDoc = userRole === 'doc'
+  const isParent = userRole === 'parent'
 
   // Live audience preview based on selection
   const selectedAudience: AudienceCounts = teamId
@@ -89,9 +90,11 @@ export default function NewAnnouncementModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-6">New Announcement</h2>
+        <h2 className="text-xl font-bold mb-6">{isParent ? 'Message Coach' : 'New Announcement'}</h2>
 
-        <label className="block text-sm font-medium text-gray mb-2">Audience</label>
+        <label className="block text-sm font-medium text-gray mb-2">
+          {isParent ? 'Which team?' : 'Audience'}
+        </label>
         <select
           value={teamId}
           onChange={e => setTeamId(e.target.value)}
@@ -107,20 +110,24 @@ export default function NewAnnouncementModal({
         <div className={`text-xs mb-4 flex items-center gap-2 ${
           audienceTotal === 0 ? 'text-yellow-400' : 'text-gray'
         }`}>
-          <span>📣</span>
+          <span>{isParent ? '💬' : '📣'}</span>
           <span>
             {audienceTotal === 0
-              ? 'This audience has no members yet — nobody will receive the announcement.'
-              : `This will reach ${formatAudience(selectedAudience)}.`}
+              ? isParent ? 'No coaches on this team yet.' : 'This audience has no members yet — nobody will receive the announcement.'
+              : isParent
+                ? `Your message will reach ${selectedAudience.coaches} coach${selectedAudience.coaches === 1 ? '' : 'es'} on this team.`
+                : `This will reach ${formatAudience(selectedAudience)}.`}
           </span>
         </div>
 
-        <label className="block text-sm font-medium text-gray mb-2">Title</label>
+        <label className="block text-sm font-medium text-gray mb-2">
+          {isParent ? 'Subject' : 'Title'}
+        </label>
         <input
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder="e.g. Practice location change"
+          placeholder={isParent ? 'e.g. Question about Saturday game' : 'e.g. Practice location change'}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
           autoFocus
         />
@@ -129,7 +136,7 @@ export default function NewAnnouncementModal({
         <textarea
           value={body}
           onChange={e => setBody(e.target.value)}
-          placeholder="Write your announcement..."
+          placeholder={isParent ? 'Write your message to the coach...' : 'Write your announcement...'}
           rows={4}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-2 resize-none"
         />
@@ -148,7 +155,7 @@ export default function NewAnnouncementModal({
             disabled={isPending}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Posting...' : 'Post Announcement'}
+            {isPending ? 'Sending...' : isParent ? 'Send Message' : 'Post Announcement'}
           </button>
         </div>
       </div>
