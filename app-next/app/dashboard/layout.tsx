@@ -42,7 +42,11 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen bg-dark">
       <Sidebar userEmail={user.email ?? ''} userRole={effectiveRole} />
       <ToastProvider>
-        <main className="flex-1 overflow-auto">
+        {/* pt-14 on mobile clears the fixed hamburger button (top-4 + ~38px
+            button = 54px footprint) so page headers don't render underneath
+            it. md:pt-0 because the sidebar is static on desktop and the
+            hamburger isn't rendered. */}
+        <main className="flex-1 overflow-auto pt-14 md:pt-0">
           {children}
         </main>
         <VoiceCommand userRole={effectiveRole} />
