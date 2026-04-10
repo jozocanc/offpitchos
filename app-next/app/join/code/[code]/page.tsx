@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
-import { getTeamByCode } from './actions'
 import AcceptCodeButton from './accept-button'
 
 export default async function JoinByCodePage({
@@ -9,7 +9,23 @@ export default async function JoinByCodePage({
   params: Promise<{ code: string }>
 }) {
   const { code } = await params
-  const team = await getTeamByCode(code)
+
+  // Use service client to bypass RLS — the user might not be logged in yet.
+  const service = createServiceClient()
+  const { data: teamRaw } = await service
+    .from('teams')
+    .select('id, name, age_group, club_id, clubs(name)')
+    .eq('invite_code', code.toUpperCase())
+    .single()
+
+  const club = teamRaw ? (Array.isArray(teamRaw.clubs) ? teamRaw.clubs[0] : teamRaw.clubs) : null
+  const team = teamRaw ? {
+    teamId: teamRaw.id,
+    teamName: teamRaw.name,
+    ageGroup: teamRaw.age_group,
+    clubId: teamRaw.club_id,
+    clubName: club?.name ?? 'Club',
+  } : null
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
