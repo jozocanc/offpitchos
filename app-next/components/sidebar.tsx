@@ -226,8 +226,8 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
         })}
       </nav>
 
-      {/* User info + sign out */}
-      <div className="px-4 py-4 border-t border-white/5">
+      {/* User info + sign out — pb includes safe-area for iPhone home bar */}
+      <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/5">
         {isAdmin && (
           <div className="mb-3 flex gap-1">
             {(['doc', 'coach', 'parent'] as const).map(role => (
@@ -287,7 +287,7 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
 
       {/* Mobile: slide-in sidebar */}
       <aside
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-dark border-r border-white/5 flex flex-col transform transition-transform duration-200 ease-in-out overflow-hidden
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-dark border-r border-white/5 flex flex-col transform transition-transform duration-200 ease-in-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
       >
         {sidebarContent}
