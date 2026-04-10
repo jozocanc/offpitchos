@@ -40,6 +40,9 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
+  // Supabase returns the joined team as an object (to-one) or array
+  // depending on context. Normalize so we can read .age_group reliably.
+  const team = Array.isArray(event.teams) ? event.teams[0] : event.teams
 
   const timeStr = `${formatTime(start)} – ${formatTime(end)}`
 
@@ -53,9 +56,11 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
-              {event.teams?.[0]?.age_group}
-            </span>
+            {team?.age_group && (
+              <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
+                {team.age_group}
+              </span>
+            )}
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTypeBadgeColors(event.type)}`}>
               {EVENT_TYPE_LABELS[event.type as EventType] ?? event.type}
             </span>
@@ -95,14 +100,15 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
           </div>
           <p className={`font-bold ${isCancelled ? 'line-through text-gray' : 'text-white'}`}>
             {event.title}
-            {event.teams?.[0]?.age_group && (
-              <span className="text-gray font-normal ml-1">({event.teams[0].age_group})</span>
+            {team?.age_group && (
+              <span className="text-gray font-normal ml-1">({team.age_group})</span>
             )}
           </p>
           <p className="text-gray text-sm mt-1">{timeStr}</p>
           {(() => {
-            const venueName = event.venues?.[0]?.name ?? null
-            const effectiveAddress = event.address || event.venues?.[0]?.address || null
+            const venue = Array.isArray(event.venues) ? event.venues[0] : event.venues
+            const venueName = venue?.name ?? null
+            const effectiveAddress = event.address || venue?.address || null
             if (!venueName && !effectiveAddress) return null
             const mapsHref = effectiveAddress
               ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(effectiveAddress)}`
