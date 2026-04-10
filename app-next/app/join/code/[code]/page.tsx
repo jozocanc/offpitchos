@@ -10,25 +10,39 @@ export default async function JoinByCodePage({
 }) {
   const { code } = await params
 
-  // Use service client to bypass RLS — the user might not be logged in yet.
-  const service = createServiceClient()
-  const { data: teamRaw } = await service
-    .from('teams')
-    .select('id, name, age_group, club_id, clubs(name)')
-    .eq('invite_code', code.toUpperCase())
-    .single()
+  let team: { teamId: string; teamName: string; ageGroup: string; clubId: string; clubName: string } | null = null
+  let user: { id: string; email?: string | null } | null = null
 
-  const club = teamRaw ? (Array.isArray(teamRaw.clubs) ? teamRaw.clubs[0] : teamRaw.clubs) : null
-  const team = teamRaw ? {
-    teamId: teamRaw.id,
-    teamName: teamRaw.name,
-    ageGroup: teamRaw.age_group,
-    clubId: teamRaw.club_id,
-    clubName: club?.name ?? 'Club',
-  } : null
+  try {
+    // Use service client to bypass RLS — the user might not be logged in yet.
+    const service = createServiceClient()
+    const { data: teamRaw } = await service
+      .from('teams')
+      .select('id, name, age_group, club_id, clubs(name)')
+      .eq('invite_code', code.toUpperCase())
+      .single()
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+    if (teamRaw) {
+      const club = Array.isArray(teamRaw.clubs) ? teamRaw.clubs[0] : teamRaw.clubs
+      team = {
+        teamId: teamRaw.id,
+        teamName: teamRaw.name,
+        ageGroup: teamRaw.age_group,
+        clubId: teamRaw.club_id,
+        clubName: (club as { name?: string } | null)?.name ?? 'Club',
+      }
+    }
+  } catch {
+    // Service client query failed — team stays null, show invalid code page
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Not signed in — user stays null
+  }
 
   if (!team) {
     return (
