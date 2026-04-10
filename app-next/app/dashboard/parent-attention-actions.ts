@@ -71,7 +71,7 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
   const { data: memberships } = await supabase
     .from('team_members')
     .select('team_id')
-    .eq('user_id', user.id)
+    .eq('profile_id', profile.id)
     .eq('role', 'parent')
 
   const teamIds = (memberships ?? []).map(m => m.team_id)
@@ -289,7 +289,7 @@ export async function claimPlayers(playerIds: string[]): Promise<{
   const { data: memberships } = await supabase
     .from('team_members')
     .select('team_id')
-    .eq('user_id', user.id)
+    .eq('profile_id', profile.id)
     .eq('role', 'parent')
 
   const allowedTeamIds = new Set((memberships ?? []).map(m => m.team_id))

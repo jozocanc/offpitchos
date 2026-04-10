@@ -42,7 +42,7 @@ export default async function CoachesPage() {
   // Fetch current coaches with enriched data
   const { data: coachesRaw } = await supabase
     .from('profiles')
-    .select('user_id, display_name')
+    .select('id, user_id, display_name')
     .eq('club_id', clubId)
     .eq('role', 'coach')
 
@@ -55,7 +55,7 @@ export default async function CoachesPage() {
       const { data: teamMemberships } = await supabase
         .from('team_members')
         .select('teams(name)')
-        .eq('user_id', coach.user_id)
+        .eq('profile_id', coach.id)
         .eq('role', 'coach')
 
       const teamNames = (teamMemberships ?? [])

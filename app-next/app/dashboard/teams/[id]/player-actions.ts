@@ -73,12 +73,21 @@ export async function linkPlayerToParent(playerId: string, parentUserId: string,
   if (profile?.role !== 'doc') throw new Error('Only DOC can reassign a player parent')
   if (!profile.club_id) throw new Error('No club found')
 
+  // Look up the target parent's profile PK so we can query team_members by profile_id.
+  const { data: parentProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', parentUserId)
+    .single()
+
+  if (!parentProfile) throw new Error('Parent profile not found')
+
   // Verify the target parent is actually a parent member of this team in this club.
   const { data: targetMember } = await supabase
     .from('team_members')
-    .select('user_id, role')
+    .select('profile_id, role')
     .eq('team_id', teamId)
-    .eq('user_id', parentUserId)
+    .eq('profile_id', parentProfile.id)
     .eq('role', 'parent')
     .single()
 

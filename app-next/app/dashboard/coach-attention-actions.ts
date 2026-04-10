@@ -105,7 +105,7 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
   const { data: myTeams } = await supabase
     .from('team_members')
     .select('team_id')
-    .eq('user_id', user.id)
+    .eq('profile_id', profile.id)
     .eq('role', 'coach')
 
   const myTeamIds = (myTeams ?? []).map(tm => tm.team_id)

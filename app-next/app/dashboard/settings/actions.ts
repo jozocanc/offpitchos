@@ -63,7 +63,16 @@ export async function leaveClub() {
 
   if (profile?.role === 'doc') return { error: 'DOC cannot leave their own club. Transfer ownership first.' }
 
-  await supabase.from('team_members').delete().eq('user_id', user.id)
+  // Look up the profile PK to delete team_members by profile_id
+  const { data: fullProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (fullProfile) {
+    await supabase.from('team_members').delete().eq('profile_id', fullProfile.id)
+  }
   await supabase.from('profiles').delete().eq('user_id', user.id)
 
   return { success: true }
@@ -74,7 +83,16 @@ export async function deleteAccount() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  await supabase.from('team_members').delete().eq('user_id', user.id)
+  // Look up the profile PK to delete team_members by profile_id
+  const { data: delProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (delProfile) {
+    await supabase.from('team_members').delete().eq('profile_id', delProfile.id)
+  }
   await supabase.from('profiles').delete().eq('user_id', user.id)
   await supabase.auth.signOut()
 

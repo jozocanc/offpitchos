@@ -117,11 +117,20 @@ export async function removeMember(teamId: string, userId: string) {
 
   if (profile?.role !== 'doc') throw new Error('Only DOC can remove members')
 
+  // Look up the member's profile PK to delete by profile_id
+  const { data: memberProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (!memberProfile) throw new Error('Member profile not found')
+
   const { error } = await supabase
     .from('team_members')
     .delete()
     .eq('team_id', teamId)
-    .eq('user_id', userId)
+    .eq('profile_id', memberProfile.id)
 
   if (error) throw new Error(`Failed to remove member: ${error.message}`)
 
