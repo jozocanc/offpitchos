@@ -112,7 +112,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
       {/* Club Overview */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4">Club Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <StatCard label="Teams" value={overview.totalTeams} />
           <StatCard label="Players" value={overview.totalPlayers} />
           <StatCard label="Coaches" value={overview.totalCoaches} />
@@ -123,7 +123,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
       {/* Activity & Attendance */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4">Activity</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <StatCard label="Events" value={activity.eventsInRange} />
           <StatCard label="Cancelled" value={activity.cancelledInRange} color={activity.cancelledInRange > 0 ? 'red' : undefined} />
           <StatCard label="Attendance Rate" value={`${activity.attendanceRate}%`} color="green" />
@@ -175,20 +175,23 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
         </div>
       </section>
 
-      {/* Coverage */}
+      {/* Coverage — 1 col on narrow, 3 on sm+ to stop cards getting squeezed
+          below reading width. */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4">Coach Coverage</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="Coverage Requests" value={coverage.totalRequests} />
           <StatCard label="Fill Rate" value={`${coverage.coverageRate}%`} color="green" />
           <StatCard label="Pending" value={coverage.pendingCoverage} color={coverage.pendingCoverage > 0 ? 'yellow' : undefined} />
         </div>
       </section>
 
-      {/* Revenue */}
+      {/* Revenue — same responsive pattern; currency values are the ones
+          most likely to overflow so the StatCard truncate + smaller mobile
+          font size carries the rest of the burden. */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4">Camp Revenue</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="Camp Registrations" value={revenue.totalCampRegistrations} />
           <StatCard label="Expected Revenue" value={formatCurrency(revenue.totalRevenueCents)} color="green" />
           <StatCard label="Collected" value={formatCurrency(revenue.totalCollectedCents)} />
@@ -258,10 +261,14 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: 'green' | 'red' | 'yellow' }) {
   const colorClass = color === 'green' ? 'text-green' : color === 'red' ? 'text-red-400' : color === 'yellow' ? 'text-yellow-400' : 'text-white'
 
+  // Responsive pattern shared with the dashboard home StatCard: shrink
+  // padding + font at narrow widths, keep labels on a consistent 2-line
+  // min-height for grid alignment, truncate the value as an overflow
+  // safety net (currency values like "$6,450.00" are the usual culprit).
   return (
-    <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-      <p className="text-sm text-gray mb-1">{label}</p>
-      <p className={`text-3xl font-black ${colorClass}`}>{value}</p>
+    <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+      <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">{label}</p>
+      <p className={`text-xl sm:text-2xl lg:text-3xl font-black truncate tabular-nums ${colorClass}`}>{value}</p>
     </div>
   )
 }

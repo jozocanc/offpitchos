@@ -203,18 +203,18 @@ export default function GearClient({
       {/* Club-wide summary */}
       {isDoc && (
         <div className="mb-8">
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-              <p className="text-sm text-gray mb-1">Total Players</p>
-              <p className="text-3xl font-black text-white">{totalPlayers}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total Players</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{totalPlayers}</p>
             </div>
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-              <p className="text-sm text-gray mb-1">Sizes Submitted</p>
-              <p className="text-3xl font-black text-green">{totalPlayers - totalMissing}</p>
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Sizes Submitted</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-green truncate tabular-nums">{totalPlayers - totalMissing}</p>
             </div>
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-              <p className="text-sm text-gray mb-1">Missing Sizes</p>
-              <p className={`text-3xl font-black ${totalMissing > 0 ? 'text-yellow-400' : 'text-white'}`}>{totalMissing}</p>
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Missing Sizes</p>
+              <p className={`text-xl sm:text-2xl lg:text-3xl font-black truncate tabular-nums ${totalMissing > 0 ? 'text-yellow-400' : 'text-white'}`}>{totalMissing}</p>
             </div>
           </div>
 

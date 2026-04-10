@@ -119,8 +119,9 @@ export default async function DashboardPage() {
           children. Hidden entirely when there are no signals AND no kids. */}
       {userRole === 'parent' && <ParentAttentionPanel />}
 
-      {/* Stat cards */}
-      <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-10`}>
+      {/* Stat cards — 1 col mobile, 2 col sm, 3 col lg for DOC so cards never
+          get squeezed below ~180 px at the 3-col breakpoint. */}
+      <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
         <StatCard
           label={userRole === 'doc' ? 'Total Teams' : 'My Teams'}
           value={String(userRole === 'doc' ? (teamCount ?? 0) : myTeams.length)}
@@ -255,13 +256,17 @@ function StatCard({
   accent: 'green' | 'gray'
   note?: string
 }) {
+  // Responsive sizing: smaller padding + font on narrow screens so labels
+  // like "Today's Sessions" don't squeeze a big number off the card. The
+  // min-w-0 lets the grid cell shrink below its content's intrinsic width
+  // and truncate covers numeric overflow as a safety net.
   return (
-    <div className="bg-dark-secondary rounded-2xl p-6 border border-white/5 hover:border-green/10 transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,135,0.05)]">
-      <p className="text-gray text-sm mb-2">{label}</p>
-      <p className={`text-4xl font-black ${accent === 'green' ? 'text-green' : 'text-white'}`}>
+    <div className="bg-dark-secondary rounded-2xl p-4 sm:p-6 border border-white/5 hover:border-green/10 transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,135,0.05)] min-w-0">
+      <p className="text-gray text-xs sm:text-sm mb-2 leading-tight min-h-[2.4em] line-clamp-2">{label}</p>
+      <p className={`text-2xl sm:text-3xl lg:text-4xl font-black truncate tabular-nums ${accent === 'green' ? 'text-green' : 'text-white'}`}>
         {value}
       </p>
-      {note && <p className="text-gray text-xs mt-2">{note}</p>}
+      {note && <p className="text-gray text-xs mt-2 truncate">{note}</p>}
     </div>
   )
 }

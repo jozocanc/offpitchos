@@ -89,29 +89,32 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
         </div>
       )}
 
-      {/* Revenue summary (DOC only) */}
+      {/* Revenue summary (DOC only) — same responsive pattern as the shared
+          StatCards: min-w-0 on cells so they can shrink below their content's
+          intrinsic width, truncate + tabular-nums on currency values, 2-line
+          min-height on labels so all four cards stay visually aligned. */}
       {isDoc && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <p className="text-sm text-gray mb-1">Total Registrations</p>
-            <p className="text-3xl font-black text-white">{totalRegistered}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total Registrations</p>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{totalRegistered}</p>
           </div>
-          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <p className="text-sm text-gray mb-1">Expected Revenue</p>
-            <p className="text-3xl font-black text-green">{formatCurrency(totalExpected)}</p>
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Expected Revenue</p>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-black text-green truncate tabular-nums">{formatCurrency(totalExpected)}</p>
           </div>
-          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <p className="text-sm text-gray mb-1">Collected</p>
-            <p className="text-3xl font-black text-white">{formatCurrency(totalCollected)}</p>
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Collected</p>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{formatCurrency(totalCollected)}</p>
             {totalExpected > 0 && (
               <div className="w-full bg-white/5 rounded-full h-1.5 mt-2">
                 <div className="bg-green h-1.5 rounded-full transition-all" style={{ width: `${collectionPct}%` }} />
               </div>
             )}
           </div>
-          <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <p className="text-sm text-gray mb-1">Outstanding</p>
-            <p className={`text-3xl font-black ${outstanding > 0 ? 'text-yellow-400' : 'text-green'}`}>
+          <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Outstanding</p>
+            <p className={`text-xl sm:text-2xl lg:text-3xl font-black truncate tabular-nums ${outstanding > 0 ? 'text-yellow-400' : 'text-green'}`}>
               {formatCurrency(outstanding)}
             </p>
           </div>
