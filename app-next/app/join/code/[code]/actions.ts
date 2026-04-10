@@ -80,5 +80,6 @@ export async function acceptInviteCode(code: string) {
   }
 
   revalidatePath('/dashboard')
-  redirect('/dashboard?claim=1')
+
+  return { clubId: team.clubId, teamId: team.teamId }
 }
