@@ -31,12 +31,14 @@ interface EventCardProps {
     profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   } | null
   showCoverageActions?: boolean
-  /** True when this is a past event that still has zero attendance rows.
-   * Renders as an "Unmarked" pill next to the other status badges. */
   isUnmarked?: boolean
+  /** Coach names assigned to this event's team — shown as a line below
+   * the venue for DOC so they know who's running each session. */
+  coaches?: string[]
+  showCoaches?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches }: EventCardProps) {
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -138,6 +140,14 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
               </div>
             )
           })()}
+          {showCoaches && coaches && coaches.length > 0 && (
+            <p className="text-gray text-xs mt-1.5 flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>{coaches.join(', ')}</span>
+            </p>
+          )}
           {event.notes && (
             <p className="text-gray text-xs mt-2 italic">{event.notes}</p>
           )}

@@ -486,11 +486,27 @@ export async function getScheduleData() {
     .eq('club_id', profile.club_id!)
     .in('status', ['pending', 'accepted', 'escalated', 'resolved'])
 
+  // Coach assignments per team — DOC sees "Coaches: Name1, Name2" on
+  // each event card so they know at a glance who's running each session.
+  const { data: coachMembers } = await supabase
+    .from('team_members')
+    .select('team_id, profiles(display_name)')
+    .eq('role', 'coach')
+
+  const coachesByTeam: Record<string, string[]> = {}
+  for (const cm of coachMembers ?? []) {
+    const name = (Array.isArray(cm.profiles) ? cm.profiles[0] : cm.profiles)?.display_name
+    if (!name || !cm.team_id) continue
+    if (!coachesByTeam[cm.team_id]) coachesByTeam[cm.team_id] = []
+    coachesByTeam[cm.team_id].push(name)
+  }
+
   return {
     events: events ?? [],
     teams: teams ?? [],
     venues: venues ?? [],
     coverageRequests: coverageRequests ?? [],
+    coachesByTeam,
     userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
   }

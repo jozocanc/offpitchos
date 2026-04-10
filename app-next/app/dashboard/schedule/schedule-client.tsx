@@ -54,12 +54,13 @@ interface ScheduleClientProps {
     unavailable_coach_id: string
     profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   }>
+  coachesByTeam?: Record<string, string[]>
   userProfileId: string
   initialTeamFilter?: string | null
   initialHighlight?: string | null
 }
 
-export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, userProfileId, initialTeamFilter = null, initialHighlight = null }: ScheduleClientProps) {
+export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, coachesByTeam, userProfileId, initialTeamFilter = null, initialHighlight = null }: ScheduleClientProps) {
   const { toast } = useToast()
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
   const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
@@ -237,6 +238,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           userRole={userRole}
           userProfileId={userProfileId}
           unmarkedEventIds={unmarkedPastEventIds}
+          coachesByTeam={coachesByTeam}
         />
       ) : (
         <CalendarView
