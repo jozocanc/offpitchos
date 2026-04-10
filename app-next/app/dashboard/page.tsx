@@ -6,6 +6,7 @@ import Link from 'next/link'
 import AttentionPanel from './attention-panel'
 import CoachAttentionPanel from './coach-attention-panel'
 import ParentAttentionPanel from './parent-attention-panel'
+import InstallPrompt from '@/components/install-prompt'
 
 const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
 
@@ -103,6 +104,11 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-gray mt-1 text-sm">Here&apos;s what&apos;s happening with your club today.</p>
       </div>
+
+      {/* PWA install CTA — self-contained, hides itself if already installed,
+          dismissed, or running on a browser that can't install. Sits above
+          the attention panels so it's visible but not blocking critical info. */}
+      <InstallPrompt />
 
       {/* AI-prioritized attention list (DOC only) */}
       {userRole === 'doc' && <AttentionPanel />}
