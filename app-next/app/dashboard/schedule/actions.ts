@@ -425,7 +425,23 @@ export async function getPastEvents() {
     .lt('start_time', todayStart.toISOString())
     .order('start_time', { ascending: false })
 
-  return events ?? []
+  // Figure out which past events still have zero attendance rows — we
+  // surface those with an "Unmarked" badge so coaches can spot (and fix)
+  // forgotten sessions at a glance without running down the attention
+  // panel one-by-one.
+  const eventIds = (events ?? []).map(e => e.id)
+  let unmarkedEventIds: string[] = []
+  if (eventIds.length > 0) {
+    const { data: attRows } = await supabase
+      .from('attendance')
+      .select('event_id')
+      .in('event_id', eventIds)
+
+    const marked = new Set((attRows ?? []).map(r => r.event_id))
+    unmarkedEventIds = eventIds.filter(id => !marked.has(id))
+  }
+
+  return { events: events ?? [], unmarkedEventIds }
 }
 
 export async function getScheduleData() {

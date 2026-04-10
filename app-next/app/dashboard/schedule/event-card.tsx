@@ -27,12 +27,15 @@ interface EventCardProps {
     id: string
     status: string
     covering_coach_id: string | null
-    profiles: any
+    profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   } | null
   showCoverageActions?: boolean
+  /** True when this is a past event that still has zero attendance rows.
+   * Renders as an "Unmarked" pill next to the other status badges. */
+  isUnmarked?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked }: EventCardProps) {
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -78,6 +81,14 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
             {coverageRequest && (coverageRequest.status === 'accepted' || coverageRequest.status === 'resolved') && (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
                 Covered{(() => { const p = Array.isArray(coverageRequest.profiles) ? coverageRequest.profiles[0] : coverageRequest.profiles; return p?.display_name ? ` by ${p.display_name}` : '' })()}
+              </span>
+            )}
+            {isUnmarked && !isCancelled && (
+              <span
+                title="No attendance recorded for this event yet"
+                className="text-xs font-bold bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full"
+              >
+                Unmarked
               </span>
             )}
           </div>

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default async function CampsPage() {
-  const { camps, userRole, userProfileId } = await getCampsData()
+  const { camps, userRole, userProfileId, teams, venues } = await getCampsData()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -16,7 +16,13 @@ export default async function CampsPage() {
         <p className="text-sm text-gray mt-1">Manage camps, registrations, and revenue.</p>
       </div>
 
-      <CampsClient camps={camps} userRole={userRole} userProfileId={userProfileId} />
+      <CampsClient
+        camps={camps}
+        userRole={userRole}
+        userProfileId={userProfileId}
+        teams={teams}
+        venues={venues}
+      />
     </div>
   )
 }

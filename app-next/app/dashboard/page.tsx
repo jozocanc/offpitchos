@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import AttentionPanel from './attention-panel'
+import CoachAttentionPanel from './coach-attention-panel'
+import ParentAttentionPanel from './parent-attention-panel'
 
 const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
 
@@ -104,6 +106,18 @@ export default async function DashboardPage() {
 
       {/* AI-prioritized attention list (DOC only) */}
       {userRole === 'doc' && <AttentionPanel />}
+
+      {/* Coach-scoped attention panel — surfaces coverage requests waiting
+          for them, recently-ended events with no attendance marked, and
+          events where they still owe player feedback. Hidden entirely when
+          there are no pending signals to avoid empty-state noise. */}
+      {userRole === 'coach' && <CoachAttentionPanel />}
+
+      {/* Parent-scoped panel — handles the "claim your kids" flow, gear
+          size nudges, unpaid camp fees, and new coach feedback. Renders the
+          "My Kids" navigation card once the parent has linked their
+          children. Hidden entirely when there are no signals AND no kids. */}
+      {userRole === 'parent' && <ParentAttentionPanel />}
 
       {/* Stat cards */}
       <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-10`}>

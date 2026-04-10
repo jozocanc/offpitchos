@@ -15,6 +15,11 @@ interface Team {
   player_count: number
   attendance_rate: number
   next_event: { title: string; start_time: string } | null
+  // Per-team roster health counts, computed server-side so the card can show
+  // an "N issues" pill without the client re-querying.
+  unlinked_count: number
+  missing_sizes_count: number
+  low_attendance_count: number
 }
 
 export default async function TeamsPage() {
@@ -47,25 +52,35 @@ export default async function TeamsPage() {
     console.error('Teams query error:', teamsError.message)
   }
 
-  // Get member counts, coach counts, and next event for each team
-  const now = new Date().toISOString()
+  // Get member counts, coach counts, next event, and per-team roster health for each team.
+  const nowDate = new Date()
+  const now = nowDate.toISOString()
+  const thirtyDaysAgo = new Date(nowDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
   const teams: Team[] = await Promise.all(
     (teamsRaw ?? []).map(async team => {
-      const { count: memberCount } = await supabase
+      const { data: teamMembers } = await supabase
         .from('team_members')
-        .select('id', { count: 'exact', head: true })
+        .select('user_id, role')
         .eq('team_id', team.id)
 
-      const { count: coachCount } = await supabase
-        .from('team_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('team_id', team.id)
-        .eq('role', 'coach')
+      const memberCount = teamMembers?.length ?? 0
+      const coachCount = teamMembers?.filter(m => m.role === 'coach').length ?? 0
+      const parentMemberIds = new Set(
+        (teamMembers ?? []).filter(m => m.role === 'parent').map(m => m.user_id),
+      )
 
-      const { count: playerCount } = await supabase
+      const { data: teamPlayers } = await supabase
         .from('players')
-        .select('id', { count: 'exact', head: true })
+        .select('id, parent_id, jersey_size, shorts_size')
         .eq('team_id', team.id)
+
+      const playerCount = teamPlayers?.length ?? 0
+
+      // Unlinked: parent_id is not one of the team's parent team_members.
+      // Missing sizes: jersey_size or shorts_size is null.
+      const unlinkedCount = (teamPlayers ?? []).filter(p => !parentMemberIds.has(p.parent_id)).length
+      const missingSizesCount = (teamPlayers ?? []).filter(p => !p.jersey_size || !p.shorts_size).length
 
       const { data: nextEvents } = await supabase
         .from('events')
@@ -76,8 +91,8 @@ export default async function TeamsPage() {
         .order('start_time', { ascending: true })
         .limit(1)
 
-      // Attendance rate (last 30 days)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      // Attendance rate (last 30 days) — team-wide, plus per-player rate so we
+      // can count how many players are trending < 60%.
       const { data: recentTeamEvents } = await supabase
         .from('events')
         .select('id')
@@ -87,24 +102,43 @@ export default async function TeamsPage() {
         .lte('start_time', now)
 
       let attendanceRate = 0
+      let lowAttendanceCount = 0
       const recentIds = (recentTeamEvents ?? []).map(e => e.id)
       if (recentIds.length > 0) {
         const { data: att } = await supabase
           .from('attendance')
-          .select('status')
+          .select('player_id, status')
           .in('event_id', recentIds)
+
         const total = att?.length ?? 0
         const present = att?.filter(a => a.status === 'present' || a.status === 'late').length ?? 0
         attendanceRate = total > 0 ? Math.round((present / total) * 100) : 0
+
+        const perPlayer: Record<string, { total: number; present: number }> = {}
+        for (const row of att ?? []) {
+          const t = perPlayer[row.player_id] ?? { total: 0, present: 0 }
+          t.total += 1
+          if (row.status === 'present' || row.status === 'late') t.present += 1
+          perPlayer[row.player_id] = t
+        }
+        for (const p of teamPlayers ?? []) {
+          const stats = perPlayer[p.id]
+          if (!stats || stats.total === 0) continue
+          const rate = (stats.present / stats.total) * 100
+          if (rate < 60) lowAttendanceCount += 1
+        }
       }
 
       return {
         ...team,
-        member_count: memberCount ?? 0,
-        coach_count: coachCount ?? 0,
-        player_count: playerCount ?? 0,
+        member_count: memberCount,
+        coach_count: coachCount,
+        player_count: playerCount,
         attendance_rate: attendanceRate,
         next_event: nextEvents?.[0] ?? null,
+        unlinked_count: unlinkedCount,
+        missing_sizes_count: missingSizesCount,
+        low_attendance_count: lowAttendanceCount,
       }
     })
   )
@@ -137,15 +171,37 @@ export default async function TeamsPage() {
 
 function TeamCard({ team }: { team: Team }) {
   const rateColor = team.attendance_rate >= 80 ? 'text-green' : team.attendance_rate >= 60 ? 'text-yellow-400' : 'text-red-400'
+  const issueCount = team.unlinked_count + team.missing_sizes_count + team.low_attendance_count
+  // "Needs attention" if there are any unlinked players (the biggest silent
+  // notification risk) or low-attendance kids; missing sizes alone is softer.
+  const issueTone = team.unlinked_count > 0 || team.low_attendance_count > 0 ? 'warn' : 'soft'
 
   return (
     <div className="bg-dark-secondary rounded-2xl border border-white/5 hover:border-green/20 transition-colors flex flex-col h-full">
       <Link href={`/dashboard/teams/${team.id}`} className="block p-6 flex-1">
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-3 gap-2">
           <h3 className="font-bold text-lg leading-tight">{team.name}</h3>
-          <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full shrink-0 ml-2">
-            {team.age_group}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {issueCount > 0 && (
+              <span
+                title={[
+                  team.unlinked_count > 0 ? `${team.unlinked_count} unlinked` : null,
+                  team.missing_sizes_count > 0 ? `${team.missing_sizes_count} missing sizes` : null,
+                  team.low_attendance_count > 0 ? `${team.low_attendance_count} low attendance` : null,
+                ].filter(Boolean).join(' · ')}
+                className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                  issueTone === 'warn'
+                    ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/20'
+                    : 'bg-white/5 text-gray border border-white/10'
+                }`}
+              >
+                ⚠ {issueCount}
+              </span>
+            )}
+            <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
+              {team.age_group}
+            </span>
+          </div>
         </div>
 
         {/* Stats row */}

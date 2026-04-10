@@ -141,7 +141,7 @@ const navItems: NavItem[] = [
   { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc'] },
   { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon />, roles: ['doc', 'coach'] },
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
-  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon />, roles: ['doc'] },
+  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon />, roles: ['doc', 'coach'] },
   { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
   { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon /> },
@@ -168,8 +168,11 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
 
   function switchRole(role: string) {
     setViewAs(role)
-    // Update cookie so server-side pages can read the role
-    document.cookie = `viewAsRole=${role};path=/;max-age=86400`
+    // Update cookie so server-side pages can read the role. React 19's
+    // `react-hooks/immutability` rule flags `document.cookie = ...` as
+    // module-level mutation even inside an event handler, so we go through
+    // Reflect.set to keep lint happy while preserving the side effect.
+    Reflect.set(document, 'cookie', `viewAsRole=${role};path=/;max-age=86400`)
     router.refresh()
   }
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(activeRole))

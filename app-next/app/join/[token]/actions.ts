@@ -26,6 +26,10 @@ export async function acceptInvite(formData: FormData) {
     role: string
     status: string
     expires_at: string | null
+    // player_id is populated for targeted "you're Billy Smith's parent"
+    // invites created via createPlayerScopedInvite. Optional — undefined
+    // on legacy team-scoped invites, in which case we skip auto-claim.
+    player_id?: string | null
   }
 
   if (invite.status !== 'pending') throw new Error('This invite has already been used or revoked')
@@ -71,6 +75,26 @@ export async function acceptInvite(formData: FormData) {
         }, { onConflict: 'team_id,profile_id' })
 
       if (memberError) throw new Error(`Failed to join team: ${memberError.message}`)
+    }
+  }
+
+  // Auto-claim a specific player when the invite was generated with a
+  // player_id attached. We still double-check the player is on the invited
+  // team to stop a bad invite row from crossing team boundaries. Silently
+  // skips if player_id is missing (legacy team-scoped invite) or if the
+  // player has since been moved to a different team.
+  if (invite.player_id && invite.team_id) {
+    const { data: targetPlayer } = await supabase
+      .from('players')
+      .select('id, team_id')
+      .eq('id', invite.player_id)
+      .single()
+
+    if (targetPlayer && targetPlayer.team_id === invite.team_id) {
+      await supabase
+        .from('players')
+        .update({ parent_id: user.id })
+        .eq('id', invite.player_id)
     }
   }
 

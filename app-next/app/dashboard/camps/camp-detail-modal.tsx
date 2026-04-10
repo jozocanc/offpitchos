@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { setCampDetails, getCampRegistrations, togglePayment } from './actions'
+import { setCampDetails, getCampRegistrations, togglePayment, sendCampPaymentReminders } from './actions'
+import { useToast } from '@/components/toast'
 
 interface Camp {
   eventId: string
@@ -15,7 +16,11 @@ interface Registration {
   id: string
   payment_status: string
   created_at: string
-  players: { first_name: string; last_name: string; teams: { name: string } | null } | null
+  players: {
+    first_name: string
+    last_name: string
+    teams: { name: string } | { name: string }[] | null
+  } | null
 }
 
 function formatCurrency(cents: number): string {
@@ -28,7 +33,9 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [nudging, setNudging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     getCampRegistrations(camp.eventId)
@@ -48,8 +55,8 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
 
       await setCampDetails({ eventId: camp.eventId, feeCents, capacity: cap })
       onClose()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
       setSaving(false)
     }
@@ -67,7 +74,30 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
     } catch {}
   }
 
+  async function handleNudgeUnpaid() {
+    if (nudging) return
+    setNudging(true)
+    try {
+      const result = await sendCampPaymentReminders(camp.eventId)
+      if (result.nudged === 0 && result.skipped === 0) {
+        toast('No unpaid registrations', 'success')
+      } else if (result.nudged === 0) {
+        toast(`Couldn't nudge anyone — ${result.skipped} unlinked player(s)`, 'error')
+      } else {
+        const parts = [`Nudged ${result.nudged} parent${result.nudged === 1 ? '' : 's'}`]
+        if (result.skipped > 0) parts.push(`skipped ${result.skipped} unlinked`)
+        toast(parts.join(' · '), 'success')
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send reminders'
+      toast(msg, 'error')
+    } finally {
+      setNudging(false)
+    }
+  }
+
   const paidCount = registrations.filter(r => r.payment_status === 'paid').length
+  const unpaidCount = registrations.length - paidCount
   const feeCents = Math.round(parseFloat(fee || '0') * 100)
 
   return (
@@ -125,6 +155,24 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
             )}
           </div>
 
+          {/* Nudge unpaid parents — one-click push + email reminder. Skips
+              registrations whose player.parent_id is still the DOC (unlinked),
+              and reports the count so the DOC knows who couldn't be reached. */}
+          {camp.feeCents > 0 && unpaidCount > 0 && (
+            <div className="mb-3 bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-yellow-400">
+                {unpaidCount} unpaid · {formatCurrency(unpaidCount * feeCents)} outstanding
+              </p>
+              <button
+                onClick={handleNudgeUnpaid}
+                disabled={nudging}
+                className="text-xs font-bold bg-yellow-400/20 text-yellow-400 px-3 py-1.5 rounded-lg hover:bg-yellow-400/30 transition-colors disabled:opacity-50"
+              >
+                {nudging ? 'Sending…' : 'Nudge unpaid parents'}
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-gray">Loading...</p>
           ) : registrations.length === 0 ? (
@@ -137,7 +185,13 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
                     <p className="text-sm text-white">
                       {reg.players?.first_name} {reg.players?.last_name}
                     </p>
-                    <p className="text-xs text-gray">{(reg.players?.teams as any)?.name ?? ''}</p>
+                    <p className="text-xs text-gray">
+                      {(() => {
+                        const t = reg.players?.teams
+                        if (!t) return ''
+                        return Array.isArray(t) ? (t[0]?.name ?? '') : t.name
+                      })()}
+                    </p>
                   </div>
                   <button
                     onClick={() => handleTogglePayment(reg.id)}

@@ -29,14 +29,19 @@ interface AgendaViewProps {
     status: string
     covering_coach_id: string | null
     unavailable_coach_id: string
-    profiles: any
+    profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   }>
   onAttendance?: (eventId: string, teamId: string) => void
   userRole: string
   userProfileId: string
+  /** Past events that still have zero attendance rows — rendered as
+   * an "Unmarked" badge in the event card so coaches can spot forgotten
+   * sessions without opening each one. Passed from the schedule client
+   * once the "Show Past" toggle has loaded past events. */
+  unmarkedEventIds?: Set<string>
 }
 
-export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onAttendance, coverageRequests, userRole, userProfileId }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds }: AgendaViewProps) {
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -75,6 +80,7 @@ export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAt
                   if (!cr || cr.status !== 'pending') return false
                   return cr.unavailable_coach_id !== userProfileId && userRole === 'coach'
                 })()}
+                isUnmarked={unmarkedEventIds?.has(event.id) ?? false}
               />
             ))}
           </div>

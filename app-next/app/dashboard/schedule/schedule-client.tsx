@@ -51,7 +51,7 @@ interface ScheduleClientProps {
     status: string
     covering_coach_id: string | null
     unavailable_coach_id: string
-    profiles: any
+    profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   }>
   userProfileId: string
   initialTeamFilter?: string | null
@@ -70,16 +70,20 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [showPast, setShowPast] = useState(false)
   const [pastEvents, setPastEvents] = useState<Event[]>([])
   const [loadingPast, setLoadingPast] = useState(false)
+  // Past events that still have zero attendance rows — used by the agenda
+  // view to paint an "Unmarked" badge so the coach can spot forgotten
+  // sessions without digging into each event individually.
+  const [unmarkedPastEventIds, setUnmarkedPastEventIds] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
 
-  // Scroll to and flash-highlight an event when arriving via "Needs your attention"
+  // Scroll to and flash-highlight an event when arriving via "Needs your attention".
+  // Agenda is the default view and the only one that renders scrollable event
+  // cards, so we don't force-switch views here (which would trip React 19's
+  // set-state-in-effect rule).
   useEffect(() => {
     if (!initialHighlight) return
-    // Ensure we're in agenda view (calendar view doesn't render event cards the same way)
-    setView('agenda')
-    // Wait a tick for layout + mount
     const t = setTimeout(() => {
       const el = document.querySelector(`[data-event-id="${initialHighlight}"]`) as HTMLElement | null
       if (!el) return
@@ -94,7 +98,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     if (!showPast && pastEvents.length === 0) {
       setLoadingPast(true)
       const past = await getPastEvents()
-      setPastEvents(past as Event[])
+      setPastEvents(past.events as Event[])
+      setUnmarkedPastEventIds(new Set(past.unmarkedEventIds))
       setLoadingPast(false)
     }
     setShowPast(!showPast)
@@ -139,7 +144,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     setModalOpen(true)
   }
 
-  function handleAddAtDate(_date: string) {
+  function handleAddAtDate() {
+    // Ignores the clicked date for now — the modal defaults to today and
+    // the DOC adjusts from there. Calendar view still provides the click
+    // context so this handler can use it in a future iteration.
     setEditEvent(null)
     setModalOpen(true)
   }
@@ -220,6 +228,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           coverageRequests={coverageRequests}
           userRole={userRole}
           userProfileId={userProfileId}
+          unmarkedEventIds={unmarkedPastEventIds}
         />
       ) : (
         <CalendarView

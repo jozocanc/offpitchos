@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import CampDetailModal from './camp-detail-modal'
 import RegisterModal from './register-modal'
+import CreateCampModal from './create-camp-modal'
 
 interface Camp {
   eventId: string
@@ -19,17 +19,43 @@ interface Camp {
   capacity: number | null
   registeredCount: number
   paidCount: number
+  unpaidCount: number
   expectedRevenue: number
   collectedRevenue: number
+}
+
+interface Team {
+  id: string
+  name: string
+  age_group: string
+}
+
+interface Venue {
+  id: string
+  name: string
 }
 
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
 }
 
-export default function CampsClient({ camps, userRole, userProfileId }: { camps: Camp[]; userRole: string; userProfileId: string }) {
+// Days from `now` to `start` rounded down. Returns negative if start is in the
+// past. Used for the "Starts in Nd" urgency pill on camp cards.
+function daysUntil(iso: string, now: Date): number {
+  const diffMs = new Date(iso).getTime() - now.getTime()
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+}
+
+export default function CampsClient({ camps, userRole, userProfileId, teams, venues }: {
+  camps: Camp[]
+  userRole: string
+  userProfileId: string
+  teams: Team[]
+  venues: Venue[]
+}) {
   const [selectedCamp, setSelectedCamp] = useState<Camp | null>(null)
   const [registerCamp, setRegisterCamp] = useState<Camp | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const isDoc = userRole === 'doc'
   const isParent = userRole === 'parent'
@@ -47,17 +73,19 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
   const outstanding = totalExpected - totalCollected
   const collectionPct = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
 
+  void userProfileId // reserved for future "registered by me" filtering
+
   return (
     <div>
       {/* Header with Create button */}
       {isDoc && (
         <div className="flex justify-end mb-6">
-          <Link
-            href="/dashboard/schedule"
+          <button
+            onClick={() => setCreateOpen(true)}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
             + Create Camp
-          </Link>
+          </button>
         </div>
       )}
 
@@ -102,6 +130,7 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
               camp={camp}
               isDoc={isDoc}
               isParent={isParent}
+              now={now}
               onManage={() => setSelectedCamp(camp)}
               onRegister={() => setRegisterCamp(camp)}
             />
@@ -120,6 +149,7 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
                 camp={camp}
                 isDoc={isDoc}
                 isParent={false}
+                now={now}
                 onManage={() => setSelectedCamp(camp)}
                 onRegister={() => {}}
               />
@@ -135,12 +165,19 @@ export default function CampsClient({ camps, userRole, userProfileId }: { camps:
       {registerCamp && (
         <RegisterModal camp={registerCamp} onClose={() => setRegisterCamp(null)} />
       )}
+      {createOpen && (
+        <CreateCampModal
+          teams={teams}
+          venues={venues}
+          onClose={() => setCreateOpen(false)}
+        />
+      )}
     </div>
   )
 }
 
-function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
-  camp: Camp; isDoc: boolean; isParent: boolean; onManage: () => void; onRegister: () => void
+function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
+  camp: Camp; isDoc: boolean; isParent: boolean; now: Date; onManage: () => void; onRegister: () => void
 }) {
   const start = new Date(camp.startTime)
   const end = new Date(camp.endTime)
@@ -149,17 +186,59 @@ function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
     ' – ' + end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const fillPct = camp.capacity ? Math.round((camp.registeredCount / camp.capacity) * 100) : null
 
+  // Urgency signal: time until start. Upcoming camps show "Starts in Nd"; we
+  // escalate to red when the camp is within a week AND under-filled, because
+  // those are the ones a DOC needs to nudge registrations on.
+  const days = daysUntil(camp.startTime, now)
+  const isUpcoming = days >= 0
+  const isUnderFilled = fillPct !== null ? fillPct < 50 : camp.registeredCount === 0
+  const urgencyTone: 'critical' | 'soon' | 'normal' | null = !isUpcoming
+    ? null
+    : days <= 7 && isUnderFilled
+    ? 'critical'
+    : days <= 7
+    ? 'soon'
+    : 'normal'
+
+  const urgencyLabel = (() => {
+    if (!isUpcoming) return null
+    if (days === 0) return 'Starts today'
+    if (days === 1) return 'Starts tomorrow'
+    return `Starts in ${days}d`
+  })()
+
   return (
     <div className="bg-dark-secondary border border-white/5 rounded-xl p-5 flex items-center justify-between">
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <h3 className="font-bold text-white">{camp.title}</h3>
           {camp.ageGroup && <span className="text-xs bg-green/10 text-green px-2 py-0.5 rounded">{camp.ageGroup}</span>}
           {camp.status === 'cancelled' && <span className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded">Cancelled</span>}
+          {urgencyLabel && (
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                urgencyTone === 'critical'
+                  ? 'bg-red-400/10 text-red-400 border border-red-400/20'
+                  : urgencyTone === 'soon'
+                  ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/20'
+                  : 'bg-white/5 text-gray border border-white/10'
+              }`}
+            >
+              {urgencyLabel}
+            </span>
+          )}
+          {isDoc && camp.unpaidCount > 0 && (
+            <span
+              title={`${camp.unpaidCount} unpaid registration${camp.unpaidCount === 1 ? '' : 's'}`}
+              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20"
+            >
+              {camp.unpaidCount} unpaid
+            </span>
+          )}
         </div>
         <p className="text-sm text-gray">{dateStr} &middot; {timeStr}</p>
         {camp.venue && <p className="text-xs text-gray mt-0.5">{camp.venue}</p>}
-        <div className="flex items-center gap-4 mt-2 text-xs text-gray">
+        <div className="flex items-center gap-4 mt-2 text-xs text-gray flex-wrap">
           {isDoc && <span>{camp.registeredCount}{camp.capacity ? `/${camp.capacity}` : ''} registered</span>}
           {camp.feeCents > 0 && <span>{formatCurrency(camp.feeCents)} / player</span>}
           {isDoc && camp.feeCents > 0 && (
@@ -188,7 +267,7 @@ function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
           </div>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 ml-4 shrink-0">
         {isDoc && (
           <button onClick={onManage} className="text-sm text-green hover:text-green/80 transition-colors">
             Manage

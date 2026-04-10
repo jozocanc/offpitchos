@@ -180,12 +180,17 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
     return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false }
   }
 
-  // Get parent profile ids (for push + email helpers)
+  // Get parent profile ids (for push + email helpers). We specifically
+  // filter on `role='parent'` so that unlinked players — whose `parent_id`
+  // still points at the DOC who added them — don't trigger a notification
+  // to the DOC about their own roster. Once the parent claims the kid via
+  // the parent attention panel, they'll start getting the reminders.
   const parentUserIds = Array.from(kidsByParent.keys())
   const { data: parentProfiles } = await service
     .from('profiles')
     .select('id, user_id')
     .in('user_id', parentUserIds)
+    .eq('role', 'parent')
 
   if (!parentProfiles || parentProfiles.length === 0) {
     return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false }

@@ -290,9 +290,17 @@ export async function acceptCoverage(requestId: string) {
       .select('profile_id, profiles!inner(role)')
       .eq('team_id', event.team_id)
 
-    const parentIds = (parents ?? [])
-      .filter((p: any) => p.profiles?.role === 'parent')
-      .map((p: any) => p.profile_id)
+    // Supabase returns the inner join as either a single profile object or
+    // an array depending on relationship cardinality; narrow both shapes.
+    const parentIds = ((parents ?? []) as Array<{
+      profile_id: string
+      profiles: { role: string } | { role: string }[] | null
+    }>)
+      .filter(p => {
+        const prof = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
+        return prof?.role === 'parent'
+      })
+      .map(p => p.profile_id)
 
     if (parentIds.length > 0) {
       await notifySpecificProfiles(request.event_id, parentIds, 'coverage_accepted', message)
@@ -453,7 +461,7 @@ export async function getCoverageData() {
   const { data: responses } = await supabase
     .from('coverage_responses')
     .select(`
-      id, coverage_request_id, response, created_at,
+      id, coverage_request_id, coach_id, response, created_at,
       profiles ( display_name )
     `)
 
