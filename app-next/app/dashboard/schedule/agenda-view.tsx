@@ -31,6 +31,7 @@ interface AgendaViewProps {
     unavailable_coach_id: string
     profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   }>
+  onParentCantAttend?: (eventId: string, teamId: string) => void
   onAttendance?: (eventId: string, teamId: string) => void
   userRole: string
   userProfileId: string
@@ -41,7 +42,7 @@ interface AgendaViewProps {
   unmarkedEventIds?: Set<string>
 }
 
-export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds }: AgendaViewProps) {
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -72,6 +73,7 @@ export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAt
                 onCancel={onCancel}
                 canEdit={canEdit}
                 onCantAttend={onCantAttend}
+                onParentCantAttend={onParentCantAttend}
                 onAttendance={onAttendance}
                 teamId={event.team_id}
                 coverageRequest={coverageRequests.find(cr => cr.event_id === event.id) ?? null}

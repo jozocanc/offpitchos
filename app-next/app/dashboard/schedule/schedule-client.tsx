@@ -8,6 +8,7 @@ import AgendaView from './agenda-view'
 import CalendarView from './calendar-view'
 import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
+import ParentCantAttendModal from './parent-cant-attend-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, getPastEvents } from './actions'
 import { useToast } from '@/components/toast'
@@ -66,6 +67,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [modalOpen, setModalOpen] = useState(false)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [cantAttendEventId, setCantAttendEventId] = useState<string | null>(null)
+  const [parentCantAttendEvent, setParentCantAttendEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
   const [showPast, setShowPast] = useState(false)
   const [pastEvents, setPastEvents] = useState<Event[]>([])
@@ -78,6 +80,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
   const canCreate = userRole === ROLES.DOC
+  const isParent = userRole === ROLES.PARENT
 
   // Scroll to and flash-highlight an event when arriving via "Needs your attention".
   // Agenda is the default view and the only one that renders scrollable event
@@ -224,6 +227,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           onEdit={handleEdit}
           onCancel={handleCancel}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
+          onParentCantAttend={isParent ? ((eventId: string, teamId: string) => {
+            const ev = [...events, ...pastEvents].find(e => e.id === eventId)
+            setParentCantAttendEvent({ eventId, teamId, title: ev?.title ?? '' })
+          }) : undefined}
           onAttendance={canEdit ? handleAttendance : undefined}
           canEdit={canEdit}
           coverageRequests={coverageRequests}
@@ -239,13 +246,23 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
         />
       )}
 
-      {/* Can't Attend Modal */}
+      {/* Coach: Can't Attend → coverage request */}
       {cantAttendEventId && (
         <CantAttendModal
           eventId={cantAttendEventId}
           userProfileId={userProfileId}
           userRole={userRole}
           onClose={() => setCantAttendEventId(null)}
+        />
+      )}
+
+      {/* Parent: Can't Attend → excuse kids + notify coach */}
+      {parentCantAttendEvent && (
+        <ParentCantAttendModal
+          eventId={parentCantAttendEvent.eventId}
+          teamId={parentCantAttendEvent.teamId}
+          eventTitle={parentCantAttendEvent.title}
+          onClose={() => setParentCantAttendEvent(null)}
         />
       )}
 

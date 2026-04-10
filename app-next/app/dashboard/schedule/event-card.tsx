@@ -21,6 +21,7 @@ interface EventCardProps {
   onCancel: (eventId: string) => void
   canEdit: boolean
   onCantAttend?: (eventId: string) => void
+  onParentCantAttend?: (eventId: string, teamId: string) => void
   onAttendance?: (eventId: string, teamId: string) => void
   teamId?: string
   coverageRequest?: {
@@ -35,7 +36,7 @@ interface EventCardProps {
   isUnmarked?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked }: EventCardProps) {
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -160,6 +161,14 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
         {onCantAttend && !isCancelled && !coverageRequest && (
           <button
             onClick={() => onCantAttend(event.id)}
+            className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0"
+          >
+            Can&apos;t Attend
+          </button>
+        )}
+        {onParentCantAttend && !isCancelled && teamId && (
+          <button
+            onClick={() => onParentCantAttend(event.id, teamId)}
             className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0"
           >
             Can&apos;t Attend
