@@ -20,7 +20,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, club_id, role')
+    .select('id, display_name, club_id, role')
     .eq('user_id', user.id)
     .single()
 
@@ -67,24 +67,37 @@ export default async function DashboardPage() {
         .in('status', ['pending', 'escalated'])
     : { count: 0 }
 
-  // Fetch user's teams (for coaches and parents)
-  const { data: myTeamsRaw } = await supabase
-    .from('team_members')
-    .select('team_id, role, teams(name, age_group)')
-    .eq('user_id', user.id)
+  // Fetch user's teams (for coaches and parents) — team_members uses
+  // profile_id, not user_id, so we need the profile's PK.
+  const { data: myTeamsRaw } = profile?.id
+    ? await supabase
+        .from('team_members')
+        .select('team_id, role, teams(name, age_group)')
+        .eq('profile_id', profile.id)
+    : { data: null }
 
   const myTeams = (myTeamsRaw ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
 
-  // Fetch today's upcoming events with details
+  // Fetch today's upcoming events — for DOC show all, for coach/parent
+  // scope to their teams only so parents don't see events for teams
+  // their kids aren't on.
+  const myTeamIds = myTeams.map(tm => tm.team_id)
+
+  let todayEventsQuery = supabase
+    .from('events')
+    .select('id, title, start_time, end_time, type, status, team_id, teams(name, age_group)')
+    .eq('club_id', profile?.club_id ?? '')
+    .gte('start_time', todayStart.toISOString())
+    .lte('start_time', todayEnd.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(10)
+
+  if (userRole !== 'doc' && myTeamIds.length > 0) {
+    todayEventsQuery = todayEventsQuery.in('team_id', myTeamIds)
+  }
+
   const { data: todayEvents, error: todayEventsError } = profile?.club_id
-    ? await supabase
-        .from('events')
-        .select('id, title, start_time, end_time, type, status, teams(name, age_group)')
-        .eq('club_id', profile.club_id)
-        .gte('start_time', todayStart.toISOString())
-        .lte('start_time', todayEnd.toISOString())
-        .order('start_time', { ascending: true })
-        .limit(10)
+    ? await todayEventsQuery
     : { data: null, error: null }
 
   if (todayEventsError) console.error('todayEvents error:', todayEventsError)
