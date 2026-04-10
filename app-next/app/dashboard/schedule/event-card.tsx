@@ -95,6 +95,9 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
           </div>
           <p className={`font-bold ${isCancelled ? 'line-through text-gray' : 'text-white'}`}>
             {event.title}
+            {event.teams?.[0]?.age_group && (
+              <span className="text-gray font-normal ml-1">({event.teams[0].age_group})</span>
+            )}
           </p>
           <p className="text-gray text-sm mt-1">{timeStr}</p>
           {(() => {
