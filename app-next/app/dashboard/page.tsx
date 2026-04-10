@@ -221,8 +221,8 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Quick actions for new clubs */}
-      {isNewClub && (
+      {/* Quick actions for new clubs — DOC only since these are admin setup steps */}
+      {isNewClub && userRole === 'doc' && (
         <div>
           <h2 className="text-lg font-bold mb-4">Quick actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

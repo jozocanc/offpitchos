@@ -256,7 +256,7 @@ export default async function TeamDetailPage({
               <div className="space-y-2">
                 {players.map(p => {
                   const sig = signals[p.id]
-                  const canRemove = isDOC || p.parent_id === user.id
+                  const canRemove = isDOC
                   return (
                     <div
                       key={p.id}
@@ -352,8 +352,9 @@ export default async function TeamDetailPage({
           </section>
         </div>
 
-        {/* Right column: Invite links */}
-        <div>
+        {/* Right column: Invite links — DOC only since coaches and parents
+            shouldn't be generating/revoking join links. */}
+        {isDOC && <div>
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Share Invite Link</h2>
@@ -385,7 +386,7 @@ export default async function TeamDetailPage({
               </div>
             )}
           </section>
-        </div>
+        </div>}
       </div>
     </div>
   )

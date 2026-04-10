@@ -31,9 +31,11 @@ export default async function CoachesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id')
+    .select('club_id, role')
     .eq('user_id', user.id)
     .single()
+
+  if (profile?.role !== 'doc') redirect('/dashboard')
 
   const clubId = profile?.club_id ?? ''
 

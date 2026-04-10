@@ -36,7 +36,7 @@ export default function MessagesClient({
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
 
-  const canPost = userRole === ROLES.DOC || userRole === ROLES.COACH
+  const canPost = userRole === ROLES.DOC
 
   const filtered = announcements.filter(a => {
     if (!filterTeam) return true

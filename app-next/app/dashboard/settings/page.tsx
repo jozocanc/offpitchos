@@ -20,6 +20,8 @@ export default async function SettingsPage() {
     .eq('user_id', user.id)
     .single()
 
+  if (profile?.role === 'parent') redirect('/dashboard')
+
   const { data: club } = await supabase
     .from('clubs')
     .select('id, name')

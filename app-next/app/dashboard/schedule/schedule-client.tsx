@@ -77,6 +77,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [, startTransition] = useTransition()
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
+  const canCreate = userRole === ROLES.DOC
 
   // Scroll to and flash-highlight an event when arriving via "Needs your attention".
   // Agenda is the default view and the only one that renders scrollable event
@@ -194,7 +195,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             </button>
           </div>
 
-          {canEdit && (
+          {canCreate && (
             <button
               onClick={handleAddNew}
               className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"

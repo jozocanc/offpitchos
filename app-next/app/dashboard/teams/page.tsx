@@ -29,7 +29,7 @@ export default async function TeamsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id')
+    .select('club_id, role')
     .eq('user_id', user.id)
     .single()
 
@@ -150,7 +150,7 @@ export default async function TeamsPage() {
           <h1 className="text-3xl font-black tracking-tight">Teams</h1>
           <p className="text-gray text-sm mt-1">{teams.length} team{teams.length !== 1 ? 's' : ''} in your club</p>
         </div>
-        <AddTeamForm />
+        {profile?.role === 'doc' && <AddTeamForm />}
       </div>
 
       {teams.length === 0 ? (
