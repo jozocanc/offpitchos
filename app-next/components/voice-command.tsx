@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { executeVoiceCommand, undoCancelEvent, type VoiceCommandResult } from '@/app/dashboard/voice-actions'
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'result'
@@ -103,8 +103,14 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
     return () => clearTimeout(t)
   }, [state, result, dismiss])
 
-  // Gate to DOC + coach only — hooks must run before this early return
+  const pathname = usePathname()
+
+  // Gate to DOC + coach only — hooks must run before this early return.
+  // Also hide on the Ask page where the floating mic overlaps the chat
+  // send button and is functionally redundant (voice commands are for
+  // schedule operations, not AI chat input).
   if (userRole === 'parent') return null
+  if (pathname === '/dashboard/ask') return null
 
   const isListening = state === 'listening'
   const isProcessing = state === 'processing'
