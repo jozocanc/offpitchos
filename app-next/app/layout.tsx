@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={inter.className}><AccessGate>{children}</AccessGate></body>
