@@ -13,6 +13,7 @@ function SignupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
+  const inviteCode = searchParams.get('code')
   const supabase = createClient()
 
   const handleEmailSignup = async (e: React.FormEvent) => {
@@ -32,16 +33,26 @@ function SignupForm() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push(inviteToken ? `/join/${inviteToken}` : '/dashboard')
+      const dest = inviteToken
+        ? `/join/${inviteToken}`
+        : inviteCode
+        ? `/join/code/${inviteCode}`
+        : '/dashboard'
+      router.push(dest)
       router.refresh()
     }
   }
 
   const handleGoogleSignup = async () => {
+    const next = inviteToken
+      ? `/join/${inviteToken}`
+      : inviteCode
+      ? `/join/code/${inviteCode}`
+      : '/dashboard'
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback${inviteToken ? `?next=/join/${inviteToken}` : ''}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
     if (error) setError(error.message)
@@ -130,7 +141,7 @@ function SignupForm() {
 
         <p className="text-center text-gray text-sm mt-6">
           Already have an account?{' '}
-          <a href={inviteToken ? `/login?invite=${inviteToken}` : '/login'} className="text-green hover:underline">Sign in</a>
+          <a href={inviteToken ? `/login?invite=${inviteToken}` : inviteCode ? `/login?code=${inviteCode}` : '/login'} className="text-green hover:underline">Sign in</a>
         </p>
       </div>
     </main>

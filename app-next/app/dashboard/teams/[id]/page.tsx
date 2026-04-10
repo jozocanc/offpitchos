@@ -10,6 +10,7 @@ import AddPlayerForm from './add-player-form'
 import RemovePlayerButton from './remove-player-button'
 import LinkParentMenu from './link-parent-menu'
 import GroupChatLink from './group-chat-link'
+import InviteCodeCard from './invite-code-card'
 
 interface Member {
   profile_id: string
@@ -68,7 +69,7 @@ export default async function TeamDetailPage({
 
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, age_group, group_chat_link')
+    .select('id, name, age_group, group_chat_link, invite_code')
     .eq('id', id)
     .eq('club_id', clubId)
     .single()
@@ -191,6 +192,11 @@ export default async function TeamDetailPage({
           {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} />}
         </div>
       </div>
+
+      {/* Invite code — DOC can share this code or link with parents */}
+      {isDOC && (team as any).invite_code && (
+        <InviteCodeCard code={(team as any).invite_code} />
+      )}
 
       {/* Group chat link — prominent for parents, compact for DOC */}
       {(isParent || isDOC) && (
