@@ -36,7 +36,9 @@ export default function MessagesClient({
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
 
-  const canPost = userRole === ROLES.DOC
+  // All roles can post messages — DOC for club announcements, coaches for
+  // team updates, parents for communicating with their kid's coaches.
+  const canPost = userRole === ROLES.DOC || userRole === ROLES.COACH || userRole === ROLES.PARENT
 
   const filtered = announcements.filter(a => {
     if (!filterTeam) return true

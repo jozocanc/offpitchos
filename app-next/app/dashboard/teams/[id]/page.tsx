@@ -11,10 +11,12 @@ import RemovePlayerButton from './remove-player-button'
 import LinkParentMenu from './link-parent-menu'
 
 interface Member {
+  profile_id: string
   user_id: string
   role: string
   profiles: {
     display_name: string | null
+    user_id: string | null
   } | null
 }
 
@@ -72,13 +74,18 @@ export default async function TeamDetailPage({
 
   if (!team) notFound()
 
-  // Fetch team members joined with profiles
+  // Fetch team members joined with profiles. team_members has profile_id
+  // (not user_id), but we need the profile's user_id to match against
+  // players.parent_id for the "linked" check.
   const { data: membersRaw } = await supabase
     .from('team_members')
-    .select('user_id, role, profiles(display_name)')
+    .select('profile_id, role, profiles(display_name, user_id)')
     .eq('team_id', id)
 
-  const members = (membersRaw ?? []) as unknown as Member[]
+  const members = (membersRaw ?? []).map(m => ({
+    ...m,
+    user_id: (m.profiles as any)?.user_id ?? '',
+  })) as unknown as Member[]
 
   // Fetch active parent invite links
   const { data: parentInvites } = await supabase
@@ -224,11 +231,11 @@ export default async function TeamDetailPage({
                 Players
                 <span className="text-gray font-normal text-sm ml-2">· {players.length}</span>
               </h2>
-              {(isDOC || isParent) && <AddPlayerForm teamId={team.id} />}
+              {isDOC && <AddPlayerForm teamId={team.id} />}
             </div>
 
-            {/* Health summary — surfaces at-risk counts so DOC sees what needs attention without scanning every row. */}
-            {players.length > 0 && (unlinkedCount > 0 || missingSizeCount > 0 || lowAttendanceCount > 0) && (
+            {/* Health summary — DOC only, parents don't need to see admin stats about other families' kids. */}
+            {isDOC && players.length > 0 && (unlinkedCount > 0 || missingSizeCount > 0 || lowAttendanceCount > 0) && (
               <div className="flex flex-wrap gap-2 mb-3 text-xs">
                 {unlinkedCount > 0 && (
                   <span className="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-1 rounded-full font-bold">
@@ -280,12 +287,12 @@ export default async function TeamDetailPage({
                         </p>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                           {p.position && <p className="text-gray text-xs">{p.position}</p>}
-                          {sig?.unlinked && (
+                          {isDOC && sig?.unlinked && (
                             <span className="text-[10px] font-bold uppercase tracking-wide bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded">
                               Unlinked
                             </span>
                           )}
-                          {sig?.missingSizes && (
+                          {isDOC && sig?.missingSizes && (
                             <span className="text-[10px] font-bold uppercase tracking-wide bg-white/10 text-gray px-1.5 py-0.5 rounded">
                               No sizes
                             </span>
