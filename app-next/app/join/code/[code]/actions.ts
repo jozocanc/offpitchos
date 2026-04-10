@@ -1,15 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
-// Look up a team by its invite code. Returns team + club info for the
-// join page to display, or null if the code is invalid.
+// Look up a team by its invite code. Uses the service client to bypass
+// RLS since this runs before the user is authenticated — they're on
+// the join page and haven't signed in yet.
 export async function getTeamByCode(code: string) {
-  const supabase = await createClient()
+  const service = createServiceClient()
 
-  const { data: team } = await supabase
+  const { data: team } = await service
     .from('teams')
     .select('id, name, age_group, club_id, clubs(name)')
     .eq('invite_code', code.toUpperCase())
