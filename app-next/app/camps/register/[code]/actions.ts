@@ -9,7 +9,7 @@ export async function getCampByCode(code: string) {
 
   const { data: detail } = await service
     .from('camp_details')
-    .select('id, event_id, fee_cents, capacity, registration_code, events(title, start_time, end_time, status, teams(name, age_group), venues(name, address))')
+    .select('id, event_id, fee_cents, capacity, registration_code, description, events(title, start_time, end_time, status, teams(name, age_group), venues(name, address))')
     .eq('registration_code', code.toUpperCase())
     .single()
 
@@ -45,6 +45,7 @@ export async function getCampByCode(code: string) {
     feeCents: detail.fee_cents,
     capacity: detail.capacity,
     registered: count ?? 0,
+    description: detail.description ?? null,
     spotsLeft: detail.capacity ? detail.capacity - (count ?? 0) : null,
     isFull: detail.capacity ? (count ?? 0) >= detail.capacity : false,
     status: event?.status ?? 'scheduled',

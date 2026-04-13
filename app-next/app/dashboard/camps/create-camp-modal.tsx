@@ -43,6 +43,7 @@ export default function CreateCampModal({
   const [address, setAddress] = useState('')
   const [fee, setFee] = useState('')
   const [capacity, setCapacity] = useState('')
+  const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
@@ -85,6 +86,7 @@ export default function CreateCampModal({
           address: address.trim() || null,
           feeCents,
           capacity: cap,
+          description: description.trim() || null,
           notes: notes.trim() || null,
         })
         toast('Camp created — parents notified', 'success')
@@ -134,6 +136,14 @@ export default function CreateCampModal({
             ))}
           </select>
         )}
+
+        <label className="block text-sm font-medium text-gray mb-2">Open to</label>
+        <input
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="e.g. Boys ages 5-13, Girls U10-U12, All players 8-14"
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
+        />
 
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div>

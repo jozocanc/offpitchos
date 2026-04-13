@@ -243,6 +243,7 @@ interface CreateCampInput {
   address: string | null
   feeCents: number
   capacity: number | null
+  description: string | null
   notes: string | null
 }
 
@@ -297,6 +298,7 @@ export async function createCamp(input: CreateCampInput) {
       fee_cents: input.feeCents,
       capacity: input.capacity,
       registration_code: regCode,
+      description: input.description,
     })
 
   if (detailError) {

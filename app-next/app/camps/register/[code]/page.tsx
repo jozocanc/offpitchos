@@ -42,7 +42,10 @@ export default async function PublicCampPage({
         </div>
 
         <div className="bg-[#12203A] rounded-2xl p-8 border border-white/10 shadow-2xl mb-6">
-          <h2 className="text-2xl font-black text-white mb-4">{camp.title}</h2>
+          <h2 className="text-2xl font-black text-white mb-2">{camp.title}</h2>
+          {camp.description && (
+            <p className="text-[#00FF87] font-semibold text-sm mb-4">{camp.description}</p>
+          )}
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center justify-between">
