@@ -151,7 +151,7 @@ export default function CreateCampModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray mb-2">Start Time</label>
+            <label className="block text-sm font-medium text-gray mb-2">Daily From</label>
             <input
               type="time"
               required
@@ -174,7 +174,7 @@ export default function CreateCampModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray mb-2">End Time</label>
+            <label className="block text-sm font-medium text-gray mb-2">Daily Until</label>
             <input
               type="time"
               required

@@ -49,11 +49,11 @@ export default async function PublicCampPage({
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Date</span>
-              <span className="text-white font-semibold text-sm">{camp.date}</span>
+              <span className="text-[#94A3B8] text-sm">Dates</span>
+              <span className="text-white font-semibold text-sm">{camp.date}{camp.endDate && camp.endDate !== camp.date ? ` – ${camp.endDate}` : ''}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Time</span>
+              <span className="text-[#94A3B8] text-sm">Daily Hours</span>
               <span className="text-white font-semibold text-sm">{camp.startTime} – {camp.endTime}</span>
             </div>
             {camp.team && (

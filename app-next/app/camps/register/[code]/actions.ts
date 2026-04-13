@@ -32,6 +32,9 @@ export async function getCampByCode(code: string) {
     date: event?.start_time
       ? new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
       : '',
+    endDate: event?.end_time
+      ? new Date(event.end_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
+      : '',
     startTime: event?.start_time
       ? new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
       : '',
