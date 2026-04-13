@@ -127,11 +127,13 @@ export async function setCampDetails(input: {
       .update({ fee_cents: input.feeCents, capacity: input.capacity })
       .eq('id', existing.id)
   } else {
+    const autoCode = 'CAMP-' + Math.floor(Math.random() * 90000 + 10000)
     await supabase.from('camp_details').insert({
       event_id: input.eventId,
       club_id: profile.club_id,
       fee_cents: input.feeCents,
       capacity: input.capacity,
+      registration_code: autoCode,
     })
   }
 
@@ -284,7 +286,9 @@ export async function createCamp(input: CreateCampInput) {
   if (eventError || !event) throw new Error(`Failed to create camp: ${eventError?.message ?? 'unknown'}`)
 
   // 2) Insert camp_details alongside so the Manage modal has fee + capacity
-  // pre-populated from the start.
+  // pre-populated from the start. Auto-generate a registration code so the
+  // DOC can immediately share a public registration link.
+  const regCode = input.title.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 15) + '-' + Math.floor(Math.random() * 900 + 100)
   const { error: detailError } = await supabase
     .from('camp_details')
     .insert({
@@ -292,6 +296,7 @@ export async function createCamp(input: CreateCampInput) {
       club_id: profile.club_id,
       fee_cents: input.feeCents,
       capacity: input.capacity,
+      registration_code: regCode,
     })
 
   if (detailError) {
