@@ -82,7 +82,7 @@ export default function CreateCampModal({
           teamId: teamId || null,
           startTime: startLocal.toISOString(),
           endTime: endLocal.toISOString(),
-          venueId: venueId || null,
+          venueId: venueId && venueId !== 'manual' ? venueId : null,
           address: address.trim() || null,
           feeCents,
           capacity: cap,
@@ -174,23 +174,23 @@ export default function CreateCampModal({
         </div>
 
         <label className="block text-sm font-medium text-gray mb-2">Venue (optional)</label>
-        {venues.length > 0 ? (
-          <select
-            value={venueId}
-            onChange={e => setVenueId(e.target.value)}
-            className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors mb-4"
-          >
-            <option value="">— None —</option>
-            {venues.map(v => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
-        ) : (
+        <select
+          value={venueId}
+          onChange={e => { setVenueId(e.target.value); if (e.target.value !== 'manual') setAddress('') }}
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors mb-2"
+        >
+          <option value="">— None —</option>
+          {venues.map(v => (
+            <option key={v.id} value={v.id}>{v.name}</option>
+          ))}
+          <option value="manual">Enter address manually</option>
+        </select>
+        {venueId === 'manual' && (
           <input
             value={address}
             onChange={e => setAddress(e.target.value)}
-            placeholder="Address"
-            className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
+            placeholder="e.g. 4100 Riverside Dr, Tampa, FL 33603"
+            className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-2"
           />
         )}
 
