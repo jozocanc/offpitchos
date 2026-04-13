@@ -236,7 +236,7 @@ export async function getParentPlayers() {
 
 interface CreateCampInput {
   title: string
-  teamId: string
+  teamId: string | null
   startTime: string // ISO
   endTime: string   // ISO
   venueId: string | null
@@ -256,7 +256,6 @@ export async function createCamp(input: CreateCampInput) {
   if (profile.role !== 'doc') throw new Error('Only directors can create camps')
 
   if (!input.title.trim()) throw new Error('Title is required')
-  if (!input.teamId) throw new Error('Team is required')
   if (new Date(input.endTime) <= new Date(input.startTime)) {
     throw new Error('End time must be after start time')
   }
@@ -270,7 +269,7 @@ export async function createCamp(input: CreateCampInput) {
     .from('events')
     .insert({
       club_id: profile.club_id,
-      team_id: input.teamId,
+      team_id: input.teamId || null,
       type: 'camp',
       title: input.title.trim(),
       start_time: input.startTime,
@@ -312,10 +311,14 @@ export async function createCamp(input: CreateCampInput) {
   // table check constraint allows.
   try {
     const service = createServiceClient()
-    const { data: members } = await service
-      .from('team_members')
-      .select('profile_id')
-      .eq('team_id', input.teamId)
+    // If camp is tied to a team, notify that team's members.
+    // If club-wide (no team), skip team notifications.
+    const { data: members } = input.teamId
+      ? await service
+          .from('team_members')
+          .select('profile_id')
+          .eq('team_id', input.teamId)
+      : { data: [] }
 
     const memberIds = (members ?? []).map(m => m.profile_id)
     if (memberIds.length > 0) {

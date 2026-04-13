@@ -29,7 +29,7 @@ export default function CreateCampModal({
   onClose: () => void
 }) {
   const [title, setTitle] = useState('')
-  const [teamId, setTeamId] = useState(teams[0]?.id ?? '')
+  const [teamId, setTeamId] = useState('')
   // Sensible defaults: starts tomorrow 9am, ends 12pm, so the DOC only has to
   // change the date rather than fill out 4 fields for the common case.
   const [date, setDate] = useState(() => {
@@ -79,7 +79,7 @@ export default function CreateCampModal({
       try {
         await createCamp({
           title: title.trim(),
-          teamId,
+          teamId: teamId || null,
           startTime: startLocal.toISOString(),
           endTime: endLocal.toISOString(),
           venueId: venueId || null,
@@ -118,24 +118,19 @@ export default function CreateCampModal({
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
         />
 
-        <label className="block text-sm font-medium text-gray mb-2">Team</label>
-        {teams.length === 0 ? (
-          <p className="text-yellow-400 text-sm mb-4">
-            No teams in your club yet. Add a team first.
-          </p>
-        ) : (
-          <select
-            value={teamId}
-            onChange={e => setTeamId(e.target.value)}
-            className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors mb-4"
-          >
-            {teams.map(t => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.age_group})
-              </option>
-            ))}
-          </select>
-        )}
+        <label className="block text-sm font-medium text-gray mb-2">Team (optional)</label>
+        <select
+          value={teamId}
+          onChange={e => setTeamId(e.target.value)}
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors mb-4"
+        >
+          <option value="">Club-wide (no specific team)</option>
+          {teams.map(t => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.age_group})
+            </option>
+          ))}
+        </select>
 
         <label className="block text-sm font-medium text-gray mb-2">Open to</label>
         <input
