@@ -15,6 +15,7 @@ interface Camp {
   ageGroup: string | null
   venue: string | null
   detailId: string | null
+  registrationCode: string | null
   feeCents: number
   capacity: number | null
   registeredCount: number
@@ -270,7 +271,18 @@ function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
           </div>
         )}
       </div>
-      <div className="flex gap-2 ml-4 shrink-0">
+      <div className="flex flex-col gap-2 ml-4 shrink-0">
+        {isDoc && camp.registrationCode && (
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/camps/register/${camp.registrationCode}`
+              navigator.clipboard.writeText(url)
+            }}
+            className="text-xs text-green bg-green/10 border border-green/20 px-3 py-1.5 rounded-lg hover:bg-green/20 transition-colors"
+          >
+            Share Link
+          </button>
+        )}
         {isDoc && (
           <button onClick={onManage} className="text-sm text-green hover:text-green/80 transition-colors">
             Manage

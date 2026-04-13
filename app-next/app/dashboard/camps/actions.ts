@@ -34,10 +34,10 @@ export async function getCampsData() {
     .eq('type', 'camp')
     .order('start_time', { ascending: true })
 
-  // Get camp details (fee, capacity) for all camp events
+  // Get camp details (fee, capacity, registration code) for all camp events
   const { data: campDetails } = await supabase
     .from('camp_details')
-    .select('id, event_id, fee_cents, capacity')
+    .select('id, event_id, fee_cents, capacity, registration_code')
     .eq('club_id', profile.club_id)
 
   // Get registration counts and revenue per camp
@@ -70,6 +70,7 @@ export async function getCampsData() {
       ageGroup: (event.teams as { name?: string; age_group?: string } | null)?.age_group ?? null,
       venue: (event.venues as { name?: string } | null)?.name ?? null,
       detailId: detail?.id ?? null,
+      registrationCode: detail?.registration_code ?? null,
       feeCents,
       capacity: detail?.capacity ?? null,
       registeredCount: regs.length,
@@ -150,7 +151,7 @@ export async function getCampRegistrations(eventId: string) {
 
   const { data: regs } = await supabase
     .from('camp_registrations')
-    .select('id, payment_status, created_at, players(first_name, last_name, team_id, teams(name))')
+    .select('id, payment_status, created_at, guest_kid_name, guest_parent_name, guest_parent_email, players(first_name, last_name, team_id, teams(name))')
     .eq('camp_detail_id', detail.id)
     .order('created_at', { ascending: true })
 

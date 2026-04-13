@@ -183,14 +183,18 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
                 <div key={reg.id} className="flex items-center justify-between bg-dark rounded-lg px-3 py-2">
                   <div>
                     <p className="text-sm text-white">
-                      {reg.players?.first_name} {reg.players?.last_name}
+                      {(reg as any).guest_kid_name
+                        ? (reg as any).guest_kid_name
+                        : `${reg.players?.first_name} ${reg.players?.last_name}`}
                     </p>
                     <p className="text-xs text-gray">
-                      {(() => {
-                        const t = reg.players?.teams
-                        if (!t) return ''
-                        return Array.isArray(t) ? (t[0]?.name ?? '') : t.name
-                      })()}
+                      {(reg as any).guest_parent_name
+                        ? `Guest — ${(reg as any).guest_parent_name}`
+                        : (() => {
+                            const t = reg.players?.teams
+                            if (!t) return ''
+                            return Array.isArray(t) ? (t[0]?.name ?? '') : t.name
+                          })()}
                     </p>
                   </div>
                   <button
