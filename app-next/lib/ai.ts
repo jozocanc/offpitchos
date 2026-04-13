@@ -11,10 +11,20 @@ interface ClubContext {
   recentAnnouncements: { title: string; body: string; team: string | null; date: string }[]
   upcomingCamps?: { title: string; team: string; ageGroup: string; date: string; time: string; venue: string; fee: string; capacity: string | number }[]
   pendingCoverage?: { event: string; team: string; status: string }[]
+  today?: string
+  userRole?: string
+  userName?: string
+  myKids?: { name: string; team: string; jersey: number | null }[]
 }
 
 function formatContext(ctx: ClubContext): string {
-  let text = `Club: ${ctx.clubName}\n\n`
+  let text = `Club: ${ctx.clubName}\n`
+  if (ctx.today) text += `Today: ${ctx.today}\n`
+  if (ctx.userName) text += `User: ${ctx.userName} (${ctx.userRole})\n`
+  if (ctx.myKids && ctx.myKids.length > 0) {
+    text += `Their kids: ${ctx.myKids.map(k => `${k.name} — ${k.team}${k.jersey ? ` #${k.jersey}` : ''}`).join(', ')}\n`
+  }
+  text += '\n'
 
   text += `## Teams\n`
   for (const t of ctx.teams) {
@@ -56,15 +66,22 @@ function formatContext(ctx: ClubContext): string {
   return text
 }
 
-const SYSTEM_PROMPT = `You are Ref, the OffPitchOS AI assistant for a youth soccer club. You answer questions from parents, coaches, and directors based on the club's real data provided below.
+const SYSTEM_PROMPT = `You are Ref, the OffPitchOS AI assistant for a youth soccer club. You answer questions from parents, coaches, and directors based on the club's real-time data provided below.
+
+The data below is fetched LIVE from the database at the moment the user asks — it is always current and accurate. Trust it completely.
 
 Rules:
 - Only answer based on the data provided. If the data doesn't contain the answer, say so honestly.
 - Be concise and friendly. Use plain language, not jargon.
-- Format dates and times clearly (e.g. "Saturday Apr 12 at 4:00 PM").
+- Format dates and times clearly (e.g. "Saturday Apr 19 at 5:00 PM").
+- Always include the venue and address when answering about events.
 - If a practice or game is cancelled, make that very clear.
 - Never make up information. If you're unsure, say "I don't have that information — check with your coach or director."
-- Keep answers short — 2-4 sentences max unless the question requires a list.`
+- Keep answers short — 2-4 sentences max unless the question requires a list.
+- When a parent asks, personalize the answer to THEIR kids' teams. Don't list events for teams they're not on.
+- "This week" means the 7 days starting from today's date shown above.
+- "Today" means the date shown above. Use it to determine which events are next.
+- When listing events, include the day of week, date, time range, venue, and team.`
 
 export async function askClubQuestion(question: string, context: ClubContext): Promise<string> {
   const message = await anthropic.messages.create({

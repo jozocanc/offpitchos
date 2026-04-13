@@ -36,7 +36,7 @@ export async function askQuestion(question: string) {
   if (!question.trim()) throw new Error('Question cannot be empty')
   if (question.length > 500) throw new Error('Question too long (max 500 characters)')
 
-  const { profile, supabase } = await getUserProfile()
+  const { user, profile, supabase } = await getUserProfile()
 
   // Gather club context
   const { data: club } = await supabase
@@ -172,6 +172,26 @@ export async function askQuestion(question: string) {
     }
   })
 
+  // For parents, include their kids so Ref can personalize answers
+  let myKids: { name: string; team: string; jersey: number | null }[] = []
+  if (profile.role === 'parent') {
+    const { data: kids } = await supabase
+      .from('players')
+      .select('first_name, last_name, jersey_number, teams(name)')
+      .eq('parent_id', user.id)
+    myKids = (kids ?? []).map((k: any) => {
+      const kTeam = Array.isArray(k.teams) ? k.teams[0] : k.teams
+      return { name: `${k.first_name} ${k.last_name}`, team: kTeam?.name ?? '', jersey: k.jersey_number }
+    })
+  }
+
+  // Get the user's display name
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('user_id', user.id)
+    .single()
+
   // Call Claude
   const answer = await askClubQuestion(question, {
     clubName: club?.name ?? 'Unknown Club',
@@ -180,6 +200,10 @@ export async function askQuestion(question: string) {
     recentAnnouncements,
     upcomingCamps,
     pendingCoverage,
+    today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }),
+    userRole: profile.role,
+    userName: userProfile?.display_name ?? 'User',
+    myKids: myKids.length > 0 ? myKids : undefined,
   })
 
   // Persist to ai_chats
