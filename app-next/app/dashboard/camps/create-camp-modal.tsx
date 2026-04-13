@@ -32,12 +32,17 @@ export default function CreateCampModal({
   const [teamId, setTeamId] = useState('')
   // Sensible defaults: starts tomorrow 9am, ends 12pm, so the DOC only has to
   // change the date rather than fill out 4 fields for the common case.
-  const [date, setDate] = useState(() => {
+  const [startDate, setStartDate] = useState(() => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     return tomorrow.toISOString().slice(0, 10)
   })
   const [startHour, setStartHour] = useState('09:00')
+  const [endDate, setEndDate] = useState(() => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().slice(0, 10)
+  })
   const [endHour, setEndHour] = useState('12:00')
   const [venueId, setVenueId] = useState('')
   const [address, setAddress] = useState('')
@@ -50,21 +55,15 @@ export default function CreateCampModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!teamId) {
-      toast('Pick a team first', 'error')
-      return
-    }
 
-    // Combine the date + time fields into ISO strings. We use the user's local
-    // zone because the server stores timestamptz; the DB handles conversion.
-    const startLocal = new Date(`${date}T${startHour}`)
-    const endLocal = new Date(`${date}T${endHour}`)
+    const startLocal = new Date(`${startDate}T${startHour}`)
+    const endLocal = new Date(`${endDate}T${endHour}`)
     if (Number.isNaN(startLocal.getTime()) || Number.isNaN(endLocal.getTime())) {
       toast('Invalid date/time', 'error')
       return
     }
     if (endLocal <= startLocal) {
-      toast('End time must be after start time', 'error')
+      toast('End date/time must be after start date/time', 'error')
       return
     }
 
@@ -140,19 +139,19 @@ export default function CreateCampModal({
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
         />
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-2">
           <div>
-            <label className="block text-sm font-medium text-gray mb-2">Date</label>
+            <label className="block text-sm font-medium text-gray mb-2">Start Date</label>
             <input
               type="date"
               required
-              value={date}
-              onChange={e => setDate(e.target.value)}
+              value={startDate}
+              onChange={e => { setStartDate(e.target.value); if (endDate < e.target.value) setEndDate(e.target.value) }}
               className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-green transition-colors"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray mb-2">Start</label>
+            <label className="block text-sm font-medium text-gray mb-2">Start Time</label>
             <input
               type="time"
               required
@@ -161,8 +160,21 @@ export default function CreateCampModal({
               className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-green transition-colors"
             />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray mb-2">End</label>
+            <label className="block text-sm font-medium text-gray mb-2">End Date</label>
+            <input
+              type="date"
+              required
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              min={startDate}
+              className="w-full bg-dark border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-green transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray mb-2">End Time</label>
             <input
               type="time"
               required
