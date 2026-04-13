@@ -7,8 +7,10 @@ const anthropic = new Anthropic({
 interface ClubContext {
   clubName: string
   teams: { name: string; ageGroup: string; coaches: string[]; playerCount: number }[]
-  upcomingEvents: { title: string; type: string; team: string; date: string; time: string; venue: string; status: string }[]
+  upcomingEvents: { title: string; type: string; team: string; date: string; time: string; endTime?: string; venue: string; address?: string | null; status: string }[]
   recentAnnouncements: { title: string; body: string; team: string | null; date: string }[]
+  upcomingCamps?: { title: string; team: string; ageGroup: string; date: string; time: string; venue: string; fee: string; capacity: string | number }[]
+  pendingCoverage?: { event: string; team: string; status: string }[]
 }
 
 function formatContext(ctx: ClubContext): string {
@@ -19,12 +21,28 @@ function formatContext(ctx: ClubContext): string {
     text += `- ${t.name} (${t.ageGroup}): ${t.playerCount} players, coaches: ${t.coaches.join(', ') || 'none assigned'}\n`
   }
 
-  text += `\n## Upcoming Events (next 14 days)\n`
+  text += `\n## Upcoming Schedule (next 14 days)\n`
   if (ctx.upcomingEvents.length === 0) {
     text += `No upcoming events.\n`
   }
   for (const e of ctx.upcomingEvents) {
-    text += `- ${e.date} ${e.time} — ${e.title} (${e.type}, ${e.team}) at ${e.venue || 'TBD'}${e.status === 'cancelled' ? ' [CANCELLED]' : ''}\n`
+    const timeRange = e.endTime ? `${e.time} – ${e.endTime}` : e.time
+    const location = e.address ? `${e.venue} (${e.address})` : e.venue || 'TBD'
+    text += `- ${e.date} ${timeRange} — ${e.title} (${e.type}, ${e.team}) at ${location}${e.status === 'cancelled' ? ' [CANCELLED]' : ''}\n`
+  }
+
+  if (ctx.upcomingCamps && ctx.upcomingCamps.length > 0) {
+    text += `\n## Upcoming Camps\n`
+    for (const c of ctx.upcomingCamps) {
+      text += `- ${c.date} ${c.time} — ${c.title} (${c.team} ${c.ageGroup}) at ${c.venue}, fee: ${c.fee}, capacity: ${c.capacity}\n`
+    }
+  }
+
+  if (ctx.pendingCoverage && ctx.pendingCoverage.length > 0) {
+    text += `\n## Pending Coverage Requests\n`
+    for (const cr of ctx.pendingCoverage) {
+      text += `- ${cr.event} (${cr.team}) — ${cr.status}\n`
+    }
   }
 
   text += `\n## Recent Announcements\n`

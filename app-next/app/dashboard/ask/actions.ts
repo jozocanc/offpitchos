@@ -88,15 +88,21 @@ export async function askQuestion(question: string) {
     .order('start_time', { ascending: true })
     .limit(50)
 
-  const upcomingEvents = (events ?? []).map((e: any) => ({
-    title: e.title,
-    type: e.type,
-    team: e.teams?.name ?? 'Club',
-    date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-    time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    venue: e.venues?.name ?? 'TBD',
-    status: e.status,
-  }))
+  const upcomingEvents = (events ?? []).map((e: any) => {
+    const team = Array.isArray(e.teams) ? e.teams[0] : e.teams
+    const venue = Array.isArray(e.venues) ? e.venues[0] : e.venues
+    return {
+      title: e.title,
+      type: e.type,
+      team: team?.name ?? 'Club',
+      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
+      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
+      endTime: new Date(e.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
+      venue: venue?.name ?? 'TBD',
+      address: e.address ?? venue?.address ?? null,
+      status: e.status,
+    }
+  })
 
   // Recent announcements (last 7 days)
   const oneWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -108,12 +114,63 @@ export async function askQuestion(question: string) {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  const recentAnnouncements = (announcements ?? []).map((a: any) => ({
-    title: a.title,
-    body: a.body,
-    team: a.teams?.name ?? null,
-    date: new Date(a.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-  }))
+  const recentAnnouncements = (announcements ?? []).map((a: any) => {
+    const aTeam = Array.isArray(a.teams) ? a.teams[0] : a.teams
+    return {
+      title: a.title,
+      body: a.body,
+      team: aTeam?.name ?? null,
+      date: new Date(a.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
+    }
+  })
+
+  // Upcoming camps with fees
+  const { data: campEvents } = await supabase
+    .from('events')
+    .select('id, title, start_time, end_time, teams(name, age_group), venues(name)')
+    .eq('club_id', profile.club_id)
+    .eq('type', 'camp')
+    .gte('start_time', now.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(10)
+
+  const campDetailIds = (campEvents ?? []).map(e => e.id)
+  const { data: campDetails } = campDetailIds.length > 0
+    ? await supabase.from('camp_details').select('event_id, fee_cents, capacity').in('event_id', campDetailIds)
+    : { data: [] }
+
+  const upcomingCamps = (campEvents ?? []).map((e: any) => {
+    const cTeam = Array.isArray(e.teams) ? e.teams[0] : e.teams
+    const cVenue = Array.isArray(e.venues) ? e.venues[0] : e.venues
+    const detail = (campDetails ?? []).find((d: any) => d.event_id === e.id)
+    return {
+      title: e.title,
+      team: cTeam?.name ?? 'Club',
+      ageGroup: cTeam?.age_group ?? '',
+      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
+      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
+      venue: cVenue?.name ?? 'TBD',
+      fee: detail?.fee_cents ? `$${(detail.fee_cents / 100).toFixed(2)}` : 'Free',
+      capacity: detail?.capacity ?? 'Unlimited',
+    }
+  })
+
+  // Coverage requests (pending)
+  const { data: coverageReqs } = await supabase
+    .from('coverage_requests')
+    .select('status, events(title, start_time, teams(name))')
+    .eq('club_id', profile.club_id)
+    .in('status', ['pending', 'escalated'])
+
+  const pendingCoverage = (coverageReqs ?? []).map((cr: any) => {
+    const crEvent = Array.isArray(cr.events) ? cr.events[0] : cr.events
+    const crTeam = crEvent?.teams ? (Array.isArray(crEvent.teams) ? crEvent.teams[0] : crEvent.teams) : null
+    return {
+      event: crEvent?.title ?? 'Unknown',
+      team: crTeam?.name ?? '',
+      status: cr.status,
+    }
+  })
 
   // Call Claude
   const answer = await askClubQuestion(question, {
@@ -121,6 +178,8 @@ export async function askQuestion(question: string) {
     teams: teamData,
     upcomingEvents,
     recentAnnouncements,
+    upcomingCamps,
+    pendingCoverage,
   })
 
   // Persist to ai_chats
