@@ -79,7 +79,9 @@ export default async function Home() {
             Start free →
           </Link>
           <a
-            href="mailto:hello@offpitchos.com?subject=OffPitchOS%20demo"
+            href="https://calendly.com/jozo-cancar27/offpitchos-demo"
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ borderColor: border, color: ink }}
             className="border font-semibold px-6 py-3.5 rounded-full hover:bg-white transition-colors text-base"
           >
@@ -250,7 +252,9 @@ export default async function Home() {
               Start free →
             </Link>
             <a
-              href="mailto:hello@offpitchos.com?subject=OffPitchOS%20demo"
+              href="https://calendly.com/jozo-cancar27/offpitchos-demo"
+            target="_blank"
+            rel="noopener noreferrer"
               style={{ color: cream, borderColor: `${cream}40` }}
               className="border font-semibold px-8 py-4 rounded-full hover:bg-white/10 transition-colors text-base"
             >
