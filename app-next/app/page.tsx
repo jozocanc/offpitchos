@@ -2,26 +2,45 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+const cream = '#FAF7F2'
+const card = '#FFFFFF'
+const ink = '#0F1510'
+const subtext = '#5C6660'
+const forest = '#1F4E3D'
+const forestHover = '#2D6B56'
+const border = '#E8E3DC'
+
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
 
   return (
-    <main className="min-h-screen bg-dark text-white antialiased">
+    <main
+      style={{ backgroundColor: cream, color: ink }}
+      className="min-h-screen antialiased"
+    >
       {/* Nav */}
-      <nav className="sticky top-0 z-40 bg-dark/80 backdrop-blur border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-black text-xl tracking-tight">
-            OffPitch<span className="text-green">OS</span>
+      <nav
+        style={{ backgroundColor: `${cream}cc`, borderColor: border }}
+        className="sticky top-0 z-40 backdrop-blur border-b"
+      >
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <span className="font-semibold text-lg tracking-tight" style={{ color: ink }}>
+            OffPitch<span style={{ color: forest }}>OS</span>
           </span>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-gray hover:text-white transition-colors px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              style={{ color: subtext }}
+              className="text-sm hover:text-black transition-colors px-3 py-2"
+            >
               Sign in
             </Link>
             <Link
               href="/signup"
-              className="bg-green text-dark font-bold text-sm px-4 py-2 rounded-lg hover:shadow-[0_0_20px_rgba(0,255,135,0.4)] transition"
+              style={{ backgroundColor: forest, color: cream }}
+              className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
             >
               Get started
             </Link>
@@ -30,60 +49,73 @@ export default async function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
-        <span className="inline-block text-xs font-bold uppercase tracking-[0.2em] text-green bg-green/10 border border-green/20 rounded-full px-3 py-1.5 mb-6">
+      <section className="max-w-4xl mx-auto px-6 pt-24 pb-28 text-center">
+        <span
+          style={{ color: forest, backgroundColor: '#E8F1EB', borderColor: `${forest}20` }}
+          className="inline-block text-[11px] font-semibold uppercase tracking-[0.16em] border rounded-full px-3 py-1.5 mb-8"
+        >
           Built by directors, for directors
         </span>
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
-          The AI-driven club
+        <h1
+          style={{ color: ink }}
+          className="text-5xl md:text-7xl font-semibold tracking-[-0.035em] leading-[1.03] mb-7"
+        >
+          The calm club
           <br />
-          <span className="text-green">operating system</span>
-          <br />
-          for youth soccer.
+          operating system.
         </h1>
-        <p className="text-gray text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p
+          style={{ color: subtext }}
+          className="text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+        >
           Coaches drop out, venues change, parents have questions. OffPitchOS reacts automatically — so your director of coaching can lead, not firefight.
         </p>
-        <div className="flex items-center justify-center gap-4 flex-wrap">
+        <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link
             href="/signup"
-            className="bg-green text-dark font-bold px-6 py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(0,255,135,0.5)] transition text-base"
+            style={{ backgroundColor: forest, color: cream }}
+            className="font-semibold px-6 py-3.5 rounded-full hover:opacity-90 transition-opacity text-base"
           >
             Start free →
           </Link>
           <a
             href="mailto:hello@offpitchos.com?subject=OffPitchOS%20demo"
-            className="border border-white/10 text-white font-semibold px-6 py-3.5 rounded-xl hover:bg-white/5 transition text-base"
+            style={{ borderColor: border, color: ink }}
+            className="border font-semibold px-6 py-3.5 rounded-full hover:bg-white transition-colors text-base"
           >
             Book a demo
           </a>
         </div>
-        <p className="text-gray text-xs mt-6">
+        <p style={{ color: subtext }} className="text-xs mt-8">
           No credit card · Works on any device · Replaces SportsEngine, TeamSnap, GroupMe & spreadsheets
         </p>
       </section>
 
       {/* Problem */}
-      <section className="border-t border-white/5 bg-[#0C1B32]">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h2 className="text-3xl md:text-4xl font-black text-center mb-3">
+      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
+        <div className="max-w-5xl mx-auto px-6 py-24">
+          <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-3">
             Running a club is chaos.
           </h2>
-          <p className="text-gray text-center max-w-2xl mx-auto mb-12">
+          <p style={{ color: subtext }} className="text-center max-w-2xl mx-auto mb-14">
             The DOC logs into six apps just to answer one question. We fixed that.
           </p>
-          <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
             {[
               'Coach cancels 30 min before practice — who covers?',
               'Parent asks "what time Saturday?" for the 50th time',
               'Tournament gear order stuck in a spreadsheet',
               'Camp payments missing and registrations unclear',
               'Announcements buried in group texts',
-              '"Where\'s the venue?" — sent by every new parent',
+              '"Where\'s the venue?" — asked by every new parent',
             ].map((pain, i) => (
-              <div key={i} className="bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-start gap-3">
-                <span className="text-red text-lg leading-none mt-0.5">✕</span>
-                <p className="text-gray text-sm">{pain}</p>
+              <div
+                key={i}
+                style={{ backgroundColor: cream, borderColor: border }}
+                className="rounded-2xl p-4 border flex items-start gap-3"
+              >
+                <span style={{ color: forest }} className="text-sm leading-none mt-1">—</span>
+                <p style={{ color: ink }} className="text-sm">{pain}</p>
               </div>
             ))}
           </div>
@@ -91,15 +123,15 @@ export default async function Home() {
       </section>
 
       {/* Features */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <h2 className="text-3xl md:text-4xl font-black text-center mb-3">
+      <section className="max-w-6xl mx-auto px-6 py-28">
+        <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-3">
           OffPitchOS handles it.
         </h2>
-        <p className="text-gray text-center max-w-2xl mx-auto mb-16">
+        <p style={{ color: subtext }} className="text-center max-w-2xl mx-auto mb-16">
           Every feature is judged by one question: does this help the DOC handle sudden changes without manual work?
         </p>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           <FeatureCard
             title="Voice-driven scheduling"
             body='Say "Cancel U14 practice tonight" — the event moves, every parent gets notified, the coach sees the update. No forms.'
@@ -128,12 +160,12 @@ export default async function Home() {
       </section>
 
       {/* Roles */}
-      <section className="border-y border-white/5 bg-[#0C1B32]">
-        <div className="max-w-6xl mx-auto px-6 py-24">
-          <h2 className="text-3xl md:text-4xl font-black text-center mb-16">
+      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
+        <div className="max-w-6xl mx-auto px-6 py-28">
+          <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-16">
             One platform. Three perfect workflows.
           </h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-5">
             <RoleCard
               label="For the Director"
               title="Your command center"
@@ -169,53 +201,58 @@ export default async function Home() {
       </section>
 
       {/* Trust */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+      <section className="max-w-6xl mx-auto px-6 py-28">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div>
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-green">
+            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
               Privacy by default
             </span>
-            <h2 className="text-3xl md:text-4xl font-black mt-3 mb-6">
-              Your club data is <span className="text-green">yours.</span>
+            <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-6">
+              Your club data is <span style={{ color: forest }}>yours.</span>
             </h2>
-            <p className="text-gray leading-relaxed mb-4">
+            <p style={{ color: subtext }} className="leading-relaxed mb-6">
               We don&rsquo;t sell it. We don&rsquo;t share it. We don&rsquo;t train AI models on it. Kids&rsquo; data is handled with COPPA-friendly defaults, encrypted at rest, and deletable in 30 days on request.
             </p>
-            <div className="flex gap-5 mt-6 text-sm">
-              <Link href="/privacy" className="text-green hover:underline font-semibold">Privacy policy →</Link>
-              <Link href="/terms" className="text-green hover:underline font-semibold">Terms →</Link>
+            <div className="flex gap-5 text-sm">
+              <Link href="/privacy" style={{ color: forest }} className="font-semibold hover:underline">Privacy policy →</Link>
+              <Link href="/terms" style={{ color: forest }} className="font-semibold hover:underline">Terms →</Link>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <TrustCard label="US data centers" />
-            <TrustCard label="Encrypted at rest" />
-            <TrustCard label="GDPR / CCPA ready" />
-            <TrustCard label="COPPA-friendly" />
-            <TrustCard label="No ad tracking" />
-            <TrustCard label="Zero data resale" />
+            {['US data centers', 'Encrypted at rest', 'GDPR / CCPA ready', 'COPPA-friendly', 'No ad tracking', 'Zero data resale'].map(label => (
+              <div
+                key={label}
+                style={{ backgroundColor: card, borderColor: border }}
+                className="rounded-2xl p-4 border text-center"
+              >
+                <p style={{ color: ink }} className="text-sm font-semibold">{label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="border-t border-white/5">
-        <div className="max-w-3xl mx-auto px-6 py-24 text-center">
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
+      <section style={{ backgroundColor: forest }}>
+        <div className="max-w-3xl mx-auto px-6 py-28 text-center">
+          <h2 style={{ color: cream }} className="text-4xl md:text-5xl font-semibold tracking-[-0.025em] mb-6">
             Ready to stop firefighting?
           </h2>
-          <p className="text-gray text-lg mb-10">
+          <p style={{ color: '#C8D7D0' }} className="text-lg mb-10">
             Set up your club in under five minutes. Free while we grow with you.
           </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
               href="/signup"
-              className="bg-green text-dark font-bold px-8 py-4 rounded-xl hover:shadow-[0_0_30px_rgba(0,255,135,0.5)] transition text-base"
+              style={{ backgroundColor: cream, color: forest }}
+              className="font-semibold px-8 py-4 rounded-full hover:opacity-95 transition-opacity text-base"
             >
               Start free →
             </Link>
             <a
               href="mailto:hello@offpitchos.com?subject=OffPitchOS%20demo"
-              className="border border-white/10 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/5 transition text-base"
+              style={{ color: cream, borderColor: `${cream}40` }}
+              className="border font-semibold px-8 py-4 rounded-full hover:bg-white/10 transition-colors text-base"
             >
               Book a demo
             </a>
@@ -224,19 +261,19 @@ export default async function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 bg-[#0A1628]">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4 text-sm">
-          <div>
-            <span className="font-black tracking-tight">
-              OffPitch<span className="text-green">OS</span>
+      <footer style={{ backgroundColor: cream, borderColor: border }} className="border-t">
+        <div className="max-w-6xl mx-auto px-6 py-12 flex flex-wrap items-center justify-between gap-4 text-sm">
+          <div style={{ color: subtext }}>
+            <span className="font-semibold" style={{ color: ink }}>
+              OffPitch<span style={{ color: forest }}>OS</span>
             </span>
-            <span className="text-gray ml-3">© {new Date().getFullYear()}</span>
+            <span className="ml-3">© {new Date().getFullYear()}</span>
           </div>
-          <div className="flex gap-5 text-gray">
-            <Link href="/privacy" className="hover:text-white">Privacy</Link>
-            <Link href="/terms" className="hover:text-white">Terms</Link>
-            <a href="mailto:hello@offpitchos.com" className="hover:text-white">Contact</a>
-            <Link href="/login" className="hover:text-white">Sign in</Link>
+          <div className="flex gap-6" style={{ color: subtext }}>
+            <Link href="/privacy" className="hover:text-black">Privacy</Link>
+            <Link href="/terms" className="hover:text-black">Terms</Link>
+            <a href="mailto:hello@offpitchos.com" className="hover:text-black">Contact</a>
+            <Link href="/login" className="hover:text-black">Sign in</Link>
           </div>
         </div>
       </footer>
@@ -246,34 +283,32 @@ export default async function Home() {
 
 function FeatureCard({ title, body }: { title: string; body: string }) {
   return (
-    <div className="bg-dark-secondary rounded-2xl p-6 border border-white/5 hover:border-green/30 transition-colors">
-      <h3 className="font-bold text-white mb-2">{title}</h3>
-      <p className="text-gray text-sm leading-relaxed">{body}</p>
+    <div
+      style={{ backgroundColor: card, borderColor: border }}
+      className="rounded-3xl p-7 border hover:shadow-[0_8px_24px_rgba(15,21,16,0.06)] transition-shadow"
+    >
+      <h3 style={{ color: ink }} className="font-semibold text-lg tracking-[-0.01em] mb-2">{title}</h3>
+      <p style={{ color: subtext }} className="text-[15px] leading-relaxed">{body}</p>
     </div>
   )
 }
 
 function RoleCard({ label, title, points }: { label: string; title: string; points: string[] }) {
   return (
-    <div className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-      <span className="text-xs font-bold uppercase tracking-[0.15em] text-green">{label}</span>
-      <h3 className="font-bold text-white text-xl mt-2 mb-5">{title}</h3>
+    <div
+      style={{ backgroundColor: cream, borderColor: border }}
+      className="rounded-3xl p-7 border"
+    >
+      <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.14em]">{label}</span>
+      <h3 style={{ color: ink }} className="font-semibold text-xl tracking-[-0.015em] mt-2 mb-5">{title}</h3>
       <ul className="space-y-3">
         {points.map((p, i) => (
-          <li key={i} className="flex items-start gap-2 text-gray text-sm">
-            <span className="text-green mt-0.5">✓</span>
+          <li key={i} className="flex items-start gap-2.5 text-[15px]" style={{ color: ink }}>
+            <span style={{ color: forest }} className="mt-0.5 text-sm">✓</span>
             <span>{p}</span>
           </li>
         ))}
       </ul>
-    </div>
-  )
-}
-
-function TrustCard({ label }: { label: string }) {
-  return (
-    <div className="bg-dark-secondary rounded-xl p-4 border border-white/5 text-center">
-      <p className="text-sm font-semibold text-white">{label}</p>
     </div>
   )
 }
