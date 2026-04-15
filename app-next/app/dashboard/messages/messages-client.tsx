@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ROLES } from '@/lib/constants'
 import AnnouncementCard from './announcement-card'
 import NewAnnouncementModal from './new-announcement-modal'
+import DMClient from './dm-client'
 
 interface Team {
   id: string
@@ -23,6 +24,8 @@ interface MessagesClientProps {
   userProfileId: string
   audienceByTeam: Record<string, AudienceCounts>
   clubWideAudience: AudienceCounts
+  initialTab?: 'announcements' | 'dm'
+  initialDMUserId?: string
 }
 
 export default function MessagesClient({
@@ -32,9 +35,12 @@ export default function MessagesClient({
   userProfileId,
   audienceByTeam,
   clubWideAudience,
+  initialTab = 'announcements',
+  initialDMUserId,
 }: MessagesClientProps) {
   const [filterTeam, setFilterTeam] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [tab, setTab] = useState<'announcements' | 'dm'>(initialTab)
 
   // All roles can post messages — DOC for club announcements, coaches for
   // team updates, parents for communicating with their kid's coaches.
@@ -48,13 +54,37 @@ export default function MessagesClient({
 
   return (
     <>
+      <div className="mb-6">
+        <h1 className="text-3xl font-black tracking-tight">Messages</h1>
+      </div>
+
+      <div className="flex gap-2 mb-6 border-b border-white/5">
+        <button
+          onClick={() => setTab('announcements')}
+          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            tab === 'announcements' ? 'text-green border-green' : 'text-gray border-transparent hover:text-white'
+          }`}
+        >
+          Announcements
+        </button>
+        <button
+          onClick={() => setTab('dm')}
+          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            tab === 'dm' ? 'text-green border-green' : 'text-gray border-transparent hover:text-white'
+          }`}
+        >
+          Direct
+        </button>
+      </div>
+
+      {tab === 'dm' ? (
+        <DMClient initialOpenUserId={initialDMUserId} />
+      ) : (
+      <>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">Messages</h1>
-          <p className="text-gray text-sm mt-1">
-            {filtered.length} announcement{filtered.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+        <p className="text-gray text-sm">
+          {filtered.length} announcement{filtered.length !== 1 ? 's' : ''}
+        </p>
         {canPost && (
           <button
             onClick={() => setModalOpen(true)}
@@ -107,6 +137,8 @@ export default function MessagesClient({
           clubWideAudience={clubWideAudience}
           onClose={() => setModalOpen(false)}
         />
+      )}
+      </>
       )}
     </>
   )

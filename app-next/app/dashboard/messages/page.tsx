@@ -4,8 +4,13 @@ import MessagesClient from './messages-client'
 
 export const metadata: Metadata = { title: 'Messages' }
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; dm?: string }>
+}) {
   const data = await getMessagesData()
+  const params = await searchParams
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -16,6 +21,8 @@ export default async function MessagesPage() {
         userProfileId={data.userProfileId}
         audienceByTeam={data.audienceByTeam}
         clubWideAudience={data.clubWideAudience}
+        initialTab={params.tab === 'dm' || params.dm ? 'dm' : 'announcements'}
+        initialDMUserId={params.dm}
       />
     </div>
   )
