@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
+import PasswordInput from '@/components/password-input'
 
 function SignupForm() {
   const [email, setEmail] = useState('')
@@ -114,9 +115,8 @@ function SignupForm() {
           </div>
           <div>
             <label htmlFor="password" className="block text-sm text-gray mb-1">Password</label>
-            <input
-              id="password"
-              type="password"
+            <PasswordInput
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-dark-secondary border border-gray/20 rounded-lg text-white placeholder-gray focus:outline-none focus:ring-2 focus:ring-green"

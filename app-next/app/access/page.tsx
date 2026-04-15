@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createHmac } from 'crypto'
 import Link from 'next/link'
+import PasswordInput from '@/components/password-input'
 
 const ACCESS_COOKIE = 'offpitchos_access'
 const cream = '#FAF7F2'
@@ -79,13 +80,13 @@ export default async function AccessPage({
 
         <form action={submitCode} className="space-y-4">
           <input type="hidden" name="next" value={nextUrl} />
-          <input
+          <PasswordInput
             name="code"
             autoFocus
             autoComplete="off"
             placeholder="Access code"
-            style={{ backgroundColor: cream, borderColor: border, color: ink }}
-            className="w-full rounded-full border px-5 py-3 text-center text-sm tracking-wider focus:outline-none focus:ring-2"
+            inputStyle={{ backgroundColor: cream, borderColor: border, color: ink }}
+            className="w-full rounded-full border px-5 py-3 text-sm tracking-wider focus:outline-none focus:ring-2"
           />
           {error && (
             <p className="text-center text-sm" style={{ color: '#C53030' }}>{error}</p>
