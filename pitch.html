@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OffPitchOS — Pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --dark: #0A1628;
+      --dark-secondary: #12203A;
+      --green: #00FF87;
+      --green-glow: rgba(0, 255, 135, 0.4);
+      --gray: #94A3B8;
+      --white: #FFFFFF;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--dark);
+      color: var(--white);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: radial-gradient(ellipse at top left, rgba(0, 255, 135, 0.08), transparent 60%),
+                  radial-gradient(ellipse at bottom right, rgba(0, 255, 135, 0.05), transparent 60%),
+                  var(--dark);
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8vh 10vw;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    /* Brand tag */
+    .brand {
+      position: absolute;
+      top: 5vh;
+      left: 10vw;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .brand .os {
+      color: var(--green);
+    }
+
+    /* Slide numbers / progress */
+    .meta {
+      position: absolute;
+      bottom: 5vh;
+      left: 10vw;
+      right: 10vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--gray);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+      transition: width 0.4s ease;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: clamp(40px, 6vw, 88px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 32px;
+      max-width: 16ch;
+    }
+
+    h1 .accent {
+      color: var(--green);
+    }
+
+    .eyebrow {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 24px;
+    }
+
+    .body {
+      font-size: clamp(18px, 1.6vw, 24px);
+      color: var(--gray);
+      line-height: 1.5;
+      max-width: 42ch;
+      font-weight: 400;
+    }
+
+    .tagline {
+      font-size: clamp(16px, 1.3vw, 20px);
+      color: var(--gray);
+      font-style: italic;
+      margin-top: 24px;
+    }
+
+    /* Pricing table */
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+      max-width: 1000px;
+    }
+
+    .tier {
+      background: var(--dark-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 32px 28px;
+      position: relative;
+    }
+
+    .tier.featured {
+      border-color: var(--green);
+      box-shadow: 0 0 40px rgba(0, 255, 135, 0.15);
+    }
+
+    .tier.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--green);
+      color: var(--dark);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 999px;
+      letter-spacing: 1px;
+    }
+
+    .tier-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .tier-price {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .tier-price small {
+      font-size: 18px;
+      color: var(--gray);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .tier-limit {
+      font-size: 14px;
+      color: var(--gray);
+      margin-top: 8px;
+    }
+
+    .pilot-note {
+      margin-top: 32px;
+      font-size: 14px;
+      color: var(--gray);
+      max-width: 700px;
+    }
+
+    .pilot-note strong {
+      color: var(--green);
+    }
+
+    /* Ask slide */
+    .ask-list {
+      list-style: none;
+      margin-top: 32px;
+      max-width: 600px;
+    }
+
+    .ask-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: clamp(16px, 1.3vw, 20px);
+      color: var(--white);
+    }
+
+    .ask-list li::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-top: 10px;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px var(--green-glow);
+    }
+
+    /* Solution slide big text */
+    .solution h1 {
+      max-width: 20ch;
+    }
+
+    /* Help text (bottom-right always visible) */
+    .help {
+      position: fixed;
+      bottom: 2vh;
+      right: 2vw;
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      pointer-events: none;
+    }
+
+    /* Cursor on active area */
+    .deck {
+      cursor: default;
+    }
+
+    /* Voice demo (slide 3) */
+    .voice-demo {
+      margin-top: 40px;
+      max-width: 640px;
+      background: var(--dark-secondary);
+      border: 1px solid rgba(0, 255, 135, 0.25);
+      border-radius: 24px;
+      padding: 32px 36px;
+      box-shadow: 0 0 60px rgba(0, 255, 135, 0.1);
+    }
+
+    .voice-demo .mic-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .voice-demo .mic {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px var(--green-glow);
+      flex-shrink: 0;
+    }
+
+    .voice-demo .mic svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .voice-demo .command {
+      font-size: clamp(18px, 1.8vw, 26px);
+      font-weight: 600;
+      color: var(--white);
+      line-height: 1.3;
+    }
+
+    .voice-demo .arrow {
+      font-size: 22px;
+      color: var(--gray);
+      margin: 14px 0 14px 62px;
+      line-height: 1;
+    }
+
+    .voice-demo .results {
+      list-style: none;
+      margin-left: 62px;
+    }
+
+    .voice-demo .results li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 9px 0;
+      font-size: clamp(15px, 1.2vw, 18px);
+      color: var(--white);
+    }
+
+    .voice-demo .results li .check {
+      color: var(--green);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    /* Comparison (slide 4) */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 48px;
+      max-width: 980px;
+    }
+
+    .compare-col {
+      background: var(--dark-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .compare-col.ours {
+      border-color: var(--green);
+      box-shadow: 0 0 40px rgba(0, 255, 135, 0.12);
+    }
+
+    .compare-col h3 {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gray);
+      margin-bottom: 10px;
+    }
+
+    .compare-col.ours h3 {
+      color: var(--green);
+    }
+
+    .compare-col .verdict {
+      font-size: clamp(22px, 2.2vw, 32px);
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 20px;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .compare-col ul {
+      list-style: none;
+    }
+
+    .compare-col li {
+      padding: 10px 0;
+      font-size: clamp(14px, 1.1vw, 16px);
+      color: var(--gray);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .compare-col li:last-child {
+      border-bottom: none;
+    }
+
+    .compare-col li::before {
+      content: '—';
+      color: var(--gray);
+      flex-shrink: 0;
+    }
+
+    .compare-col.ours li {
+      color: var(--white);
+    }
+
+    .compare-col.ours li::before {
+      content: '✓';
+      color: var(--green);
+      font-weight: 900;
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <!-- SLIDE 1: PROBLEM -->
+    <section class="slide active" data-index="1">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">The Problem</div>
+      <h1>Soccer DOCs spend <span class="accent">10+ hours a week</span> on admin that shouldn't exist.</h1>
+      <p class="body">
+        Coach drops out. Parents complain. Gear orders. Sizing spreadsheets. Schedule changes across four different apps.
+        Every one of them requires you to do the work yourself.
+      </p>
+      <div class="meta">
+        <span>Pitch</span>
+        <span><span id="current">1</span> / <span id="total">4</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: SOLUTION -->
+    <section class="slide solution" data-index="2">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">The Solution</div>
+      <h1>The AI-driven <span class="accent">operating system</span> that runs your club for you.</h1>
+      <p class="body">
+        So you can coach, not admin.
+      </p>
+      <p class="tagline">Built for directors and the programs they run.</p>
+      <div class="meta">
+        <span>Let me show you →</span>
+        <span><span class="cur">2</span> / <span class="tot">6</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: DEMO / WATCH THIS -->
+    <section class="slide" data-index="3">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Watch This</div>
+      <h1>Just <span class="accent">say it.</span></h1>
+      <p class="body">
+        No app to open. No forms to fill. No parents to text one by one.
+      </p>
+
+      <div class="voice-demo">
+        <div class="mic-row">
+          <div class="mic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3"/>
+              <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </div>
+          <div class="command">"Cancel U14 practice tonight."</div>
+        </div>
+        <div class="arrow">↓</div>
+        <ul class="results">
+          <li><span class="check">✓</span> Schedule updated</li>
+          <li><span class="check">✓</span> 23 parents notified</li>
+          <li><span class="check">✓</span> Coach reassigned to U12</li>
+        </ul>
+      </div>
+
+      <div class="meta">
+        <span>In under 3 seconds</span>
+        <span><span class="cur">3</span> / <span class="tot">6</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: WHY US -->
+    <section class="slide" data-index="4">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Why Us</div>
+      <h1>Everyone else makes <span class="accent">you</span> do the work.</h1>
+
+      <div class="compare">
+        <div class="compare-col">
+          <h3>SportsEngine · TeamSnap</h3>
+          <div class="verdict">You do it.</div>
+          <ul>
+            <li>Manual scheduling and updates</li>
+            <li>Copy-paste messages to parents</li>
+            <li>Separate tools for gear, camps, comms</li>
+            <li>You notice the problem first</li>
+          </ul>
+        </div>
+        <div class="compare-col ours">
+          <h3>OffPitchOS</h3>
+          <div class="verdict">System does it.</div>
+          <ul>
+            <li>Voice-driven schedule changes</li>
+            <li>Auto-notify parents and coaches</li>
+            <li>One platform, one workflow</li>
+            <li>AI flags what needs attention</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span>The difference is automation</span>
+        <span><span class="cur">4</span> / <span class="tot">6</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: PRICING PLACEHOLDER -->
+    <section class="slide" data-index="5">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">Pricing</div>
+      <h1><span class="accent">Still shaping it</span> with our first partners.</h1>
+      <p class="body">
+        We'd rather price it around what's actually useful to your club than guess.
+      </p>
+      <div class="meta">
+        <span>Let's talk about it</span>
+        <span><span class="cur">5</span> / <span class="tot">6</span></span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: THE ASK -->
+    <section class="slide" data-index="6">
+      <div class="brand">OffPitch<span class="os">OS</span></div>
+      <div class="eyebrow">The Ask</div>
+      <h1>Can we onboard your club <span class="accent">next week?</span></h1>
+
+      <ul class="ask-list">
+        <li>Founding club partner — direct line to the founders</li>
+        <li>Every feature you need, built around your workflow</li>
+        <li>Your logo on our landing page as a founding club</li>
+        <li>Lifetime founding-partner pricing when we launch</li>
+      </ul>
+
+      <div class="meta">
+        <span>Let's do this</span>
+        <span><span class="cur">6</span> / <span class="tot">6</span></span>
+      </div>
+    </section>
+
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="help">← → to navigate  ·  F for fullscreen</div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide')
+    const total = slides.length
+    const progress = document.getElementById('progress')
+    const currentEl = document.getElementById('current')
+    const totalEl = document.getElementById('total')
+    let current = 0
+
+    totalEl.textContent = total
+
+    function show(index) {
+      current = Math.max(0, Math.min(total - 1, index))
+      slides.forEach((s, i) => {
+        s.classList.toggle('active', i === current)
+      })
+      progress.style.width = `${((current + 1) / total) * 100}%`
+      if (currentEl) currentEl.textContent = current + 1
+    }
+
+    function next() { show(current + 1) }
+    function prev() { show(current - 1) }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') {
+        e.preventDefault()
+        next()
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault()
+        prev()
+      } else if (e.key === 'Home') {
+        show(0)
+      } else if (e.key === 'End') {
+        show(total - 1)
+      } else if (/^[1-9]$/.test(e.key)) {
+        const n = parseInt(e.key, 10) - 1
+        if (n < total) show(n)
+      } else if (e.key.toLowerCase() === 'f') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.()
+        } else {
+          document.exitFullscreen?.()
+        }
+      } else if (e.key === 'Escape') {
+        // handled by browser
+      }
+    })
+
+    // Click to advance
+    document.querySelector('.deck').addEventListener('click', (e) => {
+      // Don't advance if clicking an interactive element
+      if (e.target.closest('a, button')) return
+      next()
+    })
+
+    // Start at slide 1
+    show(0)
+  </script>
+</body>
+</html>

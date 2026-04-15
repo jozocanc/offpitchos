@@ -179,7 +179,7 @@ function ThreadView({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100vh-10rem)]">
+    <div className="flex flex-col h-[calc(100dvh-14rem)] md:h-[calc(100vh-12rem)] max-h-[700px]">
       <div className="flex items-center gap-3 pb-4 border-b border-white/5 shrink-0">
         <button
           onClick={onBack}
