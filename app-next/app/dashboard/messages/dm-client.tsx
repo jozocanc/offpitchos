@@ -179,8 +179,8 @@ function ThreadView({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
-      <div className="flex items-center gap-3 pb-4 border-b border-white/5">
+    <div className="flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100vh-10rem)]">
+      <div className="flex items-center gap-3 pb-4 border-b border-white/5 shrink-0">
         <button
           onClick={onBack}
           className="text-gray hover:text-white text-sm"
@@ -194,7 +194,7 @@ function ThreadView({
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-2">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto py-4 space-y-2">
         {messages === null ? (
           <div className="text-gray text-sm">Loading…</div>
         ) : messages.length === 0 ? (
@@ -229,9 +229,9 @@ function ThreadView({
         )}
       </div>
 
-      {error && <p className="text-red text-sm mb-2">{error}</p>}
+      {error && <p className="text-red text-sm mb-2 shrink-0">{error}</p>}
 
-      <div className="flex gap-2 pt-3 border-t border-white/5">
+      <div className="flex gap-2 pt-3 border-t border-white/5 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
