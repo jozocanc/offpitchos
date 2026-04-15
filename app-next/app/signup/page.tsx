@@ -143,6 +143,13 @@ function SignupForm() {
           Already have an account?{' '}
           <a href={inviteToken ? `/login?invite=${inviteToken}` : inviteCode ? `/login?code=${inviteCode}` : '/login'} className="text-green hover:underline">Sign in</a>
         </p>
+
+        <p className="text-center text-gray text-xs mt-6 leading-relaxed">
+          By creating an account you agree to our{' '}
+          <a href="/terms" className="text-green hover:underline">Terms</a>{' '}
+          and{' '}
+          <a href="/privacy" className="text-green hover:underline">Privacy Policy</a>.
+        </p>
       </div>
     </main>
   )

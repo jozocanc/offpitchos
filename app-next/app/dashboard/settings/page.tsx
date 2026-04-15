@@ -69,6 +69,17 @@ export default async function SettingsPage() {
         {profile?.role === 'doc' && <CoverageSettings />}
 
         <DangerZone userRole={profile?.role ?? 'parent'} />
+
+        <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
+          <h2 className="text-lg font-bold mb-2">Legal</h2>
+          <p className="text-gray text-sm mb-4">
+            We never sell your data or train AI models on your club&rsquo;s info.
+          </p>
+          <div className="flex gap-4 text-sm font-bold">
+            <a href="/privacy" className="text-green hover:underline">Privacy Policy →</a>
+            <a href="/terms" className="text-green hover:underline">Terms of Service →</a>
+          </div>
+        </section>
       </div>
     </div>
   )

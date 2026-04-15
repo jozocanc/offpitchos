@@ -118,6 +118,11 @@ function LoginForm() {
           Don&apos;t have an account?{' '}
           <a href={inviteToken ? `/signup?invite=${inviteToken}` : '/signup'} className="text-green hover:underline">Sign up</a>
         </p>
+
+        <p className="text-center text-gray text-xs mt-6 flex justify-center gap-4">
+          <a href="/privacy" className="hover:text-white">Privacy</a>
+          <a href="/terms" className="hover:text-white">Terms</a>
+        </p>
       </div>
     </main>
   )
