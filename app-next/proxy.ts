@@ -1,8 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createHmac } from 'crypto'
 
-const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register']
+const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register', '/access']
 const publicExact = new Set(['/'])
+
+// Routes that still need early-access gating even though they're public.
+// Team/camp invite links bypass the gate since the prospect has been invited.
+const gatedPrefixes = ['/login', '/signup', '/forgot-password']
+
+function isAccessCookieValid(cookie: string | undefined): boolean {
+  if (!cookie) return false
+  const parts = cookie.split(':')
+  if (parts.length !== 3) return false
+  const [version, ts, provided] = parts
+  const secret = process.env.ACCESS_SECRET || 'dev-secret-change-me'
+  const expected = createHmac('sha256', secret).update(`${version}:${ts}`).digest('hex')
+  return provided === expected
+}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -37,6 +52,21 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
   const isPublicRoute = publicExact.has(pathname) || publicPrefixes.some(route => pathname.startsWith(route))
+
+  // Early-access gate: block /login, /signup, /forgot-password for anyone
+  // without a valid access cookie. Applies only when ACCESS_CODE env is set
+  // so local dev without the env stays unblocked.
+  const accessConfigured = Boolean(process.env.ACCESS_CODE)
+  const needsGate = accessConfigured && gatedPrefixes.some(p => pathname.startsWith(p))
+  if (needsGate) {
+    const accessCookie = request.cookies.get('offpitchos_access')?.value
+    if (!isAccessCookieValid(accessCookie)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/access'
+      url.searchParams.set('next', pathname + request.nextUrl.search)
+      return NextResponse.redirect(url)
+    }
+  }
 
   // Not logged in and trying to access protected route
   if (!user && !isPublicRoute) {
