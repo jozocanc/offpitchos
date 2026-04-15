@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const publicRoutes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html']
+const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register']
+const publicExact = new Set(['/'])
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -35,7 +36,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicExact.has(pathname) || publicPrefixes.some(route => pathname.startsWith(route))
 
   // Not logged in and trying to access protected route
   if (!user && !isPublicRoute) {
