@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
 import CoverageActionsInline from './coverage-actions-inline'
+import EventPhotosModal from './event-photos-modal'
 
 interface EventCardProps {
   event: {
@@ -39,6 +41,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches }: EventCardProps) {
+  const [photosOpen, setPhotosOpen] = useState(false)
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -196,6 +199,28 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
       </div>
       {showCoverageActions && coverageRequest?.status === 'pending' && (
         <CoverageActionsInline requestId={coverageRequest.id} />
+      )}
+
+      <div className="mt-3 pt-3 border-t border-white/5">
+        <button
+          onClick={() => setPhotosOpen(true)}
+          className="text-xs text-gray hover:text-green inline-flex items-center gap-1.5 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          Photos
+        </button>
+      </div>
+
+      {photosOpen && (
+        <EventPhotosModal
+          eventId={event.id}
+          eventTitle={event.title}
+          onClose={() => setPhotosOpen(false)}
+        />
       )}
     </div>
   )
