@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <h1 className="text-4xl font-black uppercase tracking-tight mt-6 mb-2">Privacy Policy</h1>
         <p className="text-gray text-sm mb-10">Last updated: April 15, 2026</p>
 
-        <div className="space-y-8 text-gray-200 leading-relaxed">
+        <div className="space-y-8 text-white/90 leading-relaxed">
           <section>
             <p className="text-lg">
               OffPitchOS is built for youth soccer clubs, which means a lot of the people in our system are minors and their families. We take that seriously. This policy explains exactly what we collect, why, where it lives, and what we will never do with it.

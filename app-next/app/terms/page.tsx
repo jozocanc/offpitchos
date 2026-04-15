@@ -14,7 +14,7 @@ export default function TermsPage() {
         <h1 className="text-4xl font-black uppercase tracking-tight mt-6 mb-2">Terms of Service</h1>
         <p className="text-gray text-sm mb-10">Last updated: April 15, 2026</p>
 
-        <div className="space-y-8 text-gray-200 leading-relaxed">
+        <div className="space-y-8 text-white/90 leading-relaxed">
           <section>
             <p className="text-lg">
               By creating an account or using OffPitchOS, you agree to these terms. Read them — they are short and written in plain English.
