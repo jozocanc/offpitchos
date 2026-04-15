@@ -1,12 +1,22 @@
 @import "tailwindcss";
 
 @theme {
-  --color-dark: #0A1628;
-  --color-dark-secondary: #12203A;
-  --color-green: #00FF87;
-  --color-green-glow: rgba(0, 255, 135, 0.4);
-  --color-gray: #94A3B8;
-  --color-red: #FF6B6B;
+  /* Semantic tokens remapped to the Apple-clean cream + forest palette.
+     The token names stay the same so existing classes (bg-dark,
+     text-white, border-white/10 etc.) automatically pick up the new
+     colors — no global find/replace needed. */
+  --color-dark: #FAF7F2;            /* warm cream (page bg) */
+  --color-dark-secondary: #FFFFFF;  /* pure white (cards) */
+  --color-green: #1F4E3D;           /* forest (accent) */
+  --color-green-glow: rgba(31, 78, 61, 0.25);
+  --color-gray: #5C6660;            /* warm gray (subtext) */
+  --color-red: #C53030;             /* darker red for light mode contrast */
+
+  /* Override Tailwind built-ins so text-white / border-white on the
+     old dark surfaces becomes readable ink on the new light surfaces. */
+  --color-white: #0F1510;           /* near-black ink (primary text) */
+  --color-black: #0F1510;
+
   --font-sans: "Inter", sans-serif;
 }
 
@@ -15,17 +25,14 @@
     @apply bg-dark text-white font-sans antialiased;
   }
 
-  /* Smooth scroll */
   html {
     scroll-behavior: smooth;
   }
 
-  /* Better focus styles */
   *:focus-visible {
     @apply outline-none ring-2 ring-green ring-offset-2 ring-offset-dark rounded-lg;
   }
 
-  /* Smooth page transitions */
   main {
     animation: fadeIn 0.15s ease-out;
   }
@@ -37,12 +44,10 @@
 }
 
 @layer utilities {
-  /* Toast animation */
   .toast-enter {
     animation: slideUp 0.3s ease-out;
   }
 
-  /* Attention highlight — flashes when navigated from "Needs your attention" */
   .attention-highlight {
     animation: attentionPulse 3s ease-out;
     position: relative;
@@ -54,23 +59,25 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Attention pulse now uses the forest green with a softer,
+   light-mode-appropriate intensity. */
 @keyframes attentionPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.8), 0 0 0 0 rgba(0, 255, 135, 0.4);
-    border-color: rgba(0, 255, 135, 0.9);
+    box-shadow: 0 0 0 0 rgba(31, 78, 61, 0.6), 0 0 0 0 rgba(31, 78, 61, 0.3);
+    border-color: rgba(31, 78, 61, 0.9);
     transform: scale(1);
   }
   15% {
-    box-shadow: 0 0 0 4px rgba(0, 255, 135, 0.3), 0 0 30px 8px rgba(0, 255, 135, 0.5);
-    border-color: rgba(0, 255, 135, 1);
+    box-shadow: 0 0 0 4px rgba(31, 78, 61, 0.25), 0 0 30px 8px rgba(31, 78, 61, 0.35);
+    border-color: rgba(31, 78, 61, 1);
     transform: scale(1.01);
   }
   60% {
-    box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2), 0 0 20px 4px rgba(0, 255, 135, 0.3);
-    border-color: rgba(0, 255, 135, 0.5);
+    box-shadow: 0 0 0 2px rgba(31, 78, 61, 0.15), 0 0 20px 4px rgba(31, 78, 61, 0.2);
+    border-color: rgba(31, 78, 61, 0.4);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 135, 0), 0 0 0 0 rgba(0, 255, 135, 0);
-    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 0 rgba(31, 78, 61, 0), 0 0 0 0 rgba(31, 78, 61, 0);
+    border-color: rgba(15, 21, 16, 0.08);
   }
 }
