@@ -24,6 +24,7 @@ interface Event {
   notes: string | null
   venue_id: string | null
   address: string | null
+  link: string | null
   recurrence_group: string | null
   teams: { name: string; age_group: string }[] | null
   venues: { name: string; address: string | null }[] | null

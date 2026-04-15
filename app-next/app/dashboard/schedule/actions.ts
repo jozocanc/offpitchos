@@ -20,6 +20,7 @@ interface CreateEventInput {
   endTime: string
   venueId: string | null
   address?: string | null
+  link?: string | null
   notes: string | null
   recurring: {
     enabled: boolean
@@ -35,6 +36,7 @@ interface UpdateEventInput {
   endTime: string
   venueId: string | null
   address?: string | null
+  link?: string | null
   notes: string | null
   updateFuture: boolean // true = edit all future in series
 }
@@ -137,6 +139,7 @@ export async function createEvent(input: CreateEventInput) {
         end_time: input.endTime,
         venue_id: input.venueId,
         address: input.address?.trim() || null,
+        link: input.link?.trim() || null,
         notes: input.notes?.trim() || null,
         status: 'scheduled',
         created_by: user.id,
@@ -170,6 +173,7 @@ export async function createEvent(input: CreateEventInput) {
       end_time: string
       venue_id: string | null
       address: string | null
+      link: string | null
       notes: string | null
       status: string
       created_by: string
@@ -197,6 +201,7 @@ export async function createEvent(input: CreateEventInput) {
           end_time: eventEnd.toISOString(),
           venue_id: input.venueId,
           address: input.address?.trim() || null,
+          link: input.link?.trim() || null,
           notes: input.notes?.trim() || null,
           status: 'scheduled',
           created_by: user.id,
@@ -264,6 +269,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
     end_time: input.endTime,
     venue_id: input.venueId,
     address: input.address?.trim() || null,
+    link: input.link?.trim() || null,
     notes: input.notes?.trim() || null,
   }
 
@@ -303,6 +309,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
             end_time: feEnd.toISOString(),
             venue_id: input.venueId,
             address: input.address?.trim() || null,
+            link: input.link?.trim() || null,
             notes: input.notes?.trim() || null,
           })
           .eq('id', fe.id)
@@ -417,7 +424,7 @@ export async function getPastEvents() {
     .from('events')
     .select(`
       id, team_id, type, title, start_time, end_time,
-      venue_id, address, recurrence_group, notes, status,
+      venue_id, address, link, recurrence_group, notes, status,
       teams ( name, age_group ),
       venues ( name, address )
     `)
@@ -456,7 +463,7 @@ export async function getScheduleData() {
     .from('events')
     .select(`
       id, team_id, type, title, start_time, end_time,
-      venue_id, address, recurrence_group, notes, status,
+      venue_id, address, link, recurrence_group, notes, status,
       teams ( name, age_group ),
       venues ( name, address )
     `)

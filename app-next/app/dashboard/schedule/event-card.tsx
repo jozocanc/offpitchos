@@ -15,6 +15,7 @@ interface EventCardProps {
     status: string
     notes: string | null
     address: string | null
+    link?: string | null
     recurrence_group: string | null
     teams: { name: string; age_group: string }[] | null
     venues: { name: string; address: string | null }[] | null
@@ -150,6 +151,21 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
               </svg>
               <span>{coaches.join(', ')}</span>
             </p>
+          )}
+          {event.link && (
+            <a
+              href={event.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              Tournament link →
+            </a>
           )}
           {event.notes && (
             <p className="text-gray text-xs mt-2 italic">{event.notes}</p>

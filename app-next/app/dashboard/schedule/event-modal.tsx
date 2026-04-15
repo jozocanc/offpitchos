@@ -28,6 +28,7 @@ interface EventData {
   end_time: string
   venue_id: string | null
   address: string | null
+  link: string | null
   notes: string | null
   recurrence_group: string | null
 }
@@ -53,6 +54,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
     editEvent?.address ?? (editEvent?.venue_id ? (venues.find(v => v.id === editEvent.venue_id)?.address ?? '') : '')
   )
   const [addressTouched, setAddressTouched] = useState(!!editEvent?.address)
+  const [link, setLink] = useState(editEvent?.link ?? '')
   const [notes, setNotes] = useState(editEvent?.notes ?? '')
   const [recurringEnabled, setRecurringEnabled] = useState(false)
   const [recurringDays, setRecurringDays] = useState<number[]>([])
@@ -160,6 +162,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             endTime: endISO,
             venueId: venueId || null,
             address: address.trim() || null,
+            link: link.trim() || null,
             notes: notes.trim() || null,
             updateFuture,
           })
@@ -172,6 +175,7 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             endTime: endISO,
             venueId: venueId || null,
             address: address.trim() || null,
+            link: link.trim() || null,
             notes: notes.trim() || null,
             recurring: {
               enabled: recurringEnabled,
@@ -321,6 +325,19 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
             loading={checkingConflicts}
           />
         </div>
+
+        {/* Link */}
+        <label className="block text-sm font-medium text-gray mb-2">
+          Link (optional)
+          {type === 'tournament' && <span className="text-green ml-2 text-xs">Tournament registration or info page</span>}
+        </label>
+        <input
+          type="url"
+          value={link}
+          onChange={e => setLink(e.target.value)}
+          placeholder="https://..."
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
+        />
 
         {/* Notes */}
         <label className="block text-sm font-medium text-gray mb-2">Notes (optional)</label>
