@@ -253,7 +253,7 @@ export async function interpretVoiceCommand(
   const [eventsRes, teamsRes, venuesRes] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, type, start_time, end_time, status, teams(id, name, age_group), venues(id, name)')
+      .select('id, title, type, start_time, end_time, status, venue_id, teams(id, name, age_group), venues(id, name)')
       .eq('club_id', profile.club_id)
       .gte('start_time', now.toISOString())
       .lte('start_time', twoWeeks.toISOString())
@@ -404,7 +404,7 @@ export async function executeVoicePlan(
   const [eventsRes, teamsRes, venuesRes] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, type, start_time, end_time, status, teams(id, name, age_group), venues(id, name)')
+      .select('id, title, type, start_time, end_time, status, venue_id, teams(id, name, age_group), venues(id, name)')
       .eq('club_id', profile.club_id)
       .gte('start_time', now.toISOString())
       .lte('start_time', twoWeeks.toISOString())
@@ -448,7 +448,7 @@ export async function executeVoicePlan(
           title: event.title,
           startTime: input.newStartTime,
           endTime: input.newEndTime,
-          venueId: (event.venues as any)?.[0]?.id ?? null,
+          venueId: (event as any).venue_id ?? null,
           notes: null,
           updateFuture: false,
         })
