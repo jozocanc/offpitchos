@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import Wordmark from '@/components/wordmark'
@@ -14,7 +13,7 @@ const border = '#E8E3DC'
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/dashboard')
+  const signedIn = Boolean(user)
 
   return (
     <main
@@ -31,22 +30,34 @@ export default async function Home() {
             <Wordmark size="md" />
           </span>
           <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              style={{ color: subtext }}
-              className="text-sm hover:text-black transition-colors px-3 py-2"
-            >
-              Sign in
-            </Link>
-            <a
-              href="https://calendly.com/jozo-cancar27/offpitchos-demo"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ backgroundColor: forest, color: cream }}
-              className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
-            >
-              Book a demo
-            </a>
+            {signedIn ? (
+              <Link
+                href="/dashboard"
+                style={{ backgroundColor: forest, color: cream }}
+                className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
+              >
+                Dashboard →
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  style={{ color: subtext }}
+                  className="text-sm hover:text-black transition-colors px-3 py-2"
+                >
+                  Sign in
+                </Link>
+                <a
+                  href="https://calendly.com/jozo-cancar27/offpitchos-demo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ backgroundColor: forest, color: cream }}
+                  className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
+                >
+                  Book a demo
+                </a>
+              </>
+            )}
           </div>
         </div>
       </nav>
