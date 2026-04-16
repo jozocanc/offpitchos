@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const cream = '#FAF7F2'
 const card = '#FFFFFF'
@@ -291,11 +292,17 @@ export default async function Home() {
         <div className="max-w-4xl mx-auto px-6 py-24">
           <div className="grid md:grid-cols-[auto_1fr] gap-10 items-center">
             <div
-              style={{ backgroundColor: forest, color: cream, borderColor: border }}
-              className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 flex items-center justify-center text-4xl font-bold tracking-tight mx-auto md:mx-0 shrink-0"
-              aria-label="Jozo Cancar"
+              style={{ borderColor: border }}
+              className="relative w-32 h-32 md:w-36 md:h-36 rounded-full border-4 overflow-hidden mx-auto md:mx-0 shrink-0 shadow-[0_8px_24px_-12px_rgba(15,21,16,0.25)]"
             >
-              JC
+              <Image
+                src="/jozo.jpg"
+                alt="Jozo Cancar, founder of OffPitchOS"
+                fill
+                sizes="(min-width: 768px) 144px, 128px"
+                className="object-cover"
+                priority
+              />
             </div>
             <div className="text-center md:text-left">
               <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
