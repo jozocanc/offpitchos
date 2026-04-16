@@ -292,7 +292,7 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="grid md:grid-cols-[auto_1fr] gap-12 md:gap-16 items-center">
             {/* Stacked tilted photos */}
-            <div className="relative w-[260px] h-[320px] md:w-[300px] md:h-[360px] mx-auto md:mx-0 shrink-0 group">
+            <div className="relative w-[320px] h-[380px] md:w-[360px] md:h-[420px] mx-auto md:mx-0 shrink-0 group">
               {/* Back card — soccer (tilted left) */}
               <div
                 style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
