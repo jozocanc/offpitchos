@@ -286,6 +286,32 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Founder */}
+      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
+        <div className="max-w-4xl mx-auto px-6 py-24">
+          <div className="grid md:grid-cols-[auto_1fr] gap-10 items-center">
+            <div
+              style={{ backgroundColor: forest, color: cream, borderColor: border }}
+              className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 flex items-center justify-center text-4xl font-bold tracking-tight mx-auto md:mx-0 shrink-0"
+              aria-label="Jozo Cancar"
+            >
+              JC
+            </div>
+            <div className="text-center md:text-left">
+              <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
+                Built by the person who needed it
+              </span>
+              <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-5 leading-[1.1]">
+                Hi, I&rsquo;m Jozo.
+              </h2>
+              <p style={{ color: subtext }} className="text-base md:text-lg leading-relaxed">
+                Former D1 soccer player at Florida Atlantic. Years inside real clubs &mdash; as a player, on staff, around directors &mdash; showed me exactly where today&rsquo;s tools break down: coaches dropping out last minute, parents lost in group texts, directors logging into six apps to answer one question. OffPitchOS is what those systems should have been from the start.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section style={{ backgroundColor: forest }}>
         <div className="max-w-3xl mx-auto px-6 py-28 text-center">
