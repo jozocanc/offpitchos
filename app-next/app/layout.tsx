@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AccessGate from "@/components/access-gate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,7 +45,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={inter.className}><AccessGate>{children}</AccessGate></body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
