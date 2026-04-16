@@ -289,21 +289,39 @@ export default async function Home() {
 
       {/* Founder */}
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
-        <div className="max-w-4xl mx-auto px-6 py-24">
-          <div className="grid md:grid-cols-[auto_1fr] gap-10 items-center">
-            <div
-              style={{ borderColor: border }}
-              className="relative w-32 h-32 md:w-36 md:h-36 rounded-full border-4 overflow-hidden mx-auto md:mx-0 shrink-0 shadow-[0_8px_24px_-12px_rgba(15,21,16,0.25)]"
-            >
-              <Image
-                src="/jozo.jpg"
-                alt="Jozo Cancar, founder of OffPitchOS"
-                fill
-                sizes="(min-width: 768px) 144px, 128px"
-                className="object-cover"
-                priority
-              />
+        <div className="max-w-5xl mx-auto px-6 py-24">
+          <div className="grid md:grid-cols-[auto_1fr] gap-12 md:gap-16 items-center">
+            {/* Stacked tilted photos */}
+            <div className="relative w-[260px] h-[320px] md:w-[300px] md:h-[360px] mx-auto md:mx-0 shrink-0 group">
+              {/* Back card — soccer (tilted left) */}
+              <div
+                style={{ borderColor: border }}
+                className="absolute top-0 left-0 w-[180px] h-[240px] md:w-[210px] md:h-[280px] rounded-2xl overflow-hidden border-4 bg-white shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
+              >
+                <Image
+                  src="/jozo-soccer.jpg"
+                  alt="Jozo Cancar playing D1 soccer at Florida Atlantic"
+                  fill
+                  sizes="(min-width: 768px) 210px, 180px"
+                  className="object-cover"
+                />
+              </div>
+              {/* Front card — suit (tilted right, on top) */}
+              <div
+                style={{ borderColor: border }}
+                className="absolute bottom-0 right-0 w-[180px] h-[240px] md:w-[210px] md:h-[280px] rounded-2xl overflow-hidden border-4 bg-white shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
+              >
+                <Image
+                  src="/jozo.jpg"
+                  alt="Jozo Cancar, founder of OffPitchOS"
+                  fill
+                  sizes="(min-width: 768px) 210px, 180px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
             </div>
+
             <div className="text-center md:text-left">
               <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
                 Built by the person who needed it
