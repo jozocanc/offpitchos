@@ -1,4 +1,4 @@
-# SidelineOS Coach Coverage — Design Spec
+# OffPitchOS Coach Coverage — Design Spec
 
 ## Overview
 

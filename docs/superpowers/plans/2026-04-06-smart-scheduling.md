@@ -260,7 +260,7 @@ export async function suggestAlternatives(input: {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/conflict-actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/conflict-actions.ts
 git commit -m "feat: add conflict detection and auto-suggest server actions"
 ```
 
@@ -341,7 +341,7 @@ export default function ConflictBanner({ conflicts, suggestions, onSelectSuggest
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/conflict-banner.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/conflict-banner.tsx
 git commit -m "feat: add conflict warning banner with suggestion chips"
 ```
 
@@ -455,7 +455,7 @@ Place it after the venue select and before the notes textarea:
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/event-modal.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/event-modal.tsx
 git commit -m "feat: integrate conflict detection into event creation modal"
 ```
 
@@ -498,7 +498,7 @@ This blocks team double-bookings (hard conflict) but allows venue and coach conf
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/actions.ts
 git commit -m "feat: add server-side team conflict validation in createEvent"
 ```
 
@@ -538,6 +538,6 @@ Edit an existing event — confirm it doesn't flag itself as a conflict.
 - [ ] **Step 7: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: smart scheduling — conflict detection and auto-suggestions"
 ```

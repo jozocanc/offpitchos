@@ -1,4 +1,4 @@
--- SidelineOS Initial Schema
+-- OffPitchOS Initial Schema
 -- Tables: clubs, teams, profiles, team_members, invites
 -- Includes: constraints, triggers, RLS policies
 

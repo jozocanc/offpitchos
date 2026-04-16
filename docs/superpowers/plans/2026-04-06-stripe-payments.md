@@ -51,7 +51,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add supabase/migrations/015_stripe_connect.sql app-next/lib/stripe.ts
+cd /Users/canci27/Desktop/offpitchos && git add supabase/migrations/015_stripe_connect.sql app-next/lib/stripe.ts
 git commit -m "feat: add Stripe client and stripe_account_id migration"
 ```
 
@@ -231,7 +231,7 @@ export default function StripeConnect() {
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/api/stripe/connect/route.ts app-next/app/dashboard/settings/stripe-connect.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/api/stripe/connect/route.ts app-next/app/dashboard/settings/stripe-connect.tsx
 git commit -m "feat: add Stripe Connect onboarding flow"
 ```
 
@@ -257,7 +257,7 @@ import StripeConnect from './stripe-connect'
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/settings/
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/settings/
 git commit -m "feat: add Stripe Connect to settings page"
 ```
 
@@ -401,7 +401,7 @@ Also update the button text:
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/api/stripe/checkout/route.ts app-next/app/dashboard/camps/register-modal.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/api/stripe/checkout/route.ts app-next/app/dashboard/camps/register-modal.tsx
 git commit -m "feat: add Stripe Checkout for paid camp registration"
 ```
 
@@ -478,7 +478,7 @@ export async function POST(req: NextRequest) {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/api/stripe/webhook/route.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/api/stripe/webhook/route.ts
 git commit -m "feat: add Stripe webhook to auto-confirm camp payments"
 ```
 
@@ -507,6 +507,6 @@ Set a camp fee → as parent, click "Register & Pay" → complete Stripe Checkou
 - [ ] **Step 5: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: Stripe Connect payments — clubs collect camp fees from parents"
 ```

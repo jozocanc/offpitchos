@@ -1,11 +1,11 @@
-# SidelineOS Landing Page — Design Spec
+# OffPitchOS Landing Page — Design Spec
 
 ## Overview
 
-A single-page waitlist landing site for **SidelineOS**, an AI-driven club operating system for soccer. The page targets Directors of Coaching (DOCs) at youth soccer clubs. The goal is to sell the vision and capture early interest via email signups.
+A single-page waitlist landing site for **OffPitchOS**, an AI-driven club operating system for soccer. The page targets Directors of Coaching (DOCs) at youth soccer clubs. The goal is to sell the vision and capture early interest via email signups.
 
 - **Tech stack:** Vanilla HTML / CSS / JS
-- **Hosting:** Own repo, deployed to its own domain (sidelineos.com)
+- **Hosting:** Own repo, deployed to its own domain (offpitchos.com)
 - **Style:** Bold, sporty, dark + electric green
 
 ## Color Palette
@@ -96,7 +96,7 @@ Visual hierarchy should emphasize DOC as the top tier (largest or most prominent
 
 ### Section 7: Footer
 
-- SidelineOS logo/wordmark
+- OffPitchOS logo/wordmark
 - Copyright line
 - Placeholder social media icon links (no actual links needed yet)
 - Minimal — one row
@@ -137,7 +137,7 @@ Visual hierarchy should emphasize DOC as the top tier (largest or most prominent
 ## Files
 
 ```
-sidelineos/
+offpitchos/
   index.html        — single page, all sections
   css/
     style.css       — all styles

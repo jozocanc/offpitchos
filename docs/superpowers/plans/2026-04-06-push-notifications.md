@@ -31,13 +31,13 @@
 - [ ] **Step 1: Install web-push**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm install web-push
+cd /Users/canci27/Desktop/offpitchos/app-next && npm install web-push
 ```
 
 - [ ] **Step 2: Generate VAPID keys**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npx web-push generate-vapid-keys
+cd /Users/canci27/Desktop/offpitchos/app-next && npx web-push generate-vapid-keys
 ```
 
 Copy the output and add to `.env.local`:
@@ -49,7 +49,7 @@ VAPID_PRIVATE_KEY=<private key>
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/package.json app-next/package-lock.json
+cd /Users/canci27/Desktop/offpitchos && git add app-next/package.json app-next/package-lock.json
 git commit -m "chore: install web-push for push notifications"
 ```
 
@@ -86,7 +86,7 @@ create policy push_sub_own on push_subscriptions for all
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add supabase/migrations/014_push_subscriptions.sql
+cd /Users/canci27/Desktop/offpitchos && git add supabase/migrations/014_push_subscriptions.sql
 git commit -m "feat: add push_subscriptions table"
 ```
 
@@ -141,7 +141,7 @@ self.addEventListener('notificationclick', function(event) {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/public/sw.js
+cd /Users/canci27/Desktop/offpitchos && git add app-next/public/sw.js
 git commit -m "feat: add service worker for push notification handling"
 ```
 
@@ -206,7 +206,7 @@ export async function sendPushToProfiles(
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/lib/push.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/lib/push.ts
 git commit -m "feat: add server-side push notification sending via web-push"
 ```
 
@@ -284,7 +284,7 @@ export async function isPushSubscribed(): Promise<boolean> {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/push-actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/push-actions.ts
 git commit -m "feat: add push subscription server actions"
 ```
 
@@ -422,7 +422,7 @@ Add `<PushPrompt />` at the bottom of the notification dropdown, just before the
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/components/push-prompt.tsx app-next/components/notification-bell.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/components/push-prompt.tsx app-next/components/notification-bell.tsx
 git commit -m "feat: add push notification prompt in notification bell"
 ```
 
@@ -481,7 +481,7 @@ await sendPushToProfiles(recipientIds, { title: 'OffPitchOS', message: `New: ${i
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/coverage/actions.ts app-next/app/dashboard/schedule/actions.ts app-next/app/dashboard/messages/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/coverage/actions.ts app-next/app/dashboard/schedule/actions.ts app-next/app/dashboard/messages/actions.ts
 git commit -m "feat: send push notifications alongside in-app notifications"
 ```
 
@@ -512,6 +512,6 @@ Click the push notification — verify it opens the app to the correct page.
 - [ ] **Step 7: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: push notifications — real-time alerts for schedule, coverage, and announcements"
 ```

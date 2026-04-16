@@ -443,7 +443,7 @@ export async function getAnnouncementReplies(announcementId: string) {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 3: Commit**
@@ -965,7 +965,7 @@ export default async function MessagesPage() {
 - [ ] **Step 6: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 7: Commit**
@@ -1020,7 +1020,7 @@ Note: The notification query also needs to select the `type` field. Check the ex
 - [ ] **Step 3: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 4: Commit**
@@ -1037,7 +1037,7 @@ git commit -m "feat: enable Messages link, route notifications to correct pages"
 - [ ] **Step 1: Run build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 Expected: Build succeeds. `/dashboard/messages` route appears.

@@ -40,7 +40,7 @@ alter table players add column shorts_size text;
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add supabase/migrations/013_player_sizes.sql
+cd /Users/canci27/Desktop/offpitchos && git add supabase/migrations/013_player_sizes.sql
 git commit -m "feat: add jersey_size and shorts_size to players table"
 ```
 
@@ -157,7 +157,7 @@ export async function updatePlayerSize(playerId: string, jerseySize: string | nu
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/gear/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/gear/actions.ts
 git commit -m "feat: add gear data server actions with size aggregation"
 ```
 
@@ -371,7 +371,7 @@ function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/gear/gear-client.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/gear/gear-client.tsx
 git commit -m "feat: add gear client with size aggregation and player editing"
 ```
 
@@ -435,7 +435,7 @@ Nav item (add after Camps, before Ask):
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/gear/page.tsx app-next/components/sidebar.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/gear/page.tsx app-next/components/sidebar.tsx
 git commit -m "feat: add Gear page and sidebar link"
 ```
 
@@ -460,6 +460,6 @@ Confirm the team breakdown and club-wide summary update with the saved sizes.
 - [ ] **Step 5: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: gear management — player sizes, team breakdowns, order summaries"
 ```

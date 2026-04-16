@@ -226,7 +226,7 @@ export type CoverageResponseType = (typeof COVERAGE_RESPONSE_TYPES)[number]
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 3: Commit**
@@ -621,7 +621,7 @@ export async function getCoverageTimeout() {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 3: Commit**
@@ -986,7 +986,7 @@ export default async function CoveragePage() {
 - [ ] **Step 5: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 6: Commit**
@@ -1346,7 +1346,7 @@ Map coverage requests to events in the render.
 - [ ] **Step 7: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 8: Commit**
@@ -1453,7 +1453,7 @@ Note: The settings page needs to fetch `role` from the profile query. Update the
 - [ ] **Step 3: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 4: Commit**
@@ -1495,7 +1495,7 @@ Add the Coverage nav item to the `navItems` array, between Schedule and Coaches:
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 3: Commit**
@@ -1544,7 +1544,7 @@ Remove the `note="Coming soon"` prop.
 - [ ] **Step 3: Verify build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 - [ ] **Step 4: Commit**
@@ -1561,7 +1561,7 @@ git commit -m "feat: wire up coverage alerts stat card on dashboard"
 - [ ] **Step 1: Run build**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run build
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run build
 ```
 
 Expected: Build succeeds with no errors. New `/dashboard/coverage` route appears.

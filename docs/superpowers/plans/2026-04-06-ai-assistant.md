@@ -32,7 +32,7 @@
 - [ ] **Step 1: Install the SDK**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm install @anthropic-ai/sdk
+cd /Users/canci27/Desktop/offpitchos/app-next && npm install @anthropic-ai/sdk
 ```
 
 - [ ] **Step 2: Add API key to .env.local**
@@ -99,7 +99,7 @@ create policy ai_chats_insert on ai_chats
 - [ ] **Step 2: Apply migration to Supabase**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && npx supabase db push
+cd /Users/canci27/Desktop/offpitchos && npx supabase db push
 ```
 Or apply via Supabase dashboard SQL editor if local CLI isn't configured.
 
@@ -694,7 +694,7 @@ git commit -m "feat: add Ask link to sidebar navigation"
 - [ ] **Step 1: Start dev server**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next && npm run dev
+cd /Users/canci27/Desktop/offpitchos/app-next && npm run dev
 ```
 
 - [ ] **Step 2: Verify the page loads**

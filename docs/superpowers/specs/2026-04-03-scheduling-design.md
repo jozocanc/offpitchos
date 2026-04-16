@@ -1,8 +1,8 @@
-# SidelineOS Scheduling — Design Spec
+# OffPitchOS Scheduling — Design Spec
 
 ## Overview
 
-The scheduling sub-project adds event management to SidelineOS — the core daily-use feature for DOCs and coaches. It covers creating, editing, and cancelling events (practices, games, tournaments, camps, tryouts, meetings, custom), recurring schedules, saved venues, and in-app notifications.
+The scheduling sub-project adds event management to OffPitchOS — the core daily-use feature for DOCs and coaches. It covers creating, editing, and cancelling events (practices, games, tournaments, camps, tryouts, meetings, custom), recurring schedules, saved venues, and in-app notifications.
 
 ## Approach
 

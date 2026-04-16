@@ -94,7 +94,7 @@ create policy camp_reg_parent_insert on camp_registrations for insert
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add supabase/migrations/012_camp_registrations.sql
+cd /Users/canci27/Desktop/offpitchos && git add supabase/migrations/012_camp_registrations.sql
 git commit -m "feat: add camp_details and camp_registrations tables"
 ```
 
@@ -319,7 +319,7 @@ export async function getParentPlayers() {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/camps/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/camps/actions.ts
 git commit -m "feat: add camp & revenue server actions"
 ```
 
@@ -496,7 +496,7 @@ function CampCard({ camp, isDoc, isParent, onManage, onRegister }: {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/camps/camps-client.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/camps/camps-client.tsx
 git commit -m "feat: add camps client with revenue summary and camp cards"
 ```
 
@@ -682,7 +682,7 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/camps/camp-detail-modal.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/camps/camp-detail-modal.tsx
 git commit -m "feat: add camp detail modal — fee, capacity, registration management"
 ```
 
@@ -814,7 +814,7 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/camps/register-modal.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/camps/register-modal.tsx
 git commit -m "feat: add camp registration modal for parents"
 ```
 
@@ -877,7 +877,7 @@ Nav item (add after Messages, before Ask):
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/camps/page.tsx app-next/components/sidebar.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/camps/page.tsx app-next/components/sidebar.tsx
 git commit -m "feat: add Camps page and sidebar link"
 ```
 
@@ -910,6 +910,6 @@ As DOC, open a camp with registrations, toggle a player's payment between Paid/U
 - [ ] **Step 7: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: camp & revenue tracking — registrations, payments, revenue dashboard"
 ```

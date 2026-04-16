@@ -227,7 +227,7 @@ export async function getAnalyticsData() {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/analytics/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/analytics/actions.ts
 git commit -m "feat: add analytics server actions with club-wide stat aggregation"
 ```
 
@@ -385,7 +385,7 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/analytics/analytics-client.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/analytics/analytics-client.tsx
 git commit -m "feat: add analytics client with stat cards and team breakdown table"
 ```
 
@@ -447,6 +447,6 @@ Nav item (add right after Dashboard):
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/analytics/page.tsx app-next/components/sidebar.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/analytics/page.tsx app-next/components/sidebar.tsx
 git commit -m "feat: add Analytics page and sidebar link"
 ```

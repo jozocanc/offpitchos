@@ -1,14 +1,14 @@
-# SidelineOS Landing Page Implementation Plan
+# OffPitchOS Landing Page Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a single-page waitlist landing site for SidelineOS with bold sporty styling, seven content sections, and email capture via Formspree.
+**Goal:** Build a single-page waitlist landing site for OffPitchOS with bold sporty styling, seven content sections, and email capture via Formspree.
 
 **Architecture:** Single `index.html` page with external `css/style.css` and `js/main.js`. No build tools, no frameworks. CSS custom properties for theming. Formspree for email capture.
 
 **Tech Stack:** Vanilla HTML, CSS (custom properties, grid, flexbox, keyframes), vanilla JS (IntersectionObserver, fetch API), Google Fonts (Inter), Formspree.
 
-**Spec:** `docs/superpowers/specs/2026-04-02-sidelineos-landing-page-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-02-offpitchos-landing-page-design.md`
 
 ---
 
@@ -29,7 +29,7 @@
 - Create: `css/style.css`
 - Create: `js/main.js`
 
-**Note:** The git repo is already initialized at `/Users/canci27/Desktop/sidelineos/`. All file paths are relative to that root.
+**Note:** The git repo is already initialized at `/Users/canci27/Desktop/offpitchos/`. All file paths are relative to that root.
 
 - [ ] **Step 1: Create index.html with full semantic structure**
 
@@ -39,7 +39,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SidelineOS — The Operating System for Your Soccer Club</title>
+    <title>OffPitchOS — The Operating System for Your Soccer Club</title>
     <meta name="description" content="AI-driven club operating system built for Directors of Coaching. Automate scheduling, communication, coach coverage, and player development.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -202,12 +202,12 @@
     <footer class="site-footer">
         <div class="container">
             <div class="site-footer__inner">
-                <p class="site-footer__logo">SidelineOS</p>
+                <p class="site-footer__logo">OffPitchOS</p>
                 <div class="site-footer__social" aria-label="Social media links">
                     <a href="#" aria-label="Twitter"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
                     <a href="#" aria-label="Instagram"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
                 </div>
-                <p class="site-footer__copy">&copy; 2026 SidelineOS. All rights reserved.</p>
+                <p class="site-footer__copy">&copy; 2026 OffPitchOS. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -222,7 +222,7 @@
 Create `css/style.css` with a comment header:
 
 ```css
-/* SidelineOS Landing Page Styles */
+/* OffPitchOS Landing Page Styles */
 ```
 
 - [ ] **Step 3: Create empty js/main.js**
@@ -230,7 +230,7 @@ Create `css/style.css` with a comment header:
 Create `js/main.js` with a comment header:
 
 ```js
-// SidelineOS Landing Page Scripts
+// OffPitchOS Landing Page Scripts
 ```
 
 - [ ] **Step 4: Open index.html in browser and verify structure renders**
@@ -255,7 +255,7 @@ git commit -m "feat: add HTML skeleton with all seven sections"
 - [ ] **Step 1: Add CSS reset, custom properties, and base styles**
 
 ```css
-/* SidelineOS Landing Page Styles */
+/* OffPitchOS Landing Page Styles */
 
 /* === Reset & Base === */
 *, *::before, *::after {
@@ -878,7 +878,7 @@ Append to `css/style.css`:
 Write `js/main.js`:
 
 ```js
-// SidelineOS Landing Page Scripts
+// OffPitchOS Landing Page Scripts
 
 // === Scroll Fade-In ===
 document.addEventListener('DOMContentLoaded', () => {

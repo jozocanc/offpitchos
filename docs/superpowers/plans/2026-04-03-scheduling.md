@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add event scheduling (practices, games, tournaments, etc.), saved venues, and in-app notifications to SidelineOS.
+**Goal:** Add event scheduling (practices, games, tournaments, etc.), saved venues, and in-app notifications to OffPitchOS.
 
 **Architecture:** Event-based with smart recurrence — recurring patterns expand into individual event rows sharing a `recurrence_group` UUID. Notifications are created server-side in actions.ts using the service role client. Agenda view (default) and weekly calendar view with toggle.
 

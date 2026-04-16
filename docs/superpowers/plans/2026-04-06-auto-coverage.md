@@ -163,7 +163,7 @@ export async function autoAssignCoverage(
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/coverage/auto-assign.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/coverage/auto-assign.ts
 git commit -m "feat: add auto-coverage assignment logic — find best available coach"
 ```
 
@@ -259,7 +259,7 @@ const { data: request, error } = await supabase
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/coverage/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/coverage/actions.ts
 git commit -m "feat: auto-assign coverage when coach can't attend — escalate if no match"
 ```
 
@@ -321,7 +321,7 @@ Add this before the existing `const { data: request, error } = await supabase.fr
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/coverage/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/coverage/actions.ts
 git commit -m "feat: add conflict check to manual coverage assignment"
 ```
 
@@ -345,7 +345,7 @@ Just verify that the existing request-card.tsx properly displays the covering co
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/coverage/request-card.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/coverage/request-card.tsx
 git commit -m "feat: show auto-assigned indicator on coverage cards"
 ```
 
@@ -380,6 +380,6 @@ As DOC, try to manually assign a coach who has a conflicting event. Confirm an e
 - [ ] **Step 5: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: auto-coverage — smart coach replacement with conflict detection"
 ```

@@ -1,4 +1,4 @@
-// SidelineOS Landing Page Scripts
+// OffPitchOS Landing Page Scripts
 
 // === Scroll Fade-In ===
 document.addEventListener('DOMContentLoaded', () => {

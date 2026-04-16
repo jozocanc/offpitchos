@@ -1,12 +1,12 @@
-# SidelineOS Auth + Project Setup — Design Spec
+# OffPitchOS Auth + Project Setup — Design Spec
 
 ## Overview
 
-Foundation layer for the SidelineOS web app — a Next.js + Supabase application with authentication, role-based access, club onboarding, invite system, and the DOC dashboard shell. This is Sub-project 1 of 4. Subsequent sub-projects (Scheduling, Coach Coverage, Communication Hub) build on this foundation.
+Foundation layer for the OffPitchOS web app — a Next.js + Supabase application with authentication, role-based access, club onboarding, invite system, and the DOC dashboard shell. This is Sub-project 1 of 4. Subsequent sub-projects (Scheduling, Coach Coverage, Communication Hub) build on this foundation.
 
 - **Tech stack:** Next.js 14 (App Router), Supabase (Postgres + Auth), Tailwind CSS
 - **Hosting:** Vercel
-- **Repo:** Separate Next.js app in a new directory or the existing `sidelineos` repo alongside the landing page
+- **Repo:** Separate Next.js app in a new directory or the existing `offpitchos` repo alongside the landing page
 
 ## Tech Stack Details
 
@@ -14,7 +14,7 @@ Foundation layer for the SidelineOS web app — a Next.js + Supabase application
 |------|---------|
 | Next.js 14 (App Router) | React framework with server components, API routes, middleware |
 | Supabase | Postgres database, auth (email + Google OAuth), row-level security |
-| Tailwind CSS | Utility-first CSS, configured with SidelineOS brand tokens |
+| Tailwind CSS | Utility-first CSS, configured with OffPitchOS brand tokens |
 | Resend | Transactional email (invite emails). Free tier: 3k emails/month |
 | Vercel | Hosting, auto-deploy from GitHub |
 

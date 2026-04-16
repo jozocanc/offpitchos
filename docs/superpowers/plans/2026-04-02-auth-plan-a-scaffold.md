@@ -1,14 +1,14 @@
-# SidelineOS Plan A: Project Scaffold + Database
+# OffPitchOS Plan A: Project Scaffold + Database
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Set up the Next.js 14 project with Supabase, Tailwind CSS (branded), and the complete database schema with RLS policies.
 
-**Architecture:** Next.js 14 App Router project in `app-next/` directory (separate from the static landing page in the repo root). Supabase provides Postgres database and auth. Tailwind CSS configured with SidelineOS brand tokens. Database schema includes clubs, teams, profiles, team_members, and invites tables with row-level security.
+**Architecture:** Next.js 14 App Router project in `app-next/` directory (separate from the static landing page in the repo root). Supabase provides Postgres database and auth. Tailwind CSS configured with OffPitchOS brand tokens. Database schema includes clubs, teams, profiles, team_members, and invites tables with row-level security.
 
 **Tech Stack:** Next.js 14, Supabase (`@supabase/supabase-js`, `@supabase/ssr`), Tailwind CSS, TypeScript
 
-**Spec:** `docs/superpowers/specs/2026-04-02-sidelineos-auth-setup-design.md`
+**Spec:** `docs/superpowers/specs/2026-04-02-offpitchos-auth-setup-design.md`
 
 ---
 
@@ -18,7 +18,7 @@
 |------|---------------|
 | `app-next/package.json` | Dependencies and scripts |
 | `app-next/tsconfig.json` | TypeScript config |
-| `app-next/tailwind.config.ts` | Tailwind with SidelineOS brand tokens |
+| `app-next/tailwind.config.ts` | Tailwind with OffPitchOS brand tokens |
 | `app-next/app/globals.css` | Tailwind directives + base styles |
 | `app-next/app/layout.tsx` | Root layout with Inter font |
 | `app-next/app/page.tsx` | Root page (temporary "it works" page) |
@@ -37,7 +37,7 @@
 
 - [ ] **Step 1: Create Next.js project**
 
-Run from `/Users/canci27/Desktop/sidelineos/`:
+Run from `/Users/canci27/Desktop/offpitchos/`:
 
 ```bash
 npx create-next-app@latest app-next --typescript --tailwind --eslint --app --src-dir=false --import-alias="@/*" --use-npm
@@ -57,14 +57,14 @@ Stop the server with Ctrl+C.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos
+cd /Users/canci27/Desktop/offpitchos
 git add app-next/
 git commit -m "feat: initialize Next.js 14 project with TypeScript and Tailwind"
 ```
 
 ---
 
-## Task 2: Configure Tailwind with SidelineOS brand tokens
+## Task 2: Configure Tailwind with OffPitchOS brand tokens
 
 **Files:**
 - Modify: `app-next/tailwind.config.ts`
@@ -140,7 +140,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SidelineOS",
+  title: "OffPitchOS",
   description: "AI-driven club operating system for soccer",
 };
 
@@ -182,14 +182,14 @@ export default function Home() {
 cd app-next && npm run dev
 ```
 
-Open `http://localhost:3000`. Expected: dark navy background, "SidelineOS" in white with "OS" in electric green, "App scaffold ready" in gray. Stop server.
+Open `http://localhost:3000`. Expected: dark navy background, "OffPitchOS" in white with "OS" in electric green, "App scaffold ready" in gray. Stop server.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos
+cd /Users/canci27/Desktop/offpitchos
 git add app-next/
-git commit -m "feat: configure Tailwind with SidelineOS brand tokens and base styles"
+git commit -m "feat: configure Tailwind with OffPitchOS brand tokens and base styles"
 ```
 
 ---
@@ -205,7 +205,7 @@ git commit -m "feat: configure Tailwind with SidelineOS brand tokens and base st
 - [ ] **Step 1: Install Supabase packages**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos/app-next
+cd /Users/canci27/Desktop/offpitchos/app-next
 npm install @supabase/supabase-js @supabase/ssr
 ```
 
@@ -304,7 +304,7 @@ Append to `app-next/.gitignore`:
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos
+cd /Users/canci27/Desktop/offpitchos
 git add app-next/
 git commit -m "feat: add Supabase client helpers and constants"
 ```
@@ -319,7 +319,7 @@ git commit -m "feat: add Supabase client helpers and constants"
 - [ ] **Step 1: Create migrations directory**
 
 ```bash
-mkdir -p /Users/canci27/Desktop/sidelineos/supabase/migrations
+mkdir -p /Users/canci27/Desktop/offpitchos/supabase/migrations
 ```
 
 - [ ] **Step 2: Write the migration SQL**
@@ -327,7 +327,7 @@ mkdir -p /Users/canci27/Desktop/sidelineos/supabase/migrations
 Create `supabase/migrations/001_initial_schema.sql`:
 
 ```sql
--- SidelineOS Initial Schema
+-- OffPitchOS Initial Schema
 -- Tables: clubs, teams, profiles, team_members, invites
 -- Includes: constraints, triggers, RLS policies
 
@@ -561,7 +561,7 @@ $$;
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos
+cd /Users/canci27/Desktop/offpitchos
 git add supabase/
 git commit -m "feat: add database migration with full schema, indexes, triggers, and RLS policies"
 ```
@@ -577,7 +577,7 @@ git commit -m "feat: add database migration with full schema, indexes, triggers,
 
 Go to [supabase.com/dashboard](https://supabase.com/dashboard):
 1. Click "New Project"
-2. Name: "sidelineos"
+2. Name: "offpitchos"
 3. Set a database password (save it somewhere safe)
 4. Region: choose closest to you
 5. Click "Create project"
@@ -674,7 +674,7 @@ export default function Home() {
 - [ ] **Step 8: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos
+cd /Users/canci27/Desktop/offpitchos
 git add app-next/.env.local.example app-next/app/page.tsx
 git commit -m "feat: verify Supabase connection and finalize scaffold"
 ```
@@ -687,7 +687,7 @@ git commit -m "feat: verify Supabase connection and finalize scaffold"
 
 After completing all 5 tasks, you will have:
 - A working Next.js 14 project at `app-next/`
-- Tailwind CSS configured with SidelineOS brand colors
+- Tailwind CSS configured with OffPitchOS brand colors
 - Supabase client helpers (browser + server)
 - Complete database schema with 5 tables, indexes, triggers, and RLS
 - A running app connected to Supabase

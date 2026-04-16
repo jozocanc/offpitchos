@@ -1,8 +1,8 @@
-# SidelineOS Messaging — Design Spec
+# OffPitchOS Messaging — Design Spec
 
 ## Overview
 
-In-app messaging for SidelineOS — announcements with threaded replies. DOCs and coaches post announcements to teams or the whole club, parents and coaches reply in threads. Replaces scattered GroupMe/text/email communication with one organized place.
+In-app messaging for OffPitchOS — announcements with threaded replies. DOCs and coaches post announcements to teams or the whole club, parents and coaches reply in threads. Replaces scattered GroupMe/text/email communication with one organized place.
 
 This is sub-project 4A. AI auto-responses (4B) and email aggregation are future phases.
 

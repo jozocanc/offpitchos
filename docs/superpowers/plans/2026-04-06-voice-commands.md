@@ -250,7 +250,7 @@ export async function executeVoiceCommand(transcript: string): Promise<{ success
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/voice-actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/voice-actions.ts
 git commit -m "feat: add voice command server action with Claude tool use"
 ```
 
@@ -415,7 +415,7 @@ export default function VoiceCommand() {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/voice-command.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/voice-command.tsx
 git commit -m "feat: add voice command UI with Web Speech API"
 ```
 
@@ -445,7 +445,7 @@ Add `<VoiceCommand />` next to the existing header buttons (near "Add Event" or 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/schedule/schedule-client.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/schedule/schedule-client.tsx
 git commit -m "feat: add voice command button to schedule header"
 ```
 
@@ -484,6 +484,6 @@ Say something vague like "Cancel practice." Confirm Ref asks for clarification i
 - [ ] **Step 7: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: voice commands — speak to cancel, reschedule, or move events"
 ```

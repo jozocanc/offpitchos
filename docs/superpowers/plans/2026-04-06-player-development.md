@@ -77,7 +77,7 @@ create policy feedback_parent_read on player_feedback for select
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add supabase/migrations/016_player_feedback.sql
+cd /Users/canci27/Desktop/offpitchos && git add supabase/migrations/016_player_feedback.sql
 git commit -m "feat: add player_feedback table for development tracking"
 ```
 
@@ -199,7 +199,7 @@ export async function addFeedback(input: {
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/players/\\[id\\]/actions.ts
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/players/\\[id\\]/actions.ts
 git commit -m "feat: add player profile and feedback server actions"
 ```
 
@@ -403,7 +403,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/players/\\[id\\]/feedback-form.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/players/\\[id\\]/feedback-form.tsx
 git commit -m "feat: add feedback form with voice-to-text and category rating"
 ```
 
@@ -560,7 +560,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/players/\\[id\\]/player-profile-client.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/players/\\[id\\]/player-profile-client.tsx
 git commit -m "feat: add player profile client with development timeline"
 ```
 
@@ -604,7 +604,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/players/\\[id\\]/page.tsx
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/players/\\[id\\]/page.tsx
 git commit -m "feat: add player profile page"
 ```
 
@@ -626,7 +626,7 @@ Wrap player names in a Next.js `Link` to `/dashboard/players/${player.id}`.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add app-next/app/dashboard/
+cd /Users/canci27/Desktop/offpitchos && git add app-next/app/dashboard/
 git commit -m "feat: link player names to development profiles"
 ```
 
@@ -655,6 +655,6 @@ Add multiple feedback entries with ratings → verify averages update in the hea
 - [ ] **Step 6: Final commit**
 
 ```bash
-cd /Users/canci27/Desktop/sidelineos && git add -A
+cd /Users/canci27/Desktop/offpitchos && git add -A
 git commit -m "feat: player development profiles — feedback, ratings, voice-to-text, timeline"
 ```
