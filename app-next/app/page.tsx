@@ -295,29 +295,29 @@ export default async function Home() {
             <div className="relative w-[260px] h-[320px] md:w-[300px] md:h-[360px] mx-auto md:mx-0 shrink-0 group">
               {/* Back card — soccer (tilted left) */}
               <div
-                style={{ borderColor: border }}
-                className="absolute top-0 left-0 w-[180px] h-[240px] md:w-[210px] md:h-[280px] rounded-2xl overflow-hidden border-4 bg-white shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
+                style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+                className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
               >
                 <Image
                   src="/jozo-soccer.jpg"
                   alt="Jozo Cancar playing D1 soccer at Florida Atlantic"
-                  fill
-                  sizes="(min-width: 768px) 210px, 180px"
-                  className="object-cover"
+                  width={210}
+                  height={280}
+                  className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
                 />
               </div>
               {/* Front card — suit (tilted right, on top) */}
               <div
-                style={{ borderColor: border }}
-                className="absolute bottom-0 right-0 w-[180px] h-[240px] md:w-[210px] md:h-[280px] rounded-2xl overflow-hidden border-4 bg-white shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
+                style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+                className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
               >
                 <Image
                   src="/jozo.jpg"
                   alt="Jozo Cancar, founder of OffPitchOS"
-                  fill
-                  sizes="(min-width: 768px) 210px, 180px"
-                  className="object-cover"
+                  width={210}
+                  height={280}
                   priority
+                  className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
                 />
               </div>
             </div>
