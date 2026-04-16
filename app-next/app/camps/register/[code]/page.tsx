@@ -1,5 +1,6 @@
 import { getCampByCode } from './actions'
 import RegisterForm from './register-form'
+import Wordmark from '@/components/wordmark'
 
 export default async function PublicCampPage({
   params,
@@ -13,9 +14,7 @@ export default async function PublicCampPage({
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#0A1628] px-4">
         <div className="w-full max-w-md text-center">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-2">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" className="mb-2" />
           <div className="bg-[#12203A] rounded-2xl p-8 mt-8 border border-red-500/20">
             <p className="text-red-400 text-lg font-bold mb-2">Camp Not Found</p>
             <p className="text-[#94A3B8] text-sm">
@@ -35,9 +34,7 @@ export default async function PublicCampPage({
     <main className="min-h-screen bg-[#0A1628] px-4 py-12">
       <div className="w-full max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-2">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" className="mb-2" />
           <p className="text-[#94A3B8] text-sm">Camp Registration</p>
         </div>
 

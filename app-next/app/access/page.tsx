@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createHmac } from 'crypto'
 import Link from 'next/link'
 import PasswordInput from '@/components/password-input'
+import Wordmark from '@/components/wordmark'
 
 const ACCESS_COOKIE = 'offpitchos_access'
 const cream = '#FAF7F2'
@@ -78,9 +79,9 @@ export default async function AccessPage({
           <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: forest }}>
             Early access
           </p>
-          <h1 className="text-3xl font-semibold tracking-[-0.02em] mt-3" style={{ color: ink }}>
-            OffPitch<span style={{ backgroundColor: forest, color: cream }} className="inline-block px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <div className="mt-3" style={{ color: ink }}>
+            <Wordmark size="xl" />
+          </div>
           <p className="mt-3 text-sm" style={{ color: subtext }}>
             Enter your access code to continue to sign in or create an account.
           </p>

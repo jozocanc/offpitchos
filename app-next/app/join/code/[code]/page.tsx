@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import AcceptCodeButton from './accept-button'
+import Wordmark from '@/components/wordmark'
 
 export default async function JoinByCodePage({
   params,
@@ -48,9 +49,7 @@ export default async function JoinByCodePage({
     return (
       <main className="min-h-screen flex items-center justify-center bg-dark px-4">
         <div className="w-full max-w-md text-center">
-          <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" className="mb-2" />
           <div className="bg-dark-secondary rounded-2xl p-8 mt-8 border border-red/20">
             <p className="text-red text-lg font-bold mb-2">Invalid Code</p>
             <p className="text-gray text-sm">
@@ -67,9 +66,7 @@ export default async function JoinByCodePage({
     <main className="min-h-screen flex items-center justify-center bg-dark px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" className="mb-2" />
           <p className="text-gray">You&apos;ve been invited to join</p>
         </div>
 

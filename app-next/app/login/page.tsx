@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
 import PasswordInput from '@/components/password-input'
+import Wordmark from '@/components/wordmark'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -45,9 +46,7 @@ function LoginForm() {
     <main className="min-h-screen flex items-center justify-center bg-dark">
       <div className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-tight mb-2">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" className="mb-3" />
           <p className="text-gray">Sign in to your account</p>
         </div>
 

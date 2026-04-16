@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import Wordmark from '@/components/wordmark'
 
 const cream = '#FAF7F2'
 const card = '#FFFFFF'
@@ -26,14 +27,8 @@ export default async function Home() {
         className="sticky top-0 z-40 backdrop-blur border-b"
       >
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <span className="inline-flex items-center gap-1 font-semibold text-lg tracking-tight" style={{ color: ink }}>
-            OffPitch
-            <span
-              style={{ backgroundColor: forest, color: cream }}
-              className="inline-block px-2 py-0.5 rounded-full text-sm font-bold tracking-wide"
-            >
-              OS
-            </span>
+          <span style={{ color: ink }}>
+            <Wordmark size="md" />
           </span>
           <div className="flex items-center gap-2">
             <Link
@@ -379,14 +374,8 @@ export default async function Home() {
       <footer style={{ backgroundColor: cream, borderColor: border }} className="border-t">
         <div className="max-w-6xl mx-auto px-6 py-12 flex flex-wrap items-center justify-between gap-4 text-sm">
           <div style={{ color: subtext }} className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: ink }}>
-              OffPitch
-              <span
-                style={{ backgroundColor: forest, color: cream }}
-                className="inline-block px-1.5 py-0.5 rounded-full text-xs font-bold tracking-wide"
-              >
-                OS
-              </span>
+            <span style={{ color: ink }}>
+              <Wordmark size="sm" />
             </span>
             <span>© {new Date().getFullYear()}</span>
           </div>

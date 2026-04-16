@@ -12,19 +12,14 @@ export default function GlobalError({
       <body style={{ backgroundColor: '#FAF7F2', color: '#0F1510', fontFamily: 'Inter, sans-serif' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ textAlign: 'center', maxWidth: '480px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              OffPitch
-              <span style={{
-                backgroundColor: '#1F4E3D',
-                color: '#FAF7F2',
-                padding: '2px 10px',
-                borderRadius: '999px',
-                fontSize: '17px',
-                fontWeight: 900,
-                letterSpacing: '0.5px',
-              }}>OS</span>
-            </h1>
-            <p style={{ color: '#5C6660', fontSize: '14px', margin: '24px 0 32px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '24px', letterSpacing: '-0.5px', marginBottom: '24px' }}>
+              <svg width="32" height="37" viewBox="0 0 120 140" aria-hidden="true">
+                <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+                <text x="60" y="88" textAnchor="middle" fontFamily="Inter, sans-serif" fontWeight="800" fontSize="52" fill="#FAF7F2" letterSpacing="-2">OP</text>
+              </svg>
+              <span>OffPitchOS</span>
+            </div>
+            <p style={{ color: '#5C6660', fontSize: '14px', marginBottom: '32px' }}>
               Something went wrong. Please try again.
             </p>
             <button

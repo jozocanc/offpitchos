@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { AGE_GROUPS } from '@/lib/constants'
 import { completeOnboarding } from './actions'
+import Wordmark from '@/components/wordmark'
 
 export default function OnboardingWizard() {
   const [step, setStep] = useState(1)
@@ -47,9 +48,7 @@ export default function OnboardingWizard() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-black uppercase tracking-tight">
-            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
-          </h1>
+          <Wordmark size="xl" />
           <p className="text-gray text-sm mt-2">Let&apos;s set up your club</p>
         </div>
 
