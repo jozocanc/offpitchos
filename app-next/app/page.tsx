@@ -37,13 +37,15 @@ export default async function Home() {
             >
               Sign in
             </Link>
-            <Link
-              href="/signup"
+            <a
+              href="https://calendly.com/jozo-cancar27/offpitchos-demo"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ backgroundColor: forest, color: cream }}
               className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
             >
-              Get started
-            </Link>
+              Book a demo
+            </a>
           </div>
         </div>
       </nav>
