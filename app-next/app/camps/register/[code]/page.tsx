@@ -14,7 +14,7 @@ export default async function PublicCampPage({
       <main className="min-h-screen flex items-center justify-center bg-[#0A1628] px-4">
         <div className="w-full max-w-md text-center">
           <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-2">
-            OffPitch<span className="text-[#00FF87]">OS</span>
+            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
           </h1>
           <div className="bg-[#12203A] rounded-2xl p-8 mt-8 border border-red-500/20">
             <p className="text-red-400 text-lg font-bold mb-2">Camp Not Found</p>
@@ -36,7 +36,7 @@ export default async function PublicCampPage({
       <div className="w-full max-w-lg mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-2">
-            OffPitch<span className="text-[#00FF87]">OS</span>
+            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
           </h1>
           <p className="text-[#94A3B8] text-sm">Camp Registration</p>
         </div>

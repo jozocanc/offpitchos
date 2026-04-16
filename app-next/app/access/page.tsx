@@ -79,7 +79,7 @@ export default async function AccessPage({
             Early access
           </p>
           <h1 className="text-3xl font-semibold tracking-[-0.02em] mt-3" style={{ color: ink }}>
-            OffPitch<span style={{ color: forest }}>OS</span>
+            OffPitch<span style={{ backgroundColor: forest, color: cream }} className="inline-block px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
           </h1>
           <p className="mt-3 text-sm" style={{ color: subtext }}>
             Enter your access code to continue to sign in or create an account.

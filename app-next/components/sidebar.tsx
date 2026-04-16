@@ -191,8 +191,11 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/5">
-        <span className="text-xl font-black uppercase tracking-tight">
-          OffPitch<span className="text-green">OS</span>
+        <span className="inline-flex items-center gap-1.5 text-lg font-bold tracking-tight">
+          OffPitch
+          <span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-sm font-black tracking-wide">
+            OS
+          </span>
         </span>
       </div>
 

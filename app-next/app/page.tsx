@@ -26,8 +26,14 @@ export default async function Home() {
         className="sticky top-0 z-40 backdrop-blur border-b"
       >
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <span className="font-semibold text-lg tracking-tight" style={{ color: ink }}>
-            OffPitch<span style={{ color: forest }}>OS</span>
+          <span className="inline-flex items-center gap-1 font-semibold text-lg tracking-tight" style={{ color: ink }}>
+            OffPitch
+            <span
+              style={{ backgroundColor: forest, color: cream }}
+              className="inline-block px-2 py-0.5 rounded-full text-sm font-bold tracking-wide"
+            >
+              OS
+            </span>
           </span>
           <div className="flex items-center gap-2">
             <Link
@@ -372,11 +378,17 @@ export default async function Home() {
       {/* Footer */}
       <footer style={{ backgroundColor: cream, borderColor: border }} className="border-t">
         <div className="max-w-6xl mx-auto px-6 py-12 flex flex-wrap items-center justify-between gap-4 text-sm">
-          <div style={{ color: subtext }}>
-            <span className="font-semibold" style={{ color: ink }}>
-              OffPitch<span style={{ color: forest }}>OS</span>
+          <div style={{ color: subtext }} className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: ink }}>
+              OffPitch
+              <span
+                style={{ backgroundColor: forest, color: cream }}
+                className="inline-block px-1.5 py-0.5 rounded-full text-xs font-bold tracking-wide"
+              >
+                OS
+              </span>
             </span>
-            <span className="ml-3">© {new Date().getFullYear()}</span>
+            <span>© {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-6" style={{ color: subtext }}>
             <Link href="/privacy" className="hover:text-black">Privacy</Link>

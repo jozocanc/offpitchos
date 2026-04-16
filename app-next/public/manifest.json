@@ -1,11 +1,11 @@
 {
   "name": "OffPitchOS",
   "short_name": "OffPitchOS",
-  "description": "The AI-driven operating system for soccer clubs",
+  "description": "The calm club operating system",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0A1628",
-  "theme_color": "#0A1628",
+  "background_color": "#FAF7F2",
+  "theme_color": "#1F4E3D",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -37,7 +37,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-black uppercase tracking-tight">
-            OffPitch<span className="text-green">OS</span>
+            OffPitch<span className="inline-block bg-green text-dark px-2 py-0.5 rounded-full text-[0.7em] font-black tracking-wide align-middle ml-1">OS</span>
           </h1>
           <p className="text-sm text-gray mt-2">Enter access code to continue</p>
         </div>
