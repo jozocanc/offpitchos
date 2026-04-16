@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { ROLES } from '@/lib/constants'
 import type { EventType } from '@/lib/constants'
 import Filters from './filters'
+import { useVoiceFocus } from '@/components/voice-context'
 import AgendaView from './agenda-view'
 import CalendarView from './calendar-view'
 import EventModal from './event-modal'
@@ -79,6 +80,15 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   // sessions without digging into each event individually.
   const [unmarkedPastEventIds, setUnmarkedPastEventIds] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
+
+  // Share schedule state with the voice command so "cancel this practice"
+  // / "move these to Tuesday" works. Cleared on unmount.
+  const { setFocus, clearFocus } = useVoiceFocus()
+  useEffect(() => {
+    setFocus({ teamId: filterTeam, eventId: editEvent?.id ?? initialHighlight ?? null })
+    return () => clearFocus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterTeam, editEvent?.id, initialHighlight])
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
   const canCreate = userRole === ROLES.DOC

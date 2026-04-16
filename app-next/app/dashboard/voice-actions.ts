@@ -199,6 +199,25 @@ export interface VoiceCommandResult {
   undoEventId?: string
 }
 
+// A plan is the parsed command before execution. The user confirms it before
+// we actually mutate anything — critical for destructive actions like cancel.
+export interface VoicePlan {
+  kind: 'action' | 'clarification'
+  // 'action' has a tool ready to execute after Yes:
+  tool?: string
+  input?: Record<string, any>
+  summary?: string // short preview shown to user, e.g. "Cancel U14 Practice (Tue 6:00 PM)"
+  // 'clarification' or error:
+  message?: string
+}
+
+export interface PageContext {
+  pathname?: string
+  focusedEventId?: string | null
+  focusedTeamId?: string | null
+  focusedWeekStart?: string | null // ISO date
+}
+
 export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResult> {
   try {
     const counts = await restoreEvent(eventId)
@@ -214,16 +233,20 @@ export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResu
   }
 }
 
-export async function executeVoiceCommand(transcript: string, timeZone: string = 'UTC'): Promise<VoiceCommandResult> {
-  if (!transcript.trim()) return { success: false, message: 'No command received.' }
+// Step 1: take the transcript, ask Claude what to do, return a plan. No writes.
+export async function interpretVoiceCommand(
+  transcript: string,
+  timeZone: string = 'UTC',
+  pageContext?: PageContext
+): Promise<VoicePlan> {
+  if (!transcript.trim()) return { kind: 'clarification', message: 'No command received.' }
 
   const { profile, supabase } = await getUserProfile()
 
   if (profile.role === ROLES.PARENT) {
-    return { success: false, message: 'Voice commands are only available for directors and coaches.' }
+    return { kind: 'clarification', message: 'Voice commands are only available for directors and coaches.' }
   }
 
-  // Get schedule context
   const now = new Date()
   const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
 
@@ -244,9 +267,27 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
   const teams = teamsRes.data ?? []
   const venues = venuesRes.data ?? []
 
-  const context = buildContext(events, teams, venues, timeZone)
+  let context = buildContext(events, teams, venues, timeZone)
 
-  // Call Claude with tools
+  // Page-aware hints — gives Claude demonstrative resolution for "this", "that".
+  if (pageContext) {
+    const hints: string[] = []
+    if (pageContext.pathname) hints.push(`The user is currently on: ${pageContext.pathname}`)
+    if (pageContext.focusedEventId) {
+      const ev = events.find(e => e.id === pageContext.focusedEventId)
+      if (ev) {
+        hints.push(`The user is looking at / selected event ID ${ev.id}: ${ev.title}. Treat "this event", "this practice", "this one", "that game" as referring to this event unless the user clearly names a different one.`)
+      }
+    }
+    if (pageContext.focusedTeamId) {
+      const t = teams.find(x => x.id === pageContext.focusedTeamId)
+      if (t) hints.push(`The schedule is filtered to team: ${t.name} (${t.age_group}). Prefer matching events on this team.`)
+    }
+    if (hints.length > 0) {
+      context += `\n## Current page context\n${hints.join('\n')}\n`
+    }
+  }
+
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 500,
@@ -255,14 +296,12 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
     messages: [{ role: 'user', content: transcript }],
   })
 
-  // Check if Claude wants to use a tool
   const toolUse = response.content.find(block => block.type === 'tool_use')
 
   if (!toolUse || toolUse.type !== 'tool_use') {
-    // Claude responded with text (clarification or error)
     const textBlock = response.content.find(block => block.type === 'text')
     const message = textBlock && textBlock.type === 'text' ? textBlock.text : 'I didn\'t understand that command. Try something like "Cancel U14 practice tonight".'
-    return { success: false, message }
+    return { kind: 'clarification', message }
   }
 
   const input = toolUse.input as Record<string, any>
@@ -280,6 +319,105 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
   if (typeof input.startTime === 'string') input.startTime = ensureOffset(input.startTime)
   if (typeof input.endTime === 'string') input.endTime = ensureOffset(input.endTime)
 
+  // Build a human-readable summary for the confirmation step
+  const summary = buildPlanSummary(toolUse.name, input, events, teams, venues, timeZone)
+
+  return {
+    kind: 'action',
+    tool: toolUse.name,
+    input,
+    summary,
+  }
+}
+
+function buildPlanSummary(
+  toolName: string,
+  input: Record<string, any>,
+  events: any[],
+  teams: any[],
+  venues: any[],
+  timeZone: string
+): string {
+  const ev = input.eventId ? events.find(e => e.id === input.eventId) : null
+  const evLabel = ev ? `"${ev.title}"` : 'event'
+  switch (toolName) {
+    case 'cancel_event':
+      return ev
+        ? `Cancel ${evLabel} (${formatEventTime(ev, timeZone)}) and notify parents + coaches.`
+        : 'Cancel that event.'
+    case 'update_event_time': {
+      const newStart = new Date(input.newStartTime)
+      const dateStr = newStart.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
+      const timeStr = newStart.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+      return `Move ${evLabel} to ${dateStr} at ${timeStr} and notify affected parents + coaches.`
+    }
+    case 'update_event_venue': {
+      const venue = venues.find(v => v.id === input.venueId)
+      return `Change venue for ${evLabel} to ${venue?.name ?? 'the new venue'} and notify parents + coaches.`
+    }
+    case 'create_event': {
+      const team = teams.find(t => t.id === input.teamId)
+      const start = new Date(input.startTime)
+      const dateStr = start.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
+      const timeStr = start.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+      const venue = input.venueId ? venues.find(v => v.id === input.venueId) : null
+      return `Create "${input.title}" for ${team?.name ?? 'the team'} on ${dateStr} at ${timeStr}${venue ? ` at ${venue.name}` : ''} and notify parents.`
+    }
+    case 'request_coverage':
+      return ev
+        ? `Request coverage for ${evLabel} (${formatEventTime(ev, timeZone)}) and notify the other coaches.`
+        : 'Request coverage for that event.'
+    case 'send_announcement': {
+      const team = input.teamId ? teams.find(t => t.id === input.teamId) : null
+      const audience = team ? `${team.name}` : 'the whole club'
+      const preview = String(input.body ?? '').slice(0, 80)
+      return `Send announcement to ${audience}: "${input.title}" — ${preview}${preview.length >= 80 ? '…' : ''}`
+    }
+    default:
+      return 'Do that action.'
+  }
+}
+
+function formatEventTime(ev: any, timeZone: string): string {
+  const d = new Date(ev.start_time)
+  const dateStr = d.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
+  const timeStr = d.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
+  return `${dateStr} · ${timeStr}`
+}
+
+// Step 2: user confirmed — actually run the tool.
+export async function executeVoicePlan(
+  tool: string,
+  input: Record<string, any>,
+  timeZone: string = 'UTC'
+): Promise<VoiceCommandResult> {
+  const { profile, supabase } = await getUserProfile()
+
+  if (profile.role === ROLES.PARENT) {
+    return { success: false, message: 'Voice commands are only available for directors and coaches.' }
+  }
+
+  // Re-fetch minimal context needed for tool execution (event/venue/team lookups)
+  const now = new Date()
+  const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+
+  const [eventsRes, teamsRes, venuesRes] = await Promise.all([
+    supabase
+      .from('events')
+      .select('id, title, type, start_time, end_time, status, teams(id, name, age_group), venues(id, name)')
+      .eq('club_id', profile.club_id)
+      .gte('start_time', now.toISOString())
+      .lte('start_time', twoWeeks.toISOString())
+      .order('start_time', { ascending: true })
+      .limit(50),
+    supabase.from('teams').select('id, name, age_group').eq('club_id', profile.club_id),
+    supabase.from('venues').select('id, name').eq('club_id', profile.club_id),
+  ])
+
+  const events = eventsRes.data ?? []
+  const teams = teamsRes.data ?? []
+  const venues = venuesRes.data ?? []
+
   const formatNotified = (parents: number, coaches: number): string => {
     if (parents === 0 && coaches === 0) return 'No one needed to be notified.'
     const parts: string[] = []
@@ -289,7 +427,7 @@ export async function executeVoiceCommand(transcript: string, timeZone: string =
   }
 
   try {
-    switch (toolUse.name) {
+    switch (tool) {
       case 'cancel_event': {
         const counts = await cancelEvent(input.eventId)
         const event = events.find(e => e.id === input.eventId)

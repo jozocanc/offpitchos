@@ -2,9 +2,17 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { executeVoiceCommand, undoCancelEvent, type VoiceCommandResult } from '@/app/dashboard/voice-actions'
+import {
+  interpretVoiceCommand,
+  executeVoicePlan,
+  undoCancelEvent,
+  type VoiceCommandResult,
+  type VoicePlan,
+  type PageContext,
+} from '@/app/dashboard/voice-actions'
+import { useVoiceFocus } from './voice-context'
 
-type VoiceState = 'idle' | 'listening' | 'processing' | 'result'
+type VoiceState = 'idle' | 'listening' | 'processing' | 'confirming' | 'executing' | 'result'
 
 interface VoiceCommandProps {
   userRole: string
@@ -13,15 +21,19 @@ interface VoiceCommandProps {
 export default function VoiceCommand({ userRole }: VoiceCommandProps) {
   const [state, setState] = useState<VoiceState>('idle')
   const [transcript, setTranscript] = useState('')
+  const [plan, setPlan] = useState<VoicePlan | null>(null)
   const [result, setResult] = useState<VoiceCommandResult | null>(null)
   const [undoing, setUndoing] = useState(false)
   const recognitionRef = useRef<any>(null)
   const transcriptRef = useRef('')
   const router = useRouter()
+  const pathname = usePathname()
+  const focus = useVoiceFocus()
 
   const dismiss = useCallback(() => {
     setState('idle')
     setTranscript('')
+    setPlan(null)
     setResult(null)
     setUndoing(false)
   }, [])
@@ -38,6 +50,21 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
       setUndoing(false)
     }
   }, [router])
+
+  const handleConfirm = useCallback(async () => {
+    if (!plan || plan.kind !== 'action' || !plan.tool || !plan.input) return
+    setState('executing')
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const res = await executeVoicePlan(plan.tool, plan.input, timeZone)
+      setResult(res)
+      setState('result')
+      if (res.success) router.refresh()
+    } catch {
+      setResult({ success: false, message: 'Something went wrong. Try again.' })
+      setState('result')
+    }
+  }, [plan, router])
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -69,10 +96,20 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
       setState('processing')
       try {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-        const res = await executeVoiceCommand(finalTranscript, timeZone)
-        setResult(res)
-        setState('result')
-        if (res.success) router.refresh()
+        const pageContext: PageContext = {
+          pathname,
+          focusedEventId: focus.eventId,
+          focusedTeamId: focus.teamId,
+          focusedWeekStart: focus.weekStart,
+        }
+        const p = await interpretVoiceCommand(finalTranscript, timeZone, pageContext)
+        setPlan(p)
+        if (p.kind === 'action') {
+          setState('confirming')
+        } else {
+          setResult({ success: false, message: p.message ?? 'Didn\u2019t understand.' })
+          setState('result')
+        }
       } catch {
         setResult({ success: false, message: 'Something went wrong. Try again.' })
         setState('result')
@@ -86,10 +123,11 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
 
     setTranscript('')
     transcriptRef.current = ''
+    setPlan(null)
     setResult(null)
     setState('listening')
     recognition.start()
-  }, [])
+  }, [pathname, focus.eventId, focus.teamId, focus.weekStart])
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop()
@@ -103,42 +141,73 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
     return () => clearTimeout(t)
   }, [state, result, dismiss])
 
-  const pathname = usePathname()
-
   // Gate to DOC + coach only — hooks must run before this early return.
-  // Also hide on the Ask page where the floating mic overlaps the chat
-  // send button and is functionally redundant (voice commands are for
-  // schedule operations, not AI chat input).
   if (userRole === 'parent') return null
   if (pathname === '/dashboard/ask') return null
 
   const isListening = state === 'listening'
   const isProcessing = state === 'processing'
+  const isConfirming = state === 'confirming'
+  const isExecuting = state === 'executing'
   const showPanel = state !== 'idle'
 
   return (
     <>
-      {/* Result / transcript panel — floats above the FAB */}
       {showPanel && (
-        <div className="fixed bottom-24 right-4 sm:right-6 w-[min(380px,calc(100vw-2rem))] z-50 bg-dark-secondary border border-white/10 rounded-2xl shadow-2xl p-4">
-          {transcript && (
+        <div className="fixed bottom-24 right-4 sm:right-6 w-[min(420px,calc(100vw-2rem))] z-50 bg-dark-secondary border border-white/10 rounded-2xl shadow-2xl p-4">
+          {transcript && state !== 'executing' && state !== 'result' && (
             <div className="mb-3">
               <p className="text-xs text-gray mb-1">You said:</p>
               <p className="text-sm text-white">&ldquo;{transcript}&rdquo;</p>
             </div>
           )}
+
           {isListening && !transcript && (
             <div className="flex items-center gap-2 text-sm text-gray">
               <span className="inline-block w-2 h-2 bg-red-400 rounded-full animate-pulse" />
               Listening — speak your command...
             </div>
           )}
+
           {isProcessing && (
             <div className="flex items-center gap-2 text-sm text-gray">
               <span className="inline-block w-1.5 h-1.5 bg-green rounded-full animate-pulse" />
-              Ref is processing your command...
+              Ref is thinking...
             </div>
           )}
+
+          {isConfirming && plan?.kind === 'action' && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray mb-2">
+                Confirm
+              </p>
+              <p className="text-sm text-white mb-4 leading-relaxed">
+                {plan.summary ?? 'Do this action?'}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleConfirm}
+                  className="flex-1 bg-green text-dark font-bold text-sm py-2.5 rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Yes, do it
+                </button>
+                <button
+                  onClick={dismiss}
+                  className="flex-1 bg-white/5 text-gray hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isExecuting && (
+            <div className="flex items-center gap-2 text-sm text-gray">
+              <span className="inline-block w-1.5 h-1.5 bg-green rounded-full animate-pulse" />
+              Working...
+            </div>
+          )}
+
           {state === 'result' && result && (
             <div>
               <div className={`flex items-start gap-2 text-sm ${result.success ? 'text-green' : 'text-white/80'}`}>
@@ -167,18 +236,17 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
         </div>
       )}
 
-      {/* Floating mic button */}
       <button
         onClick={isListening ? stopListening : startListening}
-        disabled={isProcessing}
+        disabled={isProcessing || isExecuting || isConfirming}
         aria-label={isListening ? 'Stop listening' : 'Voice command'}
-        title="Voice command — try: &quot;Cancel U14 practice tonight&quot;"
+        title='Voice command — try: "Cancel U14 practice tonight"'
         className={`fixed bottom-6 right-4 sm:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all
           ${isListening
             ? 'bg-red-500 text-white animate-pulse ring-4 ring-red-500/30 scale-110'
             : 'bg-green text-dark hover:scale-110 shadow-[0_0_40px_rgba(0,255,135,0.35)]'
           }
-          ${isProcessing ? 'opacity-60 cursor-not-allowed' : ''}
+          ${(isProcessing || isExecuting || isConfirming) ? 'opacity-60 cursor-not-allowed' : ''}
         `}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
