@@ -571,9 +571,7 @@ function EventMockup() {
       </div>
 
       <p style={{ color: mockText }} className="text-xl font-semibold mb-1">Tue · 6:00 – 7:30 PM</p>
-      <a
-        href="#"
-        onClick={e => e.preventDefault()}
+      <p
         style={{ color: mockGreen }}
         className="inline-flex items-center gap-1.5 text-sm font-medium mb-5"
       >
@@ -582,7 +580,7 @@ function EventMockup() {
           <circle cx="12" cy="10" r="3" />
         </svg>
         Bayshore Park · Open in Maps
-      </a>
+      </p>
 
       <div className="border-t pt-4" style={{ borderColor: mockBorder }}>
         <p style={{ color: mockMuted }} className="text-[10px] uppercase tracking-[0.18em] font-semibold mb-2">
