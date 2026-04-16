@@ -41,6 +41,7 @@ export default function NewAnnouncementModal({
   const [teamId, setTeamId] = useState<string>('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [pollEnabled, setPollEnabled] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
@@ -71,6 +72,7 @@ export default function NewAnnouncementModal({
           teamId: teamId || null,
           title: title.trim(),
           body: body.trim(),
+          pollEnabled: pollEnabled && !isParent,
         })
         if (result.totalRecipients === 0) {
           toast('Posted — but nobody is on this audience yet', 'error')
@@ -140,6 +142,23 @@ export default function NewAnnouncementModal({
           rows={4}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-2 resize-none"
         />
+
+        {!isParent && (
+          <label className="flex items-start gap-3 mt-4 p-3 rounded-xl border border-white/10 hover:border-green/30 cursor-pointer transition-colors">
+            <input
+              type="checkbox"
+              checked={pollEnabled}
+              onChange={e => setPollEnabled(e.target.checked)}
+              className="mt-1 accent-green"
+            />
+            <span className="text-sm">
+              <span className="font-medium text-white">Ask for a response</span>
+              <span className="block text-xs text-gray mt-0.5">
+                Parents see Yes / No / Maybe buttons for each of their kids. You see the tally.
+              </span>
+            </span>
+          </label>
+        )}
 
         {error && <p className="text-red text-sm mt-2 mb-2">{error}</p>}
 

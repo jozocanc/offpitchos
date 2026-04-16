@@ -36,6 +36,7 @@ export async function createAnnouncement(input: {
   teamId: string | null
   title: string
   body: string
+  pollEnabled?: boolean
 }): Promise<CreateAnnouncementResult> {
   const { profile, supabase } = await getUserProfile()
 
@@ -51,6 +52,7 @@ export async function createAnnouncement(input: {
       author_id: profile.id,
       title: input.title.trim(),
       body: input.body.trim(),
+      poll_enabled: input.pollEnabled ?? false,
     })
     .select('id')
     .single()
@@ -256,7 +258,7 @@ export async function getMessagesData() {
   const { data: announcements } = await supabase
     .from('announcements')
     .select(`
-      id, team_id, title, body, pinned, created_at, author_id,
+      id, team_id, title, body, pinned, created_at, author_id, poll_enabled,
       author:profiles!announcements_author_id_fkey ( id, display_name ),
       teams ( name, age_group ),
       announcement_replies ( id )
@@ -309,16 +311,104 @@ export async function getMessagesData() {
     }
   }
 
+  // ---- Poll data: per-announcement tallies + this user's kids' current responses ----
+  const pollAnnouncementIds = (announcements ?? []).filter(a => a.poll_enabled).map(a => a.id)
+  const pollTallyByAnnouncement = new Map<string, { yes: number; no: number; maybe: number; totalKids: number }>()
+  const myKidsByAnnouncement = new Map<string, Array<{
+    playerId: string
+    firstName: string
+    lastName: string
+    response: 'yes' | 'no' | 'maybe' | null
+  }>>()
+
+  if (pollAnnouncementIds.length > 0) {
+    // All responses for these polls (service client — tally is public within the club)
+    const { data: responseRows } = await service
+      .from('announcement_responses')
+      .select('announcement_id, player_id, response')
+      .in('announcement_id', pollAnnouncementIds)
+
+    for (const row of responseRows ?? []) {
+      const entry = pollTallyByAnnouncement.get(row.announcement_id) ?? { yes: 0, no: 0, maybe: 0, totalKids: 0 }
+      if (row.response === 'yes') entry.yes += 1
+      else if (row.response === 'no') entry.no += 1
+      else if (row.response === 'maybe') entry.maybe += 1
+      pollTallyByAnnouncement.set(row.announcement_id, entry)
+    }
+
+    // Total possible respondents per announcement (= number of kids in the audience)
+    for (const a of announcements ?? []) {
+      if (!a.poll_enabled) continue
+      let totalKids = 0
+      if (a.team_id) {
+        const { count } = await service
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .eq('team_id', a.team_id)
+        totalKids = count ?? 0
+      } else {
+        // Club-wide: all kids in the club
+        const { count } = await service
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .eq('club_id', profile.club_id!)
+        totalKids = count ?? 0
+      }
+      const entry = pollTallyByAnnouncement.get(a.id) ?? { yes: 0, no: 0, maybe: 0, totalKids: 0 }
+      entry.totalKids = totalKids
+      pollTallyByAnnouncement.set(a.id, entry)
+    }
+
+    // This user's kids per announcement + their current responses
+    const { data: myPlayers } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, team_id, club_id')
+      .eq('parent_id', user.id)
+
+    const myResponseByKey = new Map<string, string>() // key = `${announcementId}:${playerId}`
+    if ((myPlayers ?? []).length > 0) {
+      const { data: myResponses } = await supabase
+        .from('announcement_responses')
+        .select('announcement_id, player_id, response')
+        .in('announcement_id', pollAnnouncementIds)
+        .in('player_id', (myPlayers ?? []).map(p => p.id))
+
+      for (const row of myResponses ?? []) {
+        myResponseByKey.set(`${row.announcement_id}:${row.player_id}`, row.response)
+      }
+    }
+
+    for (const a of announcements ?? []) {
+      if (!a.poll_enabled) continue
+      const kidsForThis = (myPlayers ?? []).filter(p =>
+        a.team_id ? p.team_id === a.team_id : p.club_id === profile.club_id
+      )
+      myKidsByAnnouncement.set(
+        a.id,
+        kidsForThis.map(p => ({
+          playerId: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          response: (myResponseByKey.get(`${a.id}:${p.id}`) ?? null) as 'yes' | 'no' | 'maybe' | null,
+        }))
+      )
+    }
+  }
+
   const announcementsWithStats = (announcements ?? []).map(a => {
     const stats = readStatsByAnnouncement.get(a.id) ?? { total: 0, read: 0 }
     // If the user isn't the author and has no notification row, treat it as
     // already-read (e.g. coach sees their own team's posts by another coach).
     const ownRead = ownReadByAnnouncement.has(a.id) ? !!ownReadByAnnouncement.get(a.id) : true
+    const pollTally = pollTallyByAnnouncement.get(a.id) ?? null
+    const myKids = myKidsByAnnouncement.get(a.id) ?? []
     return {
       ...a,
       read_count: stats.read,
       total_recipients: stats.total,
       own_read: ownRead,
+      poll_tally: pollTally,
+      my_kids: myKids,
     }
   })
 
@@ -360,6 +450,46 @@ export async function getMessagesData() {
     audienceByTeam,
     clubWideAudience: clubWide,
   }
+}
+
+export async function respondToPoll(
+  announcementId: string,
+  playerId: string,
+  response: 'yes' | 'no' | 'maybe'
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+
+  // Verify the player is this parent's kid (defence in depth — RLS will
+  // enforce too, but fail-fast gives a clearer error).
+  const { data: player } = await supabase
+    .from('players')
+    .select('id, parent_id')
+    .eq('id', playerId)
+    .single()
+  if (!player || player.parent_id !== user.id) {
+    return { error: 'Not authorized for this player' }
+  }
+
+  const { error } = await supabase
+    .from('announcement_responses')
+    .upsert(
+      {
+        announcement_id: announcementId,
+        player_id: playerId,
+        response,
+        responded_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'announcement_id,player_id' }
+    )
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/messages')
+  revalidatePath('/dashboard')
+  return {}
 }
 
 export async function getAnnouncementReplies(announcementId: string) {
