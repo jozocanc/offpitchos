@@ -25,7 +25,12 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
   const [result, setResult] = useState<VoiceCommandResult | null>(null)
   const [undoing, setUndoing] = useState(false)
   const recognitionRef = useRef<any>(null)
-  const transcriptRef = useRef('')
+  // Accumulates the committed portion of speech across pauses; interim
+  // results are appended for live display but only the final text is sent.
+  const finalTranscriptRef = useRef('')
+  // Flipped true when the user taps stop; lets us ignore onend events caused
+  // by short silences so the recognition auto-restarts mid-thought.
+  const userStoppedRef = useRef(false)
   const router = useRouter()
   const pathname = usePathname()
   const focus = useVoiceFocus()
@@ -66,6 +71,30 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
     }
   }, [plan, router])
 
+  const processTranscript = useCallback(async (text: string) => {
+    setState('processing')
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const pageContext: PageContext = {
+        pathname,
+        focusedEventId: focus.eventId,
+        focusedTeamId: focus.teamId,
+        focusedWeekStart: focus.weekStart,
+      }
+      const p = await interpretVoiceCommand(text, timeZone, pageContext)
+      setPlan(p)
+      if (p.kind === 'action') {
+        setState('confirming')
+      } else {
+        setResult({ success: false, message: p.message ?? 'Didn\u2019t understand.' })
+        setState('result')
+      }
+    } catch {
+      setResult({ success: false, message: 'Something went wrong. Try again.' })
+      setState('result')
+    }
+  }, [pathname, focus.eventId, focus.teamId, focus.weekStart])
+
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
@@ -76,60 +105,73 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
 
     const recognition = new SpeechRecognition()
     recognition.lang = 'en-US'
-    recognition.continuous = false
+    // continuous = keep listening across natural pauses. User controls when
+    // to stop by tapping the mic a second time.
+    recognition.continuous = true
     recognition.interimResults = true
     recognitionRef.current = recognition
 
     recognition.onresult = (event: any) => {
-      const current = event.results[event.results.length - 1]
-      const text = current[0].transcript
-      setTranscript(text)
-      transcriptRef.current = text
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i]
+        if (res.isFinal) {
+          finalTranscriptRef.current += res[0].transcript + ' '
+        } else {
+          interim += res[0].transcript
+        }
+      }
+      setTranscript((finalTranscriptRef.current + interim).trim())
     }
 
     recognition.onend = async () => {
-      const finalTranscript = transcriptRef.current
-      if (!finalTranscript.trim()) {
+      // Ignore onend events caused by short silences — auto-restart so the
+      // user can keep thinking mid-sentence.
+      if (!userStoppedRef.current) {
+        try {
+          recognition.start()
+          return
+        } catch {
+          // some browsers throw if start() is called too quickly; fall through
+        }
+      }
+      const finalText = finalTranscriptRef.current.trim()
+      if (!finalText) {
         setState('idle')
         return
       }
-      setState('processing')
-      try {
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-        const pageContext: PageContext = {
-          pathname,
-          focusedEventId: focus.eventId,
-          focusedTeamId: focus.teamId,
-          focusedWeekStart: focus.weekStart,
-        }
-        const p = await interpretVoiceCommand(finalTranscript, timeZone, pageContext)
-        setPlan(p)
-        if (p.kind === 'action') {
-          setState('confirming')
-        } else {
-          setResult({ success: false, message: p.message ?? 'Didn\u2019t understand.' })
-          setState('result')
-        }
-      } catch {
-        setResult({ success: false, message: 'Something went wrong. Try again.' })
-        setState('result')
-      }
+      setTranscript(finalText)
+      await processTranscript(finalText)
     }
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
+      // 'no-speech' fires after long silences — just restart unless the
+      // user stopped.
+      if (event?.error === 'no-speech' && !userStoppedRef.current) {
+        try {
+          recognition.start()
+          return
+        } catch {
+          // ignore
+        }
+      }
+      if (userStoppedRef.current) return
+      userStoppedRef.current = true
       setResult({ success: false, message: 'Could not hear you. Try again.' })
       setState('result')
     }
 
     setTranscript('')
-    transcriptRef.current = ''
+    finalTranscriptRef.current = ''
+    userStoppedRef.current = false
     setPlan(null)
     setResult(null)
     setState('listening')
     recognition.start()
-  }, [pathname, focus.eventId, focus.teamId, focus.weekStart])
+  }, [processTranscript])
 
   const stopListening = useCallback(() => {
+    userStoppedRef.current = true
     recognitionRef.current?.stop()
   }, [])
 
@@ -162,10 +204,16 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
             </div>
           )}
 
-          {isListening && !transcript && (
-            <div className="flex items-center gap-2 text-sm text-gray">
-              <span className="inline-block w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-              Listening — speak your command...
+          {isListening && (
+            <div className="flex items-center gap-2 text-xs text-gray mt-2">
+              <span className="inline-block w-2 h-2 bg-red-400 rounded-full animate-pulse shrink-0" />
+              <span>
+                {transcript ? 'Still listening — take your time.' : 'Listening — take your time, speak naturally.'}
+                {' '}
+                <button onClick={stopListening} className="text-green font-semibold hover:underline">
+                  Tap to finish
+                </button>
+              </span>
             </div>
           )}
 
