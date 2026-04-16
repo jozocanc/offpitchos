@@ -87,6 +87,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    // Skip API, Next internals, common static assets (images/fonts/media) so
+    // files in /public are served directly without passing through auth gating.
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:jpg|jpeg|png|svg|ico|webp|gif|avif|woff|woff2|ttf|otf|mp4|webm|mp3|wav|json|txt|xml|pdf)$).*)',
   ],
 }
