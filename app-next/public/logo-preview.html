@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OffPitchOS — Shield options</title>
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --card: #FFFFFF;
+    --ink: #0F1510;
+    --subtext: #5C6660;
+    --forest: #1F4E3D;
+    --border: #E8E3DC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 64px 24px; }
+  h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .sub { color: var(--subtext); font-size: 14px; margin: 0 0 48px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .opt {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .opt .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--forest);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .opt h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .opt p { margin: 0; font-size: 13px; color: var(--subtext); }
+
+  .display {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+
+  .sizes {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--cream);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+  .sizes svg { flex: 0 0 auto; }
+  .sizes .size-label {
+    display: block;
+    font-size: 10px;
+    color: var(--subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 6px;
+  }
+  .size-block { text-align: center; }
+
+  .lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-size: 22px;
+  }
+
+  .footnote { text-align: center; color: var(--subtext); font-size: 13px; margin-top: 48px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Shield mark — 3 variants</h1>
+    <p class="sub">Same shield silhouette, different inner mark. Pick a letter, I'll ship everywhere.</p>
+
+    <div class="grid">
+      <!-- Option A: Shield + OP monogram -->
+      <div class="opt">
+        <span class="label">Option A · OP monogram</span>
+        <div class="display">
+          <svg width="120" height="140" viewBox="0 0 120 140">
+            <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z"
+                  fill="#1F4E3D"/>
+            <text x="60" y="88" text-anchor="middle"
+                  font-family="-apple-system, Inter, sans-serif"
+                  font-weight="800" font-size="52" fill="#FAF7F2"
+                  letter-spacing="-2">OP</text>
+          </svg>
+        </div>
+        <h3>Classic crest</h3>
+        <p>Initials inside the shield. Reads as an athletic club badge. Most traditional.</p>
+
+        <div class="sizes">
+          <div class="size-block">
+            <svg width="64" height="74" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <text x="60" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="52" fill="#FAF7F2" letter-spacing="-2">OP</text>
+            </svg>
+            <span class="size-label">App</span>
+          </div>
+          <div class="size-block">
+            <svg width="32" height="37" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <text x="60" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="52" fill="#FAF7F2" letter-spacing="-2">OP</text>
+            </svg>
+            <span class="size-label">Favicon</span>
+          </div>
+          <div class="size-block">
+            <span class="lockup">
+              <svg width="28" height="32" viewBox="0 0 120 140">
+                <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+                <text x="60" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="52" fill="#FAF7F2" letter-spacing="-2">OP</text>
+              </svg>
+              OffPitchOS
+            </span>
+            <span class="size-label">Lockup</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option B: Shield + dot -->
+      <div class="opt">
+        <span class="label">Option B · Minimal dot</span>
+        <div class="display">
+          <svg width="120" height="140" viewBox="0 0 120 140">
+            <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z"
+                  fill="#1F4E3D"/>
+            <circle cx="60" cy="66" r="14" fill="#FAF7F2"/>
+          </svg>
+        </div>
+        <h3>Minimalist</h3>
+        <p>Shield + single cream dot. Stripe / Vercel vibe. Maximum scalability, zero clutter.</p>
+
+        <div class="sizes">
+          <div class="size-block">
+            <svg width="64" height="74" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <circle cx="60" cy="66" r="14" fill="#FAF7F2"/>
+            </svg>
+            <span class="size-label">App</span>
+          </div>
+          <div class="size-block">
+            <svg width="32" height="37" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <circle cx="60" cy="66" r="14" fill="#FAF7F2"/>
+            </svg>
+            <span class="size-label">Favicon</span>
+          </div>
+          <div class="size-block">
+            <span class="lockup">
+              <svg width="28" height="32" viewBox="0 0 120 140">
+                <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+                <circle cx="60" cy="66" r="14" fill="#FAF7F2"/>
+              </svg>
+              OffPitchOS
+            </span>
+            <span class="size-label">Lockup</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option C: Shield + tactical arrow -->
+      <div class="opt">
+        <span class="label">Option C · Tactical arrow</span>
+        <div class="display">
+          <svg width="120" height="140" viewBox="0 0 120 140">
+            <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z"
+                  fill="#1F4E3D"/>
+            <!-- curved tactical arrow -->
+            <path d="M36 82 Q60 46 84 62"
+                  fill="none" stroke="#FAF7F2" stroke-width="8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M80 52 L88 62 L76 68 Z" fill="#FAF7F2"/>
+          </svg>
+        </div>
+        <h3>Director in motion</h3>
+        <p>Shield + tactical arrow. Says "coaching, direction, play-calling." Most thematic across sports.</p>
+
+        <div class="sizes">
+          <div class="size-block">
+            <svg width="64" height="74" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <path d="M36 82 Q60 46 84 62" fill="none" stroke="#FAF7F2" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M80 52 L88 62 L76 68 Z" fill="#FAF7F2"/>
+            </svg>
+            <span class="size-label">App</span>
+          </div>
+          <div class="size-block">
+            <svg width="32" height="37" viewBox="0 0 120 140">
+              <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+              <path d="M36 82 Q60 46 84 62" fill="none" stroke="#FAF7F2" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M80 52 L88 62 L76 68 Z" fill="#FAF7F2"/>
+            </svg>
+            <span class="size-label">Favicon</span>
+          </div>
+          <div class="size-block">
+            <span class="lockup">
+              <svg width="28" height="32" viewBox="0 0 120 140">
+                <path d="M60 4 L112 20 L112 68 C112 104 88 126 60 136 C32 126 8 104 8 68 L8 20 Z" fill="#1F4E3D"/>
+                <path d="M36 82 Q60 46 84 62" fill="none" stroke="#FAF7F2" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M80 52 L88 62 L76 68 Z" fill="#FAF7F2"/>
+              </svg>
+              OffPitchOS
+            </span>
+            <span class="size-label">Lockup</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote">Tell me A, B, or C — I'll ship the favicon + app icon + lockup site-wide in one commit.</p>
+  </div>
+</body>
+</html>
