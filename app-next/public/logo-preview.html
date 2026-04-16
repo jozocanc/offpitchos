@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OffPitchOS — Wordmark options</title>
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --card: #FFFFFF;
+    --ink: #0F1510;
+    --subtext: #5C6660;
+    --forest: #1F4E3D;
+    --border: #E8E3DC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 64px 24px; }
+  h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .sub { color: var(--subtext); font-size: 14px; margin: 0 0 48px; }
+  .opt {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px 32px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .opt .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--forest);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .opt .desc { color: var(--subtext); font-size: 13px; margin-top: 6px; max-width: 320px; }
+  .mark { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: -0.02em; font-size: 32px; }
+
+  /* Variant A: current (baseline) */
+  .va { color: var(--ink); }
+  .va .os { color: var(--forest); }
+
+  /* Variant B: pill OS */
+  .vb { color: var(--ink); }
+  .vb .os {
+    background: var(--forest);
+    color: var(--cream);
+    padding: 3px 10px 4px;
+    border-radius: 999px;
+    font-size: 24px;
+    margin-left: 2px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Variant C: dot separator */
+  .vc { color: var(--ink); }
+  .vc .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--forest);
+    border-radius: 50%;
+    margin: 0 6px 3px;
+  }
+  .vc .os { color: var(--forest); }
+
+  /* Variant D: bracketed ".os" like a file extension */
+  .vd { color: var(--ink); }
+  .vd .os {
+    color: var(--forest);
+    font-weight: 500;
+    font-size: 26px;
+    margin-left: 2px;
+  }
+
+  .title-block { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Wordmark options — refined, no icon</h1>
+    <p class="sub">Same philosophy as Linear, Vercel, Cursor. Pick one and I'll apply everywhere.</p>
+
+    <div class="opt">
+      <div class="title-block">
+        <span class="label">Option A · Current</span>
+        <p class="desc">What the site uses today. "OS" tinted forest green, continuous lockup.</p>
+      </div>
+      <span class="mark va">OffPitch<span class="os">OS</span></span>
+    </div>
+
+    <div class="opt">
+      <div class="title-block">
+        <span class="label">Option B · OS pill</span>
+        <p class="desc">"OS" sits inside a forest green pill. Most distinctive, reads as a "system." Strong favicon potential.</p>
+      </div>
+      <span class="mark vb">OffPitch<span class="os">OS</span></span>
+    </div>
+
+    <div class="opt">
+      <div class="title-block">
+        <span class="label">Option C · Dot separator</span>
+        <p class="desc">Small forest green dot between "OffPitch" and "OS." Editorial feel — like Notion or The Browser Company.</p>
+      </div>
+      <span class="mark vc">OffPitch<span class="dot"></span><span class="os">OS</span></span>
+    </div>
+
+    <div class="opt">
+      <div class="title-block">
+        <span class="label">Option D · File-extension feel</span>
+        <p class="desc">"OS" lighter weight and smaller, like ".com" or a file extension. Tech-forward, understated.</p>
+      </div>
+      <span class="mark vd">OffPitch<span class="os">OS</span></span>
+    </div>
+  </div>
+</body>
+</html>
