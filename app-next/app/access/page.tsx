@@ -46,6 +46,14 @@ export default async function AccessPage({
   searchParams: Promise<{ next?: string; error?: string }>
 }) {
   const params = await searchParams
+
+  // Anyone who lands here without a `next` target (typed /access directly,
+  // autocompleted there, shared link) belongs on the landing page — the
+  // gate only exists to intercept /login, /signup, /forgot-password.
+  if (!params.next && !params.error) {
+    redirect('/')
+  }
+
   const nextUrl = params.next && params.next.startsWith('/') ? params.next : '/login'
   const error = params.error === 'invalid'
     ? 'That access code is not recognized.'
