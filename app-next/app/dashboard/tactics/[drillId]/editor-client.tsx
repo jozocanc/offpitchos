@@ -6,6 +6,7 @@ import React, {
 import Link from 'next/link'
 import Konva from 'konva'
 import FieldRenderer, { useFieldLayout } from '@/lib/tactics/field-renderer'
+import type { PreviewArrow } from '@/lib/tactics/field-renderer'
 import type { BoardObject, DrillRow, Field } from '@/lib/tactics/object-schema'
 import {
   DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES,
@@ -181,7 +182,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 const ZONE_COLOR_PRESETS = [
   '#2C7BE5', '#E63946', '#FFD500', '#00FF87',
-  '#FF8C00', '#9333EA', '#06B6D4', '#ffffff',
+  '#9333EA', '#F97316', '#06B6D4', '#F472B6',
 ]
 
 interface ToolBtnProps {
@@ -527,12 +528,67 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
     )
   }
 
+  function getObjXY(o: BoardObject): { x: number; y: number } {
+    if (o.type === 'arrow' || o.type === 'zone-line') {
+      return { x: o.points[0], y: o.points[1] }
+    }
+    return { x: (o as { x: number; y: number }).x, y: (o as { x: number; y: number }).y }
+  }
+
+  function applyAlign(axis: 'x' | 'y', mode: 'min' | 'center' | 'max') {
+    const vals = selectedObjs.map(o => (axis === 'x' ? getObjXY(o).x : getObjXY(o).y))
+    const min = Math.min(...vals)
+    const max = Math.max(...vals)
+    const avg = (min + max) / 2
+    const target = mode === 'min' ? min : mode === 'max' ? max : avg
+
+    selectedObjs.forEach(o => {
+      const cur = getObjXY(o)
+      if (o.type === 'arrow' || o.type === 'zone-line') {
+        const dx = axis === 'x' ? target - cur.x : 0
+        const dy = axis === 'y' ? target - cur.y : 0
+        const newPts = o.points.map((v, i) => (i % 2 === 0 ? v + dx : v + dy))
+        dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch: { points: newPts } as Partial<BoardObject> })
+      } else {
+        const patch = axis === 'x'
+          ? { x: target } as Partial<BoardObject>
+          : { y: target } as Partial<BoardObject>
+        dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch })
+      }
+    })
+  }
+
   function renderMultiSelect() {
+    const alignBtns: { label: string; title: string; action: () => void }[] = [
+      { label: '⊢', title: 'Align left', action: () => applyAlign('x', 'min') },
+      { label: '⊙', title: 'Align center (H)', action: () => applyAlign('x', 'center') },
+      { label: '⊣', title: 'Align right', action: () => applyAlign('x', 'max') },
+      { label: '⊤', title: 'Align top', action: () => applyAlign('y', 'min') },
+      { label: '⊕', title: 'Align middle (V)', action: () => applyAlign('y', 'center') },
+      { label: '⊥', title: 'Align bottom', action: () => applyAlign('y', 'max') },
+    ]
     return (
       <div className="space-y-3">
         <p className="text-xs font-semibold text-gray uppercase tracking-wide">
           {selectedObjs.length} items selected
         </p>
+
+        <div>
+          <span className="text-xs text-gray">Align</span>
+          <div className="flex gap-1 mt-1 flex-wrap">
+            {alignBtns.map(btn => (
+              <button
+                key={btn.title}
+                title={btn.title}
+                onClick={btn.action}
+                className="flex-1 min-w-[2rem] py-1 rounded border border-white/10 text-gray text-sm hover:text-white hover:border-green/40 transition-colors"
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={() => dispatch({ type: 'DELETE_SELECTED' })}
           className="w-full py-2 rounded bg-red/20 text-red text-sm border border-red/30 hover:bg-red/30 transition-colors"
@@ -601,6 +657,10 @@ export default function EditorClient({
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'idle'>('saved')
   const [openPicker, setOpenPicker] = useState<string | null>(null)
   const [clearConfirm, setClearConfirm] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+  // Arrow preview: tracks current mouse position in field-meter coords
+  const [previewHead, setPreviewHead] = useState<{ x: number; y: number } | null>(null)
+  const rafRef = useRef<number | null>(null)
   const isMounted = useRef(false)
 
   const initState: EditorState = {
@@ -710,6 +770,29 @@ export default function EditorClient({
   // ── Canvas click handler (placement) ────────────────────────────────────────
   const layout = useFieldLayout(state.field, canvasSize.w, canvasSize.h)
 
+  // ── Arrow preview mouse tracking ────────────────────────────────────────────
+  // Clear preview head when tool changes away from arrow or draft is cancelled
+  useEffect(() => {
+    if (state.tool !== 'arrow' || !state.arrowDraftTail) {
+      setPreviewHead(null)
+    }
+  }, [state.tool, state.arrowDraftTail])
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (state.tool !== 'arrow' || !state.arrowDraftTail) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const stageX = e.clientX - rect.left
+    const stageY = e.clientY - rect.top
+    if (rafRef.current !== null) return // throttle via RAF
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      setPreviewHead({
+        x: (stageX - layout.fieldPxX) / layout.pxPerMeter,
+        y: (stageY - layout.fieldPxY) / layout.pxPerMeter,
+      })
+    })
+  }, [state.tool, state.arrowDraftTail, layout])
+
   const handleStageClick = useCallback((stageX: number, stageY: number) => {
     const xM = (stageX - layout.fieldPxX) / layout.pxPerMeter
     const yM = (stageY - layout.fieldPxY) / layout.pxPerMeter
@@ -791,7 +874,7 @@ export default function EditorClient({
                 id: crypto.randomUUID(),
                 type: 'zone',
                 x, y, width, height,
-                color: '#2C7BE5',
+                color: state.toolOption || '#2C7BE5',
                 opacity: 0.25,
               },
             })
@@ -839,6 +922,11 @@ export default function EditorClient({
     { value: 'run', color: '#2C7BE5', label: 'Run' },
     { value: 'free', color: '#FFD500', label: 'Free' },
   ]
+  const zoneOptions = ZONE_COLOR_PRESETS.map(hex => ({
+    value: hex,
+    color: hex,
+    label: hex,
+  }))
 
   const teamName = drill.team_id
     ? (teams.find(t => t.id === drill.team_id)?.name ?? 'Team')
@@ -881,63 +969,92 @@ export default function EditorClient({
     <div className="flex flex-col h-screen bg-dark overflow-hidden">
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
-      <header className="h-12 flex items-center gap-3 px-3 bg-dark-secondary border-b border-white/5 flex-shrink-0">
-        <Link href="/dashboard/tactics" className="text-gray hover:text-white text-sm flex-shrink-0">
-          ← Library
-        </Link>
+      <header className="flex-shrink-0 bg-dark-secondary border-b border-white/5">
+        <div className="h-12 flex items-center gap-3 px-3">
+          <Link href="/dashboard/tactics" className="text-gray hover:text-white text-sm flex-shrink-0">
+            ← Library
+          </Link>
 
-        <input
-          type="text"
-          value={state.title}
-          placeholder="Untitled drill"
-          onChange={e => dispatch({ type: 'SET_TITLE', title: e.target.value })}
-          className="bg-transparent border-b border-white/10 focus:border-green outline-none text-white text-sm px-1 py-0.5 max-w-[200px] flex-shrink-0"
-        />
+          <input
+            type="text"
+            value={state.title}
+            placeholder="Untitled drill"
+            onChange={e => dispatch({ type: 'SET_TITLE', title: e.target.value })}
+            className="bg-transparent border-b border-white/10 focus:border-green outline-none text-white text-sm px-1 py-0.5 max-w-[200px] flex-shrink-0"
+          />
 
-        <span className="text-xs text-gray bg-dark px-2 py-0.5 rounded flex-shrink-0">
-          {teamName}
-        </span>
+          {/* Notes toggle */}
+          <button
+            onClick={() => setNotesOpen(v => !v)}
+            title="Toggle notes"
+            className={[
+              'px-2 py-0.5 rounded text-xs border flex-shrink-0 transition-colors',
+              notesOpen
+                ? 'border-green text-green bg-green/10'
+                : 'border-white/10 text-gray hover:text-white',
+            ].join(' ')}
+          >
+            Notes
+          </button>
 
-        <select
-          value={state.visibility}
-          onChange={e => dispatch({ type: 'SET_VISIBILITY', visibility: e.target.value as Visibility })}
-          className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
-        >
-          {VISIBILITIES.map(v => (
-            <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
-          ))}
-        </select>
+          <span className="text-xs text-gray bg-dark px-2 py-0.5 rounded flex-shrink-0">
+            {teamName}
+          </span>
 
-        <select
-          value={state.category}
-          onChange={e => dispatch({ type: 'SET_CATEGORY', category: e.target.value as DrillCategory })}
-          className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
-        >
-          {DRILL_CATEGORIES.map(c => (
-            <option key={c} value={c}>{DRILL_CATEGORY_LABELS[c]}</option>
-          ))}
-        </select>
+          <select
+            value={state.visibility}
+            onChange={e => dispatch({ type: 'SET_VISIBILITY', visibility: e.target.value as Visibility })}
+            className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
+          >
+            {VISIBILITIES.map(v => (
+              <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+            ))}
+          </select>
 
-        <div className="flex-1" />
+          <select
+            value={state.category}
+            onChange={e => dispatch({ type: 'SET_CATEGORY', category: e.target.value as DrillCategory })}
+            className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
+          >
+            {DRILL_CATEGORIES.map(c => (
+              <option key={c} value={c}>{DRILL_CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
 
-        {/* Save status */}
-        <span className={[
-          'text-xs flex-shrink-0 transition-opacity',
-          saveStatus === 'saved' ? 'text-green' :
-          saveStatus === 'saving' ? 'text-gray animate-pulse' :
-          saveStatus === 'error' ? 'text-red' : 'opacity-0',
-        ].join(' ')}>
-          {saveStatus === 'saved' ? 'Saved' :
-           saveStatus === 'saving' ? 'Saving…' :
-           saveStatus === 'error' ? 'Error saving' : ''}
-        </span>
+          <div className="flex-1" />
 
-        <button
-          onClick={exportPng}
-          className="px-3 py-1 rounded bg-dark border border-white/10 text-xs text-gray hover:text-white flex-shrink-0"
-        >
-          Export PNG
-        </button>
+          {/* Save status */}
+          <span className={[
+            'text-xs flex-shrink-0 transition-opacity',
+            saveStatus === 'saved' ? 'text-green' :
+            saveStatus === 'saving' ? 'text-gray animate-pulse' :
+            saveStatus === 'error' ? 'text-red' : 'opacity-0',
+          ].join(' ')}>
+            {saveStatus === 'saved' ? 'Saved' :
+             saveStatus === 'saving' ? 'Saving…' :
+             saveStatus === 'error' ? 'Error saving' : ''}
+          </span>
+
+          <button
+            onClick={exportPng}
+            className="px-3 py-1 rounded bg-dark border border-white/10 text-xs text-gray hover:text-white flex-shrink-0"
+          >
+            Export PNG
+          </button>
+        </div>
+
+        {/* Notes row */}
+        {notesOpen && (
+          <div className="px-3 pb-2">
+            <textarea
+              value={state.description}
+              placeholder="Add notes about this drill…"
+              rows={2}
+              onChange={e => dispatch({ type: 'SET_DESCRIPTION', description: e.target.value })}
+              className="w-full bg-dark border border-white/10 focus:border-green/50 outline-none rounded px-2 py-1 text-sm text-white resize-none placeholder:text-gray/50"
+            />
+          </div>
+        )}
       </header>
 
       {/* ── Main area ────────────────────────────────────────────────────────── */}
@@ -1037,9 +1154,27 @@ export default function EditorClient({
           </div>
 
           {/* Zone */}
-          <ToolBtn label="Zone" shortcut="Z" active={state.tool === 'zone'} onClick={() => dispatch({ type: 'SET_TOOL', tool: 'zone' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
-          </ToolBtn>
+          <div className="relative">
+            <ToolBtn
+              label="Zone" shortcut="Z"
+              active={state.tool === 'zone'}
+              onClick={() => dispatch({
+                type: 'SET_TOOL', tool: 'zone',
+                option: state.tool === 'zone' ? state.toolOption : (ZONE_COLOR_PRESETS[0]),
+              })}
+              onShiftClick={() => setOpenPicker(openPicker === 'zone' ? null : 'zone')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
+            </ToolBtn>
+            {openPicker === 'zone' && (
+              <SwatchPicker
+                options={zoneOptions}
+                current={state.toolOption}
+                onPick={v => dispatch({ type: 'SET_TOOL', tool: 'zone', option: v })}
+                onClose={() => setOpenPicker(null)}
+              />
+            )}
+          </div>
 
           {/* Divider */}
           <div className="w-8 h-px bg-white/10 my-1" />
@@ -1098,6 +1233,7 @@ export default function EditorClient({
           className="flex-1 overflow-hidden relative"
           style={{ cursor: cursorStyle }}
           onClick={handleCanvasAreaClick}
+          onMouseMove={handleCanvasMouseMove}
         >
           {canvasSize.w > 0 && canvasSize.h > 0 && (
             <FieldRenderer
@@ -1116,6 +1252,15 @@ export default function EditorClient({
                 }
               }}
               onDragEnd={(id, x, y) => dispatch({ type: 'MOVE_OBJECT', id, x, y })}
+              previewArrow={
+                state.tool === 'arrow' && state.arrowDraftTail && previewHead
+                  ? {
+                      tail: state.arrowDraftTail,
+                      head: previewHead,
+                      style: state.toolOption || 'pass',
+                    } as PreviewArrow
+                  : undefined
+              }
             />
           )}
 

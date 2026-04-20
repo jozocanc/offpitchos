@@ -697,6 +697,12 @@ export function ArrowNode({
 
 // ─── Main field renderer ──────────────────────────────────────────────────────
 
+export interface PreviewArrow {
+  tail: { x: number; y: number } // field-meter coords
+  head: { x: number; y: number } // field-meter coords
+  style: string
+}
+
 export interface FieldRendererProps {
   field: Field
   objects: BoardObject[]
@@ -708,6 +714,7 @@ export interface FieldRendererProps {
   onDragEnd?: (id: string, x: number, y: number) => void
   onDoubleClick?: (id: string) => void
   stageRef?: React.MutableRefObject<Konva.Stage | null>
+  previewArrow?: PreviewArrow
 }
 
 export default function FieldRenderer({
@@ -721,6 +728,7 @@ export default function FieldRenderer({
   onDragEnd,
   onDoubleClick,
   stageRef,
+  previewArrow,
 }: FieldRendererProps): React.JSX.Element {
   const layout = useFieldLayout(field, width, height)
   const selectedSet = new Set(selectedIds)
@@ -765,6 +773,17 @@ export default function FieldRenderer({
     }
   }
 
+  // Compute preview arrow pixel points if present
+  let previewPxPoints: number[] | null = null
+  let previewStroke = '#ffffff'
+  if (previewArrow) {
+    const tail = mToPx(previewArrow.tail.x, previewArrow.tail.y, layout)
+    const head = mToPx(previewArrow.head.x, previewArrow.head.y, layout)
+    previewPxPoints = [tail.x, tail.y, head.x, head.y]
+    const arrowStyle = ARROW_STYLES[previewArrow.style] ?? ARROW_STYLES['pass']
+    previewStroke = arrowStyle.stroke
+  }
+
   return (
     <Stage
       width={width}
@@ -781,6 +800,20 @@ export default function FieldRenderer({
       <Layer listening={interactive}>
         {objects.map(renderObject)}
       </Layer>
+
+      {/* Layer 3: preview overlay (non-interactive) */}
+      {previewPxPoints && (
+        <Layer listening={false}>
+          <Line
+            points={previewPxPoints}
+            stroke={previewStroke}
+            strokeWidth={2}
+            dash={[8, 5]}
+            opacity={0.7}
+            listening={false}
+          />
+        </Layer>
+      )}
     </Stage>
   )
 }
