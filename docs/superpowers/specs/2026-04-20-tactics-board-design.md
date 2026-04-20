@@ -268,7 +268,7 @@ Server action `app/dashboard/tactics/ai/actions.ts::generateDrillFromDescription
 2. Uses **structured output** with the Zod `BoardObject` schema — forces the model to emit valid objects.
 3. Uses **prompt caching** on the system prompt + few-shot examples block (static across all users). Per-call cost drops from ~2¢ → ~0.3¢ after first call.
 4. Validates response against Zod schema; retries once on validation failure.
-5. Server-side renders a thumbnail via `konva-renderer` + `canvas` package → uploads to `drill-thumbnails` bucket.
+5. Server-side renders a thumbnail via `konva-renderer` + `@napi-rs/canvas` → uploads to `drill-thumbnails` bucket.
 6. Inserts new drill row, returns `drillId` → client redirects.
 
 ### System prompt contents
@@ -305,7 +305,7 @@ Trigger: `Export PDF` in editor top bar `⋯` menu.
 
 ### Batch (session plan) PDF
 
-Trigger: `Print session plan` button on a schedule event page.
+Trigger: `Print session plan` button added to `event-modal.tsx` (same modal that hosts the Session Plan section from Phase A.5). Clicking streams the PDF as a download.
 
 - Cover page: team name · session date · coach name · total duration · drill count · optional session goal
 - One page per attached drill in `order_index` order:
