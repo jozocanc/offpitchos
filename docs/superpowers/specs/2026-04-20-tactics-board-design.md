@@ -69,14 +69,24 @@ Index: `(event_id, order_index)`.
 
 `drills` policies:
 
-- **SELECT:**
-  - creator can always read
-  - if `visibility = 'club'` → any user in same `club_id` with role `doc` or `coach`
-  - if `visibility = 'team'` → any user in same `club_id` rostered to `team_id` with role `doc` or `coach`
-  - if `visibility = 'private'` → creator only
-- **INSERT:** role must be `doc` or `coach` AND `club_id` matches caller's club AND (`team_id IS NULL` requires `role = 'doc'`, otherwise `team_id` must be in user's rostered teams or user is `doc`)
-- **UPDATE:** creator OR (`role = 'doc'` AND same club) OR (`role = 'coach'` AND rostered to `team_id` AND `visibility != 'private'`)
-- **DELETE:** creator OR (`role = 'doc'` AND same club)
+**SELECT** — a row is visible if any of the following holds:
+- caller is the `created_by` user
+- `visibility = 'club'` AND caller's `club_id` matches AND caller's role ∈ {`doc`, `coach`}
+- `visibility = 'team'` AND caller's `club_id` matches AND (caller is `doc` OR caller is rostered to `team_id`)
+
+**INSERT** — all must hold:
+- caller's role ∈ {`doc`, `coach`}
+- `club_id` matches caller's club
+- if `team_id IS NULL` (club-wide), caller must be `doc`
+- if `team_id IS NOT NULL`, caller must be `doc` OR rostered to that `team_id`
+
+**UPDATE** — any of the following is sufficient:
+- caller is the `created_by` user
+- caller is `doc` AND `club_id` matches
+- caller is `coach` AND rostered to `team_id` AND `visibility != 'private'`
+
+**DELETE**:
+- caller is the `created_by` user, OR caller is `doc` AND `club_id` matches
 
 `event_drills` policies: any user who can SELECT the parent event AND has role `doc` or `coach` can read; only `doc`/`coach` rostered to the event's team can write.
 
@@ -114,11 +124,24 @@ app-next/components/
   tactics-board.tsx             # Thin wrapper around konva-renderer for embedded views
 ```
 
-Schedule attachment UI lives inside the existing `app/dashboard/schedule/[eventId]` route — a new `Session plan` section, not a separate page.
+Schedule attachment UI lives inside the existing `event-modal.tsx` at `app/dashboard/schedule/event-modal.tsx` — a new `Session plan` section added to the modal body, not a separate route. This matches the existing pattern where all event interactions (attendance, photos, coverage, cancellation) happen inside the modal, not on a dedicated event page.
 
 ### Sidebar item
 
 Add `{ label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] }` to `components/sidebar.tsx`, inserted between `Coverage` and `Coaches`. New `TacticsIcon` — soccer field outline SVG.
+
+## Dependencies
+
+Packages to add to `app-next/package.json`:
+
+| Package | Version (approx) | Used for |
+|---------|------------------|----------|
+| `konva` | ^9 | Core canvas engine (stage, layers, shapes, transforms) |
+| `react-konva` | ^18 (matching React 18/19 in-app) | React wrapper for Konva |
+| `@napi-rs/canvas` | ^0.1 | **Server-side** PNG rendering for thumbnails — a native canvas binding that works on Vercel Functions without the `node-gyp` pain of the traditional `canvas` package. Node 18+ compatible. |
+| `@react-pdf/renderer` | ^3 (Phase C only) | Server-side PDF generation for single + batch drill exports |
+
+Do **not** use the traditional `canvas` npm package — its native build is fragile on Vercel serverless, with frequent cold-start failures around `cairo` and `pango` bindings. `@napi-rs/canvas` is a drop-in replacement with precompiled binaries for the Vercel Linux runtime.
 
 ## Object Schema
 
@@ -126,7 +149,7 @@ All board objects share a common shape, discriminated on `type`:
 
 ```ts
 type BoardObject =
-  | { id: string; type: 'player'; x: number; y: number; team: 'red' | 'blue' | 'neutral' | 'outside' | 'gk' | 'coach'; number?: number; position?: string }
+  | { id: string; type: 'player'; x: number; y: number; role: 'red' | 'blue' | 'neutral' | 'outside' | 'gk' | 'coach'; number?: number; position?: string }
   | { id: string; type: 'cone'; x: number; y: number; color: 'orange' | 'yellow' | 'red' | 'blue' | 'white' }
   | { id: string; type: 'ball'; x: number; y: number }
   | { id: string; type: 'goal'; x: number; y: number; variant: 'mini-h' | 'mini-v' | 'full'; rotation?: number }
@@ -134,6 +157,8 @@ type BoardObject =
   | { id: string; type: 'zone'; x: number; y: number; width: number; height: number; color: string; opacity: number; label?: string }
   | { id: string; type: 'zone-line'; points: [number, number, number, number]; color: string }
 ```
+
+The `role` field on `player` identifies the **player's visual role on the diagram** (which color/style to render), not a team assignment in the application's sense. `red`/`blue` are the two competing sides in a drill; `neutral` is a rondo-style floater; `outside` is a positional player (wall pass, overlap); `gk` is a goalkeeper (always yellow); `coach` is the coach figure (always black) used for demo drills where the coach stands at a cone. This is purely a diagram vocabulary — unrelated to the `teams` table in the database.
 
 Coordinates are in field-relative units (meters, matching `field.width_m` × `field.length_m`). The Konva stage scales field-units → pixels for rendering. This keeps drills resolution-independent and makes PDF export trivial.
 
@@ -179,7 +204,7 @@ Three-zone layout (desktop/tablet ≥ 768px):
 - `B` Ball
 - `G` Goals (long-press: mini-h / mini-v / full)
 - `A` Arrows (long-press: pass / run / free)
-- `Z` Zones (long-press: rectangle / split line) — opens color picker after placement
+- `Z` Zones (long-press: rectangle → creates a `zone` object with color/opacity picker; split line → creates a `zone-line` object used for dividing the field into thirds, halves, or any custom band)
 - `F` Formations (opens menu: 4-4-2 · 4-3-3 · 4-2-3-1 · 3-5-2 · 3-4-3 · 5-3-2 · 4-1-4-1 · diamond)
 - Undo / Redo / Clear at bottom
 
@@ -212,16 +237,15 @@ Same canvas component, no palette, no props panel, no edit affordances. Works on
 
 ## Schedule event attachment (Phase A.5)
 
-Inside an existing event page (`/dashboard/schedule/[eventId]`), new section **Session plan**:
+Inside the existing `event-modal.tsx`, new section **Session plan** rendered below the attendance area, visible to `doc` + `coach` roles only:
 
-- Visible only to `doc` + `coach` roles (server-filtered)
-- `+ Add drill` button opens a modal: searchable drill picker scoped to event's team + club-wide drills
+- `+ Add drill` button opens a nested picker: searchable drill list scoped to event's team + club-wide drills
 - Attached drills render as ordered cards: drag handle · thumbnail · title · category · duration input · notes input · remove button
 - Running total duration at the top, red warning if total exceeds event scheduled length
-- Tapping the card opens the drill in read-only mode (`?readonly=1`)
+- Tapping a drill card opens the drill in read-only mode at `/dashboard/tactics/[drillId]?readonly=1` (new tab on desktop, same tab on mobile)
 - DOCs and coaches rostered to the team can reorder, edit duration/notes, remove
 
-Implementation: new component `app/dashboard/schedule/[eventId]/session-plan.tsx` + server actions in the same route folder: `attachDrill`, `detachDrill`, `reorderDrills`, `updateAttachment`.
+Implementation: new component `app/dashboard/schedule/session-plan.tsx` rendered inside `event-modal.tsx` + server actions added to the existing `app/dashboard/schedule/actions.ts`: `attachDrill`, `detachDrill`, `reorderDrills`, `updateAttachment`. Keeps the one-modal event-interaction pattern used by attendance, photos, coverage, and cancellation.
 
 ## Phase B — AI auto-layout
 
@@ -230,7 +254,7 @@ Implementation: new component `app/dashboard/schedule/[eventId]/session-plan.tsx
 `Generate with AI ✨` button in the library header and in the empty editor state. Opens modal:
 
 - **Description** — large textarea, placeholder "Describe your drill in English or German — e.g., '6v4 rondo in the middle third with 2 neutrals, attackers can only take 2 touches'"
-- **Drill type** — dropdown (auto-detect / rondo / build-up / pressing / finishing / ssg / transition / other)
+- **Drill type** — dropdown: `auto-detect` / `rondo` / `build-up` / `pressing` / `finishing` / `warm-up` / `ssg` / `transition` / `other` (must stay in sync with the `category` column enum on the `drills` table)
 - **Field size** — optional override (width × length, units)
 - **Generate** button
 
@@ -295,7 +319,7 @@ Generated on-demand, streamed as a response. No persistence — regenerate fresh
 ## Phase D — Animation + polish
 
 - **Animated arrows**: each arrow gets an optional `animate_order: number` prop. Editor has a **Play** button (top bar). On play, arrows animate in ascending `animate_order`, sequentially — a colored dot travels from tail to head over 1.2s. Loops on a 2s pause. Useful for showing the flow of a drill in sequence.
-- **Version history**: on every auto-save, keep a rolling window of 10 snapshots in a `drill_versions` table. Restore button in editor `⋯` menu opens a list with thumbnails + timestamps.
+- **Version history**: on every auto-save, keep a rolling window of 10 snapshots in a `drill_versions` table (schema TBD in Phase D planning — expected columns: `id`, `drill_id`, `objects` snapshot, `field` snapshot, `saved_at`, `saved_by`, with a trigger to trim to the 10 most recent per `drill_id`). Restore button in editor `⋯` menu opens a list with thumbnails + timestamps.
 - **Drill comments**: coaches can leave threaded comments on a drill ("worked great with U14"). Visible under the read-only view.
 - **Performance**: profile with 200+ objects; apply Konva `perfectDrawEnabled: false`, layer caching, and batch draws as needed.
 
