@@ -153,7 +153,8 @@ create policy drills_select on drills for select using (
     where cp.role in ('doc','coach') and cp.club_id = drills.club_id and (
       drills.created_by = cp.profile_id
       or (drills.visibility = 'club')
-      or (drills.visibility = 'team' and (cp.role = 'doc' or drills_is_rostered(drills.team_id)))
+      or (drills.visibility = 'team' and drills.team_id is not null
+          and (cp.role = 'doc' or drills_is_rostered(drills.team_id)))
     )
   )
 );
@@ -179,7 +180,8 @@ create policy drills_update on drills for update using (
     where cp.role in ('doc','coach') and cp.club_id = drills.club_id and (
       drills.created_by = cp.profile_id
       or cp.role = 'doc'
-      or (cp.role = 'coach' and drills.visibility <> 'private' and drills_is_rostered(drills.team_id))
+      or (cp.role = 'coach' and drills.visibility <> 'private'
+          and drills.team_id is not null and drills_is_rostered(drills.team_id))
     )
   )
 );
@@ -700,7 +702,7 @@ export default async function TacticsLibraryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/access')
   const { data: profile } = await supabase
-    .from('profiles').select('role, club_id').eq('user_id', user.id).single()
+    .from('profiles').select('id, role, club_id').eq('user_id', user.id).single()
   if (!profile?.club_id) redirect('/onboarding')
   if (profile.role !== 'doc' && profile.role !== 'coach') redirect('/dashboard')
 
@@ -708,7 +710,7 @@ export default async function TacticsLibraryPage() {
   const { data: teams } = await supabase
     .from('teams').select('id, name').eq('club_id', profile.club_id).order('name')
 
-  return <LibraryClient drills={drills} teams={teams ?? []} role={profile.role} />
+  return <LibraryClient drills={drills} teams={teams ?? []} role={profile.role} currentProfileId={profile.id} />
 }
 ```
 
@@ -747,7 +749,8 @@ interface Props {
   role: string
 }
 
-export default function LibraryClient({ drills, teams, role }: Props) {
+// page.tsx must pass `currentProfileId` so the "My drills" filter works client-side
+export default function LibraryClient({ drills, teams, role, currentProfileId }: Props & { currentProfileId: string }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [teamId, setTeamId] = useState<string>('all')
@@ -758,7 +761,7 @@ export default function LibraryClient({ drills, teams, role }: Props) {
   const filtered = useMemo(() => drills.filter(d => {
     if (teamId !== 'all' && (teamId === 'none' ? d.teamId !== null : d.teamId !== teamId)) return false
     if (category !== 'all' && d.category !== category) return false
-    if (visibility === 'mine') { /* server-filtered preferred; we trust initial list */ }
+    if (visibility === 'mine') { if (d.createdById !== currentProfileId) return false }
     else if (visibility !== 'all' && d.visibility !== visibility) return false
     if (search && !d.title.toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -1148,11 +1151,13 @@ git commit -am "feat(tactics): properties panel"
 - Modify: `app-next/app/dashboard/tactics/[drillId]/editor-client.tsx`
 
 - [ ] **Step 1: Marquee selection** — pointer-down on empty field + drag creates a selection rectangle; objects inside are added to selection. Shift-click toggles.
-- [ ] **Step 2: Copy/paste/duplicate** — `⌘C` serializes selection to in-memory clipboard; `⌘V` clones with new ids, offset (+2m, +2m) from originals; `⌘D` = copy + paste in one.
-- [ ] **Step 3: Snap** — while dragging, snap to: field center line, penalty-area edges, other object centers (within 0.5m), 5m grid (if enabled). Render purple dashed alignment guide overlay during drag.
-- [ ] **Step 4: Snap toggle** button in bottom-right of canvas (`⊞ Snap on` / `⊟ Snap off`).
-- [ ] **Step 5: QA** — test all shortcuts with multiple objects.
-- [ ] **Step 6: Commit**
+- [ ] **Step 2: `⌘A` select all** — selects every object on the canvas.
+- [ ] **Step 3: Copy/paste/duplicate** — `⌘C` serializes selection to in-memory clipboard; `⌘V` clones with new ids, offset (+2m, +2m) from originals; `⌘D` = copy + paste in one.
+- [ ] **Step 4: Lock / hide** — right-click on a selected object opens a context menu with `Lock` (reject drag, still rendered) / `Hide` (invisible but present in data) / `Unlock` / `Unhide`. Store `locked: boolean` and `hidden: boolean` as optional fields on the object (extend the Zod schema in Task 3 to accept these as optional — edit `BoardObject` base to include `locked: z.boolean().optional(), hidden: z.boolean().optional()` on each variant).
+- [ ] **Step 5: Snap** — while dragging, snap to: field center line, penalty-area edges, other object centers (within 0.5m), 5m grid (if enabled). Render purple dashed alignment guide overlay during drag.
+- [ ] **Step 6: Snap toggle** button in bottom-right of canvas (`⊞ Snap on` / `⊟ Snap off`).
+- [ ] **Step 7: QA** — test all shortcuts with multiple objects; verify locked objects reject drag and hidden objects disappear.
+- [ ] **Step 8: Commit**
 
 ```bash
 git commit -am "feat(tactics): multi-select, copy/paste, duplicate, snap"
@@ -1252,8 +1257,26 @@ import { DrillDocSchema } from '@/lib/tactics/object-schema'
 
 export async function regenerateThumbnail(drillId: string) {
   const supabase = await createClient()
-  const { data: drill } = await supabase.from('drills').select('id, club_id, field, objects').eq('id', drillId).single()
+  // Read with the caller's client — RLS enforces that the caller can see the drill.
+  // We then do a second permission check: the caller must have edit rights (creator,
+  // doc in same club, or rostered coach on non-private drill). Only then do we use
+  // the service client to upload. Defense-in-depth against an authenticated user
+  // triggering thumbnail regen on a drill they can read but not edit.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase
+    .from('profiles').select('id, role, club_id').eq('user_id', user.id).single()
+  if (!profile) throw new Error('No profile')
+  const { data: drill } = await supabase
+    .from('drills').select('id, club_id, team_id, created_by, visibility, field, objects').eq('id', drillId).single()
   if (!drill) return
+  const canEdit =
+    drill.created_by === profile.id ||
+    (profile.role === 'doc' && profile.club_id === drill.club_id) ||
+    (profile.role === 'coach' && drill.visibility !== 'private' && drill.team_id &&
+      await isRosteredOnTeam(supabase, profile.id, drill.team_id))
+  if (!canEdit) throw new Error('Forbidden')
+
   const parsed = DrillDocSchema.safeParse({ field: drill.field, objects: drill.objects })
   if (!parsed.success) return
   const png = await renderThumbnailPng(parsed.data.field, parsed.data.objects)
@@ -1261,6 +1284,13 @@ export async function regenerateThumbnail(drillId: string) {
   const svc = createServiceClient()
   await svc.storage.from('drill-thumbnails').upload(path, png, { contentType: 'image/png', upsert: true })
   await supabase.from('drills').update({ thumbnail_path: path }).eq('id', drillId)
+}
+
+// Helper — reads team_members to confirm roster. Callers: thumbnail regen.
+async function isRosteredOnTeam(supabase: Awaited<ReturnType<typeof createClient>>, profileId: string, teamId: string) {
+  const { data } = await supabase
+    .from('team_members').select('id').eq('profile_id', profileId).eq('team_id', teamId).maybeSingle()
+  return !!data
 }
 ```
 
@@ -1419,7 +1449,9 @@ Konva stage + field markings + object rendering. Props `{ field, objects, width,
 - Keyboard handler in `useEffect` — registered on `window`, cleaned on unmount.
 
 ### Appendix C — Formation coordinate tables
-For each formation: array of 11 `{ role: 'red', x_frac, y_frac, position }` where `x_frac` and `y_frac` are 0–1 of field dimensions. GK at (0.05, 0.5); back line around y-fractions appropriate to formation (4-back: y = 0.15/0.35/0.55/0.75/0.85 spread evenly; 3-back: y = 0.2/0.5/0.8; etc.). Midfielders + forwards follow similar conventions. The generator function maps fractions × field_size → meter coordinates.
+For each formation: array of 11 `{ role: 'red', x_frac, y_frac, position }` where `x_frac` and `y_frac` are 0–1 of field dimensions (x is along the length axis from own goal to opponent goal; y is the width axis). GK at (0.05, 0.5); back line around y-fractions appropriate to formation (4-back: y = 0.15/0.35/0.55/0.75/0.85 spread evenly; 3-back: y = 0.2/0.5/0.8; etc.). Midfielders + forwards follow similar conventions. The generator function maps fractions × field_size → meter coordinates.
+
+**`diamond`** refers specifically to the **4-4-2 diamond midfield** (flat back four + CDM + two CMs wide + CAM + two strikers). Not the "midfield diamond in a 4-4-2" variant vs. the rare "diamond 4-1-2-1-2" spelled differently — here it is fully equivalent to 4-1-2-1-2 with a flat back four.
 
 ### Appendix D — `thumbnail.ts` drawing code
 Mirrors `field-renderer.tsx` using raw Canvas 2D API: `ctx.fillRect`, `ctx.arc`, `ctx.stroke`, `ctx.setLineDash`. Same object → drawing mapping.
