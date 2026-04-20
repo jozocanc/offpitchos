@@ -12,7 +12,7 @@ import {
   DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES,
 } from '@/lib/tactics/drill-categories'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
-import { saveDrill } from './actions'
+import { saveDrill, regenerateThumbnail } from './actions'
 import { generateFormation, FORMATION_NAMES } from '@/lib/tactics/field-templates'
 import type { FormationName } from '@/lib/tactics/field-templates'
 
@@ -749,6 +749,22 @@ export default function EditorClient({
       .catch(() => setSaveStatus('error'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedPayload])
+
+  // ── Thumbnail regen (debounced 10000ms, field/objects changes only) ──────────
+  const thumbPayload = { field: state.field, objects: state.objects }
+  const debouncedThumbPayload = useDebounce(thumbPayload, 10000)
+  const isThumbnailMounted = useRef(false)
+
+  useEffect(() => {
+    if (!isThumbnailMounted.current) {
+      isThumbnailMounted.current = true
+      return
+    }
+    regenerateThumbnail(drill.id).catch((err) => {
+      console.error('[thumbnail] regen failed:', err)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedThumbPayload])
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────────
   useEffect(() => {
