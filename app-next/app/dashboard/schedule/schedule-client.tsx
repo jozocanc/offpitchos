@@ -296,6 +296,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           venues={venues}
           editEvent={editEvent}
           onClose={() => { setModalOpen(false); setEditEvent(null) }}
+          userRole={userRole}
         />
       )}
     </>

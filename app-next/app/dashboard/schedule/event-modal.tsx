@@ -6,6 +6,7 @@ import { createEvent, updateEvent } from './actions'
 import { checkConflicts, suggestAlternatives } from './conflict-actions'
 import type { Conflict, Suggestion } from './conflict-actions'
 import ConflictBanner from './conflict-banner'
+import SessionPlan from './session-plan'
 
 interface Team {
   id: string
@@ -38,9 +39,10 @@ interface EventModalProps {
   venues: Venue[]
   editEvent: EventData | null  // null = creating new
   onClose: () => void
+  userRole?: string
 }
 
-export default function EventModal({ teams, venues, editEvent, onClose }: EventModalProps) {
+export default function EventModal({ teams, venues, editEvent, onClose, userRole }: EventModalProps) {
   const isEditing = editEvent !== null
 
   const [teamId, setTeamId] = useState(editEvent?.team_id ?? teams[0]?.id ?? '')
@@ -348,6 +350,22 @@ export default function EventModal({ teams, venues, editEvent, onClose }: EventM
           rows={2}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4 resize-none"
         />
+
+        {/* Session plan — doc/coach only, editing existing events */}
+        {isEditing && (userRole === 'doc' || userRole === 'coach') && (() => {
+          const durationFromStartEnd =
+            startTime && endTime
+              ? Math.round(
+                  (new Date(`${date}T${endTime}`).getTime() - new Date(`${date}T${startTime}`).getTime()) / 60000
+                )
+              : undefined
+          return (
+            <SessionPlan
+              eventId={editEvent!.id}
+              eventDurationMin={durationFromStartEnd && durationFromStartEnd > 0 ? durationFromStartEnd : undefined}
+            />
+          )
+        })()}
 
         {/* Recurring (create only) */}
         {!isEditing && (

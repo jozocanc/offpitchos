@@ -414,6 +414,110 @@ export async function deleteEvent(eventId: string) {
   revalidatePath('/dashboard')
 }
 
+// ============================================================
+// Tactics session plan (Phase A.5) — attach drills to events
+// ============================================================
+
+export interface AttachedDrill {
+  id: string
+  drillId: string
+  orderIndex: number
+  durationMinutes: number
+  coachNotes: string | null
+  title: string
+  category: string
+  thumbnailUrl: string | null
+  teamId: string | null
+}
+
+export async function listAttachedDrills(eventId: string): Promise<AttachedDrill[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('event_drills')
+    .select('id, drill_id, order_index, duration_minutes, coach_notes, drills!inner(title, category, thumbnail_path, team_id)')
+    .eq('event_id', eventId)
+    .order('order_index')
+  if (!data) return []
+  return data.map((r: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: r.id,
+    drillId: r.drill_id,
+    orderIndex: r.order_index,
+    durationMinutes: r.duration_minutes,
+    coachNotes: r.coach_notes,
+    title: r.drills.title,
+    category: r.drills.category,
+    teamId: r.drills.team_id,
+    thumbnailUrl: r.drills.thumbnail_path
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/drill-thumbnails/${r.drills.thumbnail_path}`
+      : null,
+  }))
+}
+
+export async function listDrillsForPicker(eventId: string) {
+  const supabase = await createClient()
+  const { data: ev } = await supabase.from('events').select('team_id, club_id').eq('id', eventId).single()
+  if (!ev) return []
+  // Drills for this team OR club-wide (team_id null with visibility='club')
+  const { data } = await supabase
+    .from('drills')
+    .select('id, title, category, visibility, team_id, thumbnail_path')
+    .eq('club_id', ev.club_id)
+    .or(`team_id.eq.${ev.team_id},and(team_id.is.null,visibility.eq.club)`)
+    .order('updated_at', { ascending: false })
+    .limit(200)
+  return (data ?? []).map((d: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: d.id,
+    title: d.title,
+    category: d.category,
+    teamId: d.team_id,
+    thumbnailUrl: d.thumbnail_path
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/drill-thumbnails/${d.thumbnail_path}`
+      : null,
+  }))
+}
+
+export async function attachDrill(eventId: string, drillId: string) {
+  const supabase = await createClient()
+  const { data: maxRow } = await supabase
+    .from('event_drills')
+    .select('order_index')
+    .eq('event_id', eventId)
+    .order('order_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const nextIndex = (maxRow?.order_index ?? -1) + 1
+  const { error } = await supabase.from('event_drills').insert({
+    event_id: eventId, drill_id: drillId, order_index: nextIndex,
+  })
+  if (error) throw new Error(error.message)
+  revalidatePath('/dashboard/schedule')
+}
+
+export async function detachDrill(attachmentId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('event_drills').delete().eq('id', attachmentId)
+  if (error) throw new Error(error.message)
+  revalidatePath('/dashboard/schedule')
+}
+
+export async function reorderDrills(eventId: string, ids: string[]) {
+  const supabase = await createClient()
+  await Promise.all(ids.map((id, i) =>
+    supabase.from('event_drills').update({ order_index: i }).eq('id', id).eq('event_id', eventId)
+  ))
+  revalidatePath('/dashboard/schedule')
+}
+
+export async function updateAttachment(
+  attachmentId: string,
+  patch: { duration_minutes?: number; coach_notes?: string | null }
+) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('event_drills').update(patch).eq('id', attachmentId)
+  if (error) throw new Error(error.message)
+  revalidatePath('/dashboard/schedule')
+}
+
 export async function getPastEvents() {
   const { profile, supabase } = await getUserProfile()
   const todayStart = new Date()
