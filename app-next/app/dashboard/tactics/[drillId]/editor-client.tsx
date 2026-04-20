@@ -6,13 +6,16 @@ import React, {
 import Link from 'next/link'
 import Konva from 'konva'
 import FieldRenderer, { useFieldLayout } from '@/lib/tactics/field-renderer'
-import type { PreviewArrow } from '@/lib/tactics/field-renderer'
+import type { PreviewArrow, MarqueeRect, AlignmentGuide } from '@/lib/tactics/field-renderer'
 import type { BoardObject, DrillRow, Field } from '@/lib/tactics/object-schema'
 import {
   DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES,
 } from '@/lib/tactics/drill-categories'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
 import { saveDrill } from './actions'
+
+// ─── Module-level clipboard (Phase A: in-memory only) ─────────────────────────
+let clipboard: BoardObject[] = []
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +40,7 @@ interface EditorState {
 type Action =
   | { type: 'SET_TOOL'; tool: Tool; option?: string }
   | { type: 'PLACE_OBJECT'; obj: BoardObject }
+  | { type: 'BULK_PLACE'; objs: BoardObject[] }
   | { type: 'MOVE_OBJECT'; id: string; x: number; y: number }
   | { type: 'UPDATE_OBJECT'; id: string; patch: Partial<BoardObject> }
   | { type: 'DELETE_SELECTED' }
@@ -80,6 +84,9 @@ function reducer(s: EditorState, a: Action): EditorState {
 
     case 'PLACE_OBJECT':
       return withHistory(s, { field: s.field, objects: [...s.objects, a.obj] })
+
+    case 'BULK_PLACE':
+      return withHistory(s, { field: s.field, objects: [...s.objects, ...a.objs] })
 
     case 'MOVE_OBJECT': {
       const objects = s.objects.map(o => {
@@ -663,6 +670,24 @@ export default function EditorClient({
   const rafRef = useRef<number | null>(null)
   const isMounted = useRef(false)
 
+  // ── Marquee selection state ──────────────────────────────────────────────────
+  const [marquee, setMarquee] = useState<MarqueeRect | null>(null)
+  const marqueeStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isMarqueeRef = useRef(false)
+
+  // ── Snap + alignment guides ──────────────────────────────────────────────────
+  const [snapEnabled, setSnapEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const stored = localStorage.getItem('tactics.snapEnabled')
+    return stored === null ? true : stored === 'true'
+  })
+  const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([])
+
+  // ── Context menu ─────────────────────────────────────────────────────────────
+  const [contextMenu, setContextMenu] = useState<{
+    id: string; clientX: number; clientY: number
+  } | null>(null)
+
   const initState: EditorState = {
     field: drill.field,
     objects: drill.objects,
@@ -741,6 +766,41 @@ export default function EditorClient({
         return
       }
 
+      // ⌘A — select all (non-hidden)
+      if (ctrl && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        // We need current objects; use a ref approach via a stateRef
+        dispatch({ type: 'SELECT', ids: [] }) // trigger via reducer see below
+        // We dispatch a special action — but since we can't read state here
+        // directly, we use dispatchSelectAll which is set up below
+        dispatchSelectAllRef.current?.()
+        return
+      }
+
+      // ⌘C — copy
+      if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault()
+        copySelectionRef.current?.()
+        return
+      }
+
+      // ⌘V — paste
+      if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'v') {
+        // Don't intercept if 'v' without ctrl would switch tool — ctrl+v = paste
+        e.preventDefault()
+        pasteClipboardRef.current?.()
+        return
+      }
+
+      // ⌘D — duplicate
+      if (ctrl && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        duplicateSelectionRef.current?.()
+        return
+      }
+
+      if (ctrl) return // don't process ctrl-modified keys below
+
       switch (e.key) {
         case 'v': case 'V': dispatch({ type: 'SET_TOOL', tool: 'select' }); break
         case 'p': case 'P': dispatch({ type: 'SET_TOOL', tool: 'player' }); break
@@ -749,7 +809,7 @@ export default function EditorClient({
         case 'g': case 'G': dispatch({ type: 'SET_TOOL', tool: 'goal' }); break
         case 'a': case 'A': dispatch({ type: 'SET_TOOL', tool: 'arrow' }); break
         case 'z': case 'Z':
-          if (!ctrl) dispatch({ type: 'SET_TOOL', tool: 'zone' })
+          dispatch({ type: 'SET_TOOL', tool: 'zone' })
           break
         case 'Delete':
         case 'Backspace':
@@ -760,12 +820,19 @@ export default function EditorClient({
           dispatch({ type: 'SET_ARROW_DRAFT', tail: undefined })
           dispatch({ type: 'SET_ZONE_DRAFT', corner: undefined })
           dispatch({ type: 'SET_TOOL', tool: 'select' })
+          setContextMenu(null)
           break
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // ── Callback refs for keyboard shortcuts (avoid stale closure) ───────────────
+  const dispatchSelectAllRef = useRef<(() => void) | null>(null)
+  const copySelectionRef = useRef<(() => void) | null>(null)
+  const pasteClipboardRef = useRef<(() => void) | null>(null)
+  const duplicateSelectionRef = useRef<(() => void) | null>(null)
 
   // ── Canvas click handler (placement) ────────────────────────────────────────
   const layout = useFieldLayout(state.field, canvasSize.w, canvasSize.h)
@@ -897,6 +964,283 @@ export default function EditorClient({
     const stageY = e.clientY - rect.top
     handleStageClick(stageX, stageY)
   }, [state.tool, handleStageClick])
+
+  // ── Copy / Paste / Duplicate ──────────────────────────────────────────────────
+  // These use a stateRef pattern — the refs are updated each render so keyboard
+  // shortcut handlers (which close over stale state) always get fresh values.
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  dispatchSelectAllRef.current = useCallback(() => {
+    const nonHidden = stateRef.current.objects
+      .filter(o => !o.hidden)
+      .map(o => o.id)
+    dispatch({ type: 'SELECT', ids: nonHidden })
+  }, [])
+
+  copySelectionRef.current = useCallback(() => {
+    const { objects, selectedIds } = stateRef.current
+    const sel = new Set(selectedIds)
+    clipboard = objects.filter(o => sel.has(o.id))
+  }, [])
+
+  function cloneWithOffset(o: BoardObject): BoardObject {
+    const id = crypto.randomUUID()
+    if (o.type === 'arrow') {
+      return { ...o, id, points: o.points.map((v, i) => v + (i % 2 === 0 ? 2 : 2)) }
+    }
+    if (o.type === 'zone-line') {
+      return { ...o, id, points: [o.points[0] + 2, o.points[1] + 2, o.points[2] + 2, o.points[3] + 2] as [number, number, number, number] }
+    }
+    return { ...o, id, x: o.x + 2, y: o.y + 2 }
+  }
+
+  pasteClipboardRef.current = useCallback(() => {
+    if (clipboard.length === 0) return
+    const cloned = clipboard.map(cloneWithOffset)
+    dispatch({ type: 'BULK_PLACE', objs: cloned })
+    dispatch({ type: 'SELECT', ids: cloned.map(o => o.id) })
+  }, [])
+
+  duplicateSelectionRef.current = useCallback(() => {
+    const { objects, selectedIds } = stateRef.current
+    if (selectedIds.length === 0) return
+    const sel = new Set(selectedIds)
+    clipboard = objects.filter(o => sel.has(o.id))
+    const cloned = clipboard.map(cloneWithOffset)
+    dispatch({ type: 'BULK_PLACE', objs: cloned })
+    dispatch({ type: 'SELECT', ids: cloned.map(o => o.id) })
+  }, [])
+
+  // ── Snap helpers ──────────────────────────────────────────────────────────────
+  function getSnapTargets(field: Field, objects: BoardObject[], excludeId: string) {
+    const { length_m, width_m, orientation } = field
+    const isH = orientation === 'horizontal'
+    // In field-meter space:
+    // x axis = length axis (if horizontal), width axis (if vertical)
+    // y axis = width axis (if horizontal), length axis (if vertical)
+    const lm = isH ? length_m : width_m
+    const wm = isH ? width_m : length_m
+
+    const snapX: number[] = []
+    const snapY: number[] = []
+
+    // Center line
+    snapX.push(lm / 2)
+    snapY.push(wm / 2)
+
+    // 5m grid
+    for (let v = 0; v <= lm; v += 5) snapX.push(v)
+    for (let v = 0; v <= wm; v += 5) snapY.push(v)
+
+    // Penalty area edges: 16.5m from each goal line
+    snapX.push(16.5)
+    snapX.push(lm - 16.5)
+    // Penalty area width edges: (wm - 40.3)/2 and (wm + 40.3)/2
+    const penHalfW = 40.3 / 2
+    snapY.push(wm / 2 - penHalfW)
+    snapY.push(wm / 2 + penHalfW)
+
+    // Other objects' centers
+    for (const o of objects) {
+      if (o.id === excludeId || o.hidden) continue
+      if (o.type === 'arrow' || o.type === 'zone-line') continue
+      snapX.push(o.x)
+      snapY.push(o.y)
+    }
+
+    return { snapX, snapY }
+  }
+
+  function computeSnap(
+    xM: number, yM: number,
+    field: Field, objects: BoardObject[], excludeId: string,
+    pxPerMeter: number,
+    fieldPxX: number, fieldPxY: number,
+    fieldPxW: number, fieldPxH: number,
+  ): { xM: number; yM: number; guides: AlignmentGuide[] } {
+    if (!snapEnabled) return { xM, yM, guides: [] }
+    const TOL_GRID = 0.3
+    const TOL_OTHER = 0.5
+
+    const { snapX, snapY } = getSnapTargets(field, objects, excludeId)
+
+    let bestX = xM, bestXDist = TOL_OTHER
+    for (const sx of snapX) {
+      const d = Math.abs(xM - sx)
+      const tol = (sx % 5 === 0) ? TOL_GRID : TOL_OTHER
+      if (d < tol && d < bestXDist) { bestX = sx; bestXDist = d }
+    }
+
+    let bestY = yM, bestYDist = TOL_OTHER
+    for (const sy of snapY) {
+      const d = Math.abs(yM - sy)
+      const tol = (sy % 5 === 0) ? TOL_GRID : TOL_OTHER
+      if (d < tol && d < bestYDist) { bestY = sy; bestYDist = d }
+    }
+
+    const guides: AlignmentGuide[] = []
+    if (bestX !== xM) {
+      const px = fieldPxX + bestX * pxPerMeter
+      guides.push({ points: [px, fieldPxY, px, fieldPxY + fieldPxH] })
+    }
+    if (bestY !== yM) {
+      const py = fieldPxY + bestY * pxPerMeter
+      guides.push({ points: [fieldPxX, py, fieldPxX + fieldPxW, py] })
+    }
+
+    return { xM: bestX, yM: bestY, guides }
+  }
+
+  // ── Marquee pointer handlers ──────────────────────────────────────────────────
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (stateRef.current.tool !== 'select') return
+    // Only start marquee on primary button on empty canvas (not on a Konva child)
+    const target = e.target as HTMLElement
+    // If the pointer is on the canvas element itself (stage background) start marquee
+    if (target.tagName !== 'CANVAS') return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const sx = e.clientX - rect.left
+    const sy = e.clientY - rect.top
+    marqueeStartRef.current = { x: sx, y: sy }
+    isMarqueeRef.current = false
+    setMarquee(null)
+  }, [])
+
+  const handleCanvasPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!marqueeStartRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const sx = e.clientX - rect.left
+    const sy = e.clientY - rect.top
+    const start = marqueeStartRef.current
+    const dx = sx - start.x
+    const dy = sy - start.y
+    if (!isMarqueeRef.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+    isMarqueeRef.current = true
+    setMarquee({
+      x: Math.min(start.x, sx),
+      y: Math.min(start.y, sy),
+      width: Math.abs(dx),
+      height: Math.abs(dy),
+    })
+  }, [])
+
+  const handleCanvasPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = marqueeStartRef.current
+    if (!start || !isMarqueeRef.current) {
+      marqueeStartRef.current = null
+      isMarqueeRef.current = false
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    const sx = e.clientX - rect.left
+    const sy = e.clientY - rect.top
+    const mRect = {
+      x: Math.min(start.x, sx),
+      y: Math.min(start.y, sy),
+      width: Math.abs(sx - start.x),
+      height: Math.abs(sy - start.y),
+    }
+
+    // Convert marquee px to field-meter and find intersecting objects
+    const lay = layout
+    const marqX1 = (mRect.x - lay.fieldPxX) / lay.pxPerMeter
+    const marqY1 = (mRect.y - lay.fieldPxY) / lay.pxPerMeter
+    const marqX2 = marqX1 + mRect.width / lay.pxPerMeter
+    const marqY2 = marqY1 + mRect.height / lay.pxPerMeter
+
+    const hit: string[] = []
+    for (const o of stateRef.current.objects) {
+      if (o.hidden) continue
+      let cx: number, cy: number
+      if (o.type === 'arrow' || o.type === 'zone-line') {
+        cx = (o.points[0] + o.points[2]) / 2
+        cy = (o.points[1] + o.points[3]) / 2
+      } else {
+        cx = o.x; cy = o.y
+      }
+      if (cx >= marqX1 && cx <= marqX2 && cy >= marqY1 && cy <= marqY2) {
+        hit.push(o.id)
+      }
+    }
+
+    dispatch({ type: 'SELECT', ids: hit, additive: e.shiftKey })
+    setMarquee(null)
+    marqueeStartRef.current = null
+    isMarqueeRef.current = false
+  }, [layout])
+
+  // ── Snap-on-drag handler (passed to FieldRenderer via onDragMove) ─────────────
+  // We use a DOM approach: listen for Konva dragmove events on the stage
+  const handleSnapDragMove = useCallback((id: string, stageX: number, stageY: number) => {
+    const lay = layout
+    const xM = (stageX - lay.fieldPxX) / lay.pxPerMeter
+    const yM = (stageY - lay.fieldPxY) / lay.pxPerMeter
+    const result = computeSnap(
+      xM, yM,
+      stateRef.current.field, stateRef.current.objects, id,
+      lay.pxPerMeter, lay.fieldPxX, lay.fieldPxY, lay.fieldPxW, lay.fieldPxH,
+    )
+    setAlignmentGuides(result.guides)
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, snapEnabled])
+
+  // Wire up Konva stage dragmove for snap via effect
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    function onDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+      const node = e.target
+      // Only snap plain objects (not stage or layer)
+      if (node === stage || node instanceof Konva.Layer) return
+      const id = node.id()
+      if (!id) return
+      const result = handleSnapDragMove(id, node.x(), node.y())
+      if (snapEnabled && (result.xM !== (node.x() - layout.fieldPxX) / layout.pxPerMeter || result.yM !== (node.y() - layout.fieldPxY) / layout.pxPerMeter)) {
+        node.x(layout.fieldPxX + result.xM * layout.pxPerMeter)
+        node.y(layout.fieldPxY + result.yM * layout.pxPerMeter)
+      }
+    }
+    function onDragEnd() {
+      setAlignmentGuides([])
+    }
+    stage.on('dragmove', onDragMove)
+    stage.on('dragend', onDragEnd)
+    return () => {
+      stage.off('dragmove', onDragMove)
+      stage.off('dragend', onDragEnd)
+    }
+  }, [layout, snapEnabled, handleSnapDragMove])
+
+  // ── Context menu actions ──────────────────────────────────────────────────────
+  const handleContextMenuAction = useCallback((action: string) => {
+    const id = contextMenu?.id
+    if (!id) return
+    setContextMenu(null)
+    const obj = stateRef.current.objects.find(o => o.id === id)
+    if (!obj) return
+
+    switch (action) {
+      case 'lock':
+        dispatch({ type: 'UPDATE_OBJECT', id, patch: { locked: !obj.locked } as Partial<BoardObject> })
+        break
+      case 'hide':
+        dispatch({ type: 'UPDATE_OBJECT', id, patch: { hidden: !obj.hidden } as Partial<BoardObject> })
+        dispatch({ type: 'SELECT', ids: [] })
+        break
+      case 'duplicate': {
+        const newObj = cloneWithOffset(obj)
+        dispatch({ type: 'PLACE_OBJECT', obj: newObj })
+        dispatch({ type: 'SELECT', ids: [newObj.id] })
+        break
+      }
+      case 'delete':
+        dispatch({ type: 'SELECT', ids: [id] })
+        dispatch({ type: 'DELETE_SELECTED' })
+        break
+    }
+  }, [contextMenu])
 
   // ── Export PNG ───────────────────────────────────────────────────────────────
   function exportPng() {
@@ -1234,6 +1578,9 @@ export default function EditorClient({
           style={{ cursor: cursorStyle }}
           onClick={handleCanvasAreaClick}
           onMouseMove={handleCanvasMouseMove}
+          onPointerDown={handleCanvasPointerDown}
+          onPointerMove={handleCanvasPointerMove}
+          onPointerUp={handleCanvasPointerUp}
         >
           {canvasSize.w > 0 && canvasSize.h > 0 && (
             <FieldRenderer
@@ -1246,12 +1593,13 @@ export default function EditorClient({
               stageRef={stageRef}
               onSelect={(id, additive) => {
                 if (id === null) {
-                  dispatch({ type: 'SELECT', ids: [] })
+                  if (!isMarqueeRef.current) dispatch({ type: 'SELECT', ids: [] })
                 } else {
                   dispatch({ type: 'SELECT', ids: [id], additive })
                 }
               }}
               onDragEnd={(id, x, y) => dispatch({ type: 'MOVE_OBJECT', id, x, y })}
+              onContextMenu={(id, clientX, clientY) => setContextMenu({ id, clientX, clientY })}
               previewArrow={
                 state.tool === 'arrow' && state.arrowDraftTail && previewHead
                   ? {
@@ -1261,6 +1609,8 @@ export default function EditorClient({
                     } as PreviewArrow
                   : undefined
               }
+              marquee={marquee}
+              alignmentGuides={alignmentGuides}
             />
           )}
 
@@ -1277,6 +1627,62 @@ export default function EditorClient({
               Zone: first corner placed — click opposite corner
             </div>
           )}
+
+          {/* ── Snap toggle button ──────────────────────────────────────────── */}
+          <button
+            onClick={() => setSnapEnabled(v => {
+              const next = !v
+              localStorage.setItem('tactics.snapEnabled', String(next))
+              return next
+            })}
+            title="Toggle snap to grid / objects"
+            className="absolute bottom-3 right-3 bg-dark-secondary border border-white/10 rounded px-2 py-1 text-xs text-gray hover:text-white transition-colors select-none"
+          >
+            {snapEnabled ? '⊞ Snap on' : '⊟ Snap off'}
+          </button>
+
+          {/* ── Context menu ────────────────────────────────────────────────── */}
+          {contextMenu && (() => {
+            const obj = state.objects.find(o => o.id === contextMenu.id)
+            if (!obj) return null
+            // Position relative to main element
+            const mainRect = wrapRef.current?.getBoundingClientRect()
+            const menuX = mainRect ? contextMenu.clientX - mainRect.left : contextMenu.clientX
+            const menuY = mainRect ? contextMenu.clientY - mainRect.top : contextMenu.clientY
+            return (
+              <div
+                style={{ position: 'absolute', left: menuX, top: menuY, zIndex: 100 }}
+                className="bg-dark-secondary border border-white/10 rounded-lg shadow-xl py-1 min-w-[140px] text-sm"
+                onMouseLeave={() => setContextMenu(null)}
+              >
+                <button
+                  onClick={() => handleContextMenuAction('lock')}
+                  className="w-full text-left px-3 py-1.5 text-gray hover:text-white hover:bg-dark/60 transition-colors"
+                >
+                  {obj.locked ? '🔓 Unlock' : '🔒 Lock'}
+                </button>
+                <button
+                  onClick={() => handleContextMenuAction('hide')}
+                  className="w-full text-left px-3 py-1.5 text-gray hover:text-white hover:bg-dark/60 transition-colors"
+                >
+                  {obj.hidden ? '👁 Show' : '🙈 Hide'}
+                </button>
+                <div className="h-px bg-white/10 my-1" />
+                <button
+                  onClick={() => handleContextMenuAction('duplicate')}
+                  className="w-full text-left px-3 py-1.5 text-gray hover:text-white hover:bg-dark/60 transition-colors"
+                >
+                  Duplicate
+                </button>
+                <button
+                  onClick={() => handleContextMenuAction('delete')}
+                  className="w-full text-left px-3 py-1.5 text-red hover:bg-red/10 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            )
+          })()}
         </main>
 
         {/* ── Right properties panel ────────────────────────────────────────── */}

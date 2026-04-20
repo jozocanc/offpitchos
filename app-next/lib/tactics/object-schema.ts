@@ -6,7 +6,11 @@ export const ConeColor = z.enum(['orange','yellow','red','blue','white'])
 export const GoalVariant = z.enum(['mini-h','mini-v','full'])
 export const ArrowStyle = z.enum(['pass','run','free'])
 
-const base = { id: z.string().min(1) }
+const base = {
+  id: z.string().min(1),
+  locked: z.boolean().optional(),
+  hidden: z.boolean().optional(),
+}
 
 export const PlayerObject = z.object({
   ...base, type: z.literal('player'),

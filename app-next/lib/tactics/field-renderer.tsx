@@ -334,6 +334,7 @@ interface NodeProps<T extends BoardObject> {
   onSelect?: (id: string, additive: boolean) => void
   onDragEnd?: (id: string, x: number, y: number) => void
   onDoubleClick?: (id: string) => void
+  onContextMenu?: (id: string, clientX: number, clientY: number) => void
 }
 
 // Selection ring stroke
@@ -351,16 +352,23 @@ export function ZoneNode({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
 }: NodeProps<ZoneObj>) {
+  if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, layout)
   const w = mLen(obj.width, layout)
   const h = mLen(obj.height, layout)
+  const draggable = interactive && !obj.locked
 
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
           onSelect?.(obj.id, e.evt.shiftKey),
         onDblClick: () => onDoubleClick?.(obj.id),
+        onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => {
+          e.evt.preventDefault()
+          onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
           const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
@@ -372,9 +380,10 @@ export function ZoneNode({
 
   return (
     <Group
+      id={obj.id}
       x={x}
       y={y}
-      draggable={interactive}
+      draggable={draggable}
       {...handlers}
     >
       <Rect
@@ -416,7 +425,9 @@ export function ZoneLineNode({
   selected,
   interactive,
   onSelect,
+  onContextMenu,
 }: NodeProps<ZoneLineObj>) {
+  if (obj.hidden) return null
   const p0 = mToPx(obj.points[0], obj.points[1], layout)
   const p1 = mToPx(obj.points[2], obj.points[3], layout)
 
@@ -431,6 +442,14 @@ export function ZoneLineNode({
         interactive
           ? (e: Konva.KonvaEventObject<MouseEvent>) =>
               onSelect?.(obj.id, e.evt.shiftKey)
+          : undefined
+      }
+      onContextMenu={
+        interactive && onContextMenu
+          ? (e: Konva.KonvaEventObject<PointerEvent>) => {
+              e.evt.preventDefault()
+              onContextMenu(obj.id, e.evt.clientX, e.evt.clientY)
+            }
           : undefined
       }
     />
@@ -448,15 +467,22 @@ export function ConeNode({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
 }: NodeProps<ConeObj>) {
+  if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, layout)
   const radius = mLen(0.8, layout)
+  const draggable = interactive && !obj.locked
 
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
           onSelect?.(obj.id, e.evt.shiftKey),
         onDblClick: () => onDoubleClick?.(obj.id),
+        onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => {
+          e.evt.preventDefault()
+          onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
           const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
@@ -468,6 +494,7 @@ export function ConeNode({
 
   return (
     <RegularPolygon
+      id={obj.id}
       x={x}
       y={y}
       sides={3}
@@ -475,7 +502,7 @@ export function ConeNode({
       fill={CONE_COLORS[obj.color] ?? obj.color}
       stroke={selected ? SEL_COLOR : '#00000044'}
       strokeWidth={selected ? SEL_WIDTH : 1}
-      draggable={interactive}
+      draggable={draggable}
       listening={interactive}
       {...handlers}
     />
@@ -493,15 +520,22 @@ export function BallNode({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
 }: NodeProps<BallObj>) {
+  if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, layout)
   const radius = mLen(0.4, layout)
+  const draggable = interactive && !obj.locked
 
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
           onSelect?.(obj.id, e.evt.shiftKey),
         onDblClick: () => onDoubleClick?.(obj.id),
+        onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => {
+          e.evt.preventDefault()
+          onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
           const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
@@ -513,9 +547,10 @@ export function BallNode({
 
   return (
     <Group
+      id={obj.id}
       x={x}
       y={y}
-      draggable={interactive}
+      draggable={draggable}
       listening={interactive}
       {...handlers}
     >
@@ -548,17 +583,24 @@ export function GoalNode({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
 }: NodeProps<GoalObj>) {
+  if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
   const w = mLen(size.w, layout)
   const h = mLen(size.h, layout)
+  const draggable = interactive && !obj.locked
 
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
           onSelect?.(obj.id, e.evt.shiftKey),
         onDblClick: () => onDoubleClick?.(obj.id),
+        onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => {
+          e.evt.preventDefault()
+          onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
           const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
@@ -570,12 +612,13 @@ export function GoalNode({
 
   return (
     <Group
+      id={obj.id}
       x={x}
       y={y}
       rotation={obj.rotation ?? 0}
       offsetX={w / 2}
       offsetY={h / 2}
-      draggable={interactive}
+      draggable={draggable}
       listening={interactive}
       {...handlers}
     >
@@ -601,17 +644,24 @@ export function PlayerNode({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
 }: NodeProps<PlayerObj>) {
+  if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, layout)
   const radius = mLen(1.2, layout)
   const label =
     obj.number != null ? String(obj.number) : (obj.position ?? '')
+  const draggable = interactive && !obj.locked
 
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
           onSelect?.(obj.id, e.evt.shiftKey),
         onDblClick: () => onDoubleClick?.(obj.id),
+        onContextMenu: (e: Konva.KonvaEventObject<PointerEvent>) => {
+          e.evt.preventDefault()
+          onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
           const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
@@ -623,9 +673,10 @@ export function PlayerNode({
 
   return (
     <Group
+      id={obj.id}
       x={x}
       y={y}
-      draggable={interactive}
+      draggable={draggable}
       listening={interactive}
       {...handlers}
     >
@@ -663,7 +714,9 @@ export function ArrowNode({
   selected,
   interactive,
   onSelect,
+  onContextMenu,
 }: NodeProps<ArrowObj>) {
+  if (obj.hidden) return null
   const pxPoints: number[] = []
   for (let i = 0; i < obj.points.length - 1; i += 2) {
     const { x, y } = mToPx(obj.points[i], obj.points[i + 1], layout)
@@ -691,6 +744,14 @@ export function ArrowNode({
               onSelect?.(obj.id, e.evt.shiftKey)
           : undefined
       }
+      onContextMenu={
+        interactive && onContextMenu
+          ? (e: Konva.KonvaEventObject<PointerEvent>) => {
+              e.evt.preventDefault()
+              onContextMenu(obj.id, e.evt.clientX, e.evt.clientY)
+            }
+          : undefined
+      }
     />
   )
 }
@@ -703,6 +764,15 @@ export interface PreviewArrow {
   style: string
 }
 
+export interface MarqueeRect {
+  x: number; y: number; width: number; height: number
+}
+
+export interface AlignmentGuide {
+  // stage-pixel coordinates for a single line
+  points: [number, number, number, number]
+}
+
 export interface FieldRendererProps {
   field: Field
   objects: BoardObject[]
@@ -713,8 +783,11 @@ export interface FieldRendererProps {
   onSelect?: (id: string | null, additive: boolean) => void
   onDragEnd?: (id: string, x: number, y: number) => void
   onDoubleClick?: (id: string) => void
+  onContextMenu?: (id: string, clientX: number, clientY: number) => void
   stageRef?: React.MutableRefObject<Konva.Stage | null>
   previewArrow?: PreviewArrow
+  marquee?: MarqueeRect | null
+  alignmentGuides?: AlignmentGuide[]
 }
 
 export default function FieldRenderer({
@@ -727,8 +800,11 @@ export default function FieldRenderer({
   onSelect,
   onDragEnd,
   onDoubleClick,
+  onContextMenu,
   stageRef,
   previewArrow,
+  marquee,
+  alignmentGuides = [],
 }: FieldRendererProps): React.JSX.Element {
   const layout = useFieldLayout(field, width, height)
   const selectedSet = new Set(selectedIds)
@@ -751,6 +827,7 @@ export default function FieldRenderer({
       onSelect: interactive ? (id: string, additive: boolean) => onSelect?.(id, additive) : undefined,
       onDragEnd: interactive ? onDragEnd : undefined,
       onDoubleClick: interactive ? onDoubleClick : undefined,
+      onContextMenu: interactive ? onContextMenu : undefined,
     }
 
     switch (obj.type) {
@@ -784,6 +861,8 @@ export default function FieldRenderer({
     previewStroke = arrowStyle.stroke
   }
 
+  const hasOverlay = previewPxPoints || marquee || alignmentGuides.length > 0
+
   return (
     <Stage
       width={width}
@@ -802,16 +881,42 @@ export default function FieldRenderer({
       </Layer>
 
       {/* Layer 3: preview overlay (non-interactive) */}
-      {previewPxPoints && (
+      {hasOverlay && (
         <Layer listening={false}>
-          <Line
-            points={previewPxPoints}
-            stroke={previewStroke}
-            strokeWidth={2}
-            dash={[8, 5]}
-            opacity={0.7}
-            listening={false}
-          />
+          {previewPxPoints && (
+            <Line
+              points={previewPxPoints}
+              stroke={previewStroke}
+              strokeWidth={2}
+              dash={[8, 5]}
+              opacity={0.7}
+              listening={false}
+            />
+          )}
+          {marquee && (
+            <Rect
+              x={marquee.x}
+              y={marquee.y}
+              width={marquee.width}
+              height={marquee.height}
+              fill="rgba(147,51,234,0.1)"
+              stroke="#9333EA"
+              strokeWidth={1}
+              dash={[5, 3]}
+              listening={false}
+            />
+          )}
+          {alignmentGuides.map((g, i) => (
+            <Line
+              key={i}
+              points={g.points}
+              stroke="#9333EA"
+              strokeWidth={1}
+              dash={[6, 4]}
+              opacity={0.8}
+              listening={false}
+            />
+          ))}
         </Layer>
       )}
     </Stage>
