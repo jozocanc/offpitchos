@@ -13,6 +13,8 @@ import {
 } from '@/lib/tactics/drill-categories'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
 import { saveDrill } from './actions'
+import { generateFormation, FORMATION_NAMES } from '@/lib/tactics/field-templates'
+import type { FormationName } from '@/lib/tactics/field-templates'
 
 // ─── Module-level clipboard (Phase A: in-memory only) ─────────────────────────
 let clipboard: BoardObject[] = []
@@ -55,6 +57,7 @@ type Action =
   | { type: 'REDO' }
   | { type: 'SET_ARROW_DRAFT'; tail?: { x: number; y: number } }
   | { type: 'SET_ZONE_DRAFT'; corner?: { x: number; y: number } }
+  | { type: 'LOAD_FORMATION'; objects: BoardObject[] }
 
 const MAX_HISTORY = 100
 
@@ -164,6 +167,9 @@ function reducer(s: EditorState, a: Action): EditorState {
 
     case 'SET_ZONE_DRAFT':
       return { ...s, zoneDraftCorner: a.corner }
+
+    case 'LOAD_FORMATION':
+      return withHistory(s, { field: s.field, objects: a.objects })
 
     default:
       return s
@@ -664,6 +670,7 @@ export default function EditorClient({
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'idle'>('saved')
   const [openPicker, setOpenPicker] = useState<string | null>(null)
   const [clearConfirm, setClearConfirm] = useState(false)
+  const [formationMenuOpen, setFormationMenuOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   // Arrow preview: tracks current mouse position in field-meter coords
   const [previewHead, setPreviewHead] = useState<{ x: number; y: number } | null>(null)
@@ -1522,6 +1529,48 @@ export default function EditorClient({
 
           {/* Divider */}
           <div className="w-8 h-px bg-white/10 my-1" />
+
+          {/* Formations */}
+          <div className="relative">
+            <ToolBtn
+              label="Formation" shortcut=""
+              active={formationMenuOpen}
+              onClick={() => setFormationMenuOpen(v => !v)}
+            >
+              {/* Simple 4-4-2 grid icon */}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="4"  cy="12" r="2" />
+                <circle cx="10" cy="6"  r="2" />
+                <circle cx="10" cy="12" r="2" />
+                <circle cx="10" cy="18" r="2" />
+                <circle cx="16" cy="9"  r="2" />
+                <circle cx="16" cy="15" r="2" />
+                <circle cx="21" cy="12" r="2" />
+              </svg>
+            </ToolBtn>
+            {formationMenuOpen && (
+              <div
+                className="absolute left-14 top-0 z-50 bg-dark-secondary border border-white/10 rounded-lg py-1 shadow-xl w-32"
+                onMouseLeave={() => setFormationMenuOpen(false)}
+              >
+                {FORMATION_NAMES.map((name: FormationName) => (
+                  <button
+                    key={name}
+                    onClick={() => {
+                      dispatch({
+                        type: 'LOAD_FORMATION',
+                        objects: generateFormation(name, state.field),
+                      })
+                      setFormationMenuOpen(false)
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-sm text-gray hover:text-white hover:bg-dark/60 transition-colors"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Undo */}
           <ToolBtn label="Undo" shortcut="⌘Z" active={false} onClick={() => dispatch({ type: 'UNDO' })}>
