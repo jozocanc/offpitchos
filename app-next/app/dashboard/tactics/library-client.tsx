@@ -115,9 +115,9 @@ function DrillCard({ drill, onDelete, onDuplicate, onVisibilityChange }: {
   const vIcon = drill.visibility === 'private' ? '🔒' : drill.visibility === 'team' ? '👥' : '🌍'
 
   return (
-    <div className="bg-dark-secondary rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition">
+    <div className="bg-dark-secondary rounded-lg border border-white/5 hover:border-white/20 transition">
       <Link href={`/dashboard/tactics/${drill.id}`} className="block">
-        <div className="aspect-[16/10] bg-dark flex items-center justify-center text-gray text-xs">
+        <div className="aspect-[16/10] bg-dark rounded-t-lg overflow-hidden flex items-center justify-center text-gray text-xs">
           {drill.thumbnailUrl
             ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -140,7 +140,7 @@ function DrillCard({ drill, onDelete, onDuplicate, onVisibilityChange }: {
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-0" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-dark border border-white/10 rounded-lg shadow-lg z-10 min-w-[160px]">
+                <div className="absolute right-0 top-full mt-1 bg-dark border border-white/10 rounded-lg shadow-lg z-20 min-w-[160px]">
                   <button onClick={() => { setMenuOpen(false); onDuplicate(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Duplicate</button>
                   {drill.canEdit && <>
                     <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'private') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Private</button>
