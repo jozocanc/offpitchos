@@ -19,10 +19,12 @@ import type { DrillCategory } from './drill-categories'
 const C = {
   green: '#2d6e42',
   cream: '#f7f3e9',
-  ink: '#0a1628',
-  accent: '#00FF87',
+  offWhite: '#fafaf7',
+  ink: '#1a1a1a',
   muted: '#6b7280',
   border: '#e5e0d5',
+  // forest green at 20% opacity — expressed as hex approximation on white bg
+  headerBorderGreen: '#b8d4c2',
 } as const
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -33,34 +35,56 @@ const S = StyleSheet.create({
     fontSize: 10,
     color: C.ink,
     backgroundColor: '#ffffff',
-    paddingBottom: 70,
+    paddingBottom: 56,
   },
-  // Header band
-  header: {
+  // ─ Logo box (18×18 forest-green rounded square with "OP" white text) ─
+  logoBox: {
+    width: 18,
+    height: 18,
     backgroundColor: C.green,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  logoText: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
+    color: '#ffffff',
+    letterSpacing: 0.3,
+  },
+  // ─ Header band ─
+  header: {
+    backgroundColor: C.cream,
     paddingHorizontal: 32,
-    paddingTop: 24,
-    paddingBottom: 20,
-    minHeight: 80,
+    paddingTop: 22,
+    paddingBottom: 18,
+    borderBottom: `1pt solid ${C.headerBorderGreen}`,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  drillTitle: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 22,
-    color: '#ffffff',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     flex: 1,
     marginRight: 16,
+  },
+  drillTitle: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 26,
+    color: C.green,
+    flex: 1,
+    lineHeight: 1.2,
   },
   headerMeta: {
     alignItems: 'flex-end',
   },
   headerMetaText: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.75)',
+    color: C.muted,
     marginBottom: 2,
   },
   chipRow: {
@@ -70,23 +94,16 @@ const S = StyleSheet.create({
     flexWrap: 'wrap',
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: C.cream,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
     fontSize: 9,
-    color: '#ffffff',
-  },
-  chipAccent: {
-    backgroundColor: C.accent,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    fontSize: 9,
-    color: C.ink,
+    color: C.green,
+    border: `1pt solid ${C.green}`,
     fontFamily: 'Helvetica-Bold',
   },
-  // Body
+  // ─ Body ─
   body: {
     paddingHorizontal: 32,
     paddingTop: 20,
@@ -108,7 +125,7 @@ const S = StyleSheet.create({
   },
   coachNoteBox: {
     backgroundColor: C.cream,
-    borderLeft: `3px solid ${C.green}`,
+    borderLeft: `3pt solid ${C.green}`,
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 20,
@@ -124,107 +141,150 @@ const S = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
+  diagramPanel: {
+    width: 380,
+    backgroundColor: C.offWhite,
+    border: `1pt solid ${C.green}`,
+    borderRadius: 6,
+    padding: 6,
+    alignItems: 'center',
+  },
   diagramImage: {
-    width: 370,
-    height: 278,
+    width: 368,
+    height: 276,
     objectFit: 'contain',
   },
-  noPreview: {
-    width: 370,
-    height: 220,
-    backgroundColor: C.cream,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: `1px solid ${C.border}`,
+  divider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginVertical: 14,
   },
-  noPreviewText: {
-    fontSize: 11,
-    color: C.muted,
-    fontFamily: 'Helvetica-Oblique',
-  },
-  // Footer
+  // ─ Footer ─
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 40,
-    backgroundColor: C.ink,
+    backgroundColor: C.cream,
+    borderTop: `1pt solid ${C.headerBorderGreen}`,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 32,
   },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   footerBrand: {
     fontSize: 10,
     fontFamily: 'Helvetica-Bold',
-    color: C.accent,
+    color: C.green,
     letterSpacing: 0.5,
   },
   footerPage: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.6)',
+    color: C.muted,
   },
   footerDate: {
     fontSize: 8,
-    color: 'rgba(255,255,255,0.45)',
+    color: C.muted,
   },
-  // Cover page
-  cover: {
+  // ─ Cover page ─
+  coverPage: {
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+    color: C.ink,
+    backgroundColor: '#ffffff',
+    paddingBottom: 56,
+  },
+  coverHeader: {
     backgroundColor: C.green,
-    flex: 1,
-    padding: 48,
-    justifyContent: 'center',
+    paddingHorizontal: 48,
+    paddingTop: 64,
+    paddingBottom: 64,
   },
   coverBrand: {
     fontSize: 12,
     fontFamily: 'Helvetica-Bold',
-    color: C.accent,
+    color: C.cream,
     letterSpacing: 1,
-    marginBottom: 48,
+    marginBottom: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coverBrandText: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    color: C.cream,
+    letterSpacing: 1,
   },
   coverTitle: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 28,
+    fontSize: 32,
     color: '#ffffff',
-    marginBottom: 12,
+    marginBottom: 10,
+    lineHeight: 1.2,
   },
   coverSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: 'rgba(255,255,255,0.75)',
-    marginBottom: 40,
   },
-  coverMeta: {
-    borderTop: '1px solid rgba(255,255,255,0.2)',
-    paddingTop: 24,
-    gap: 10,
+  coverBody: {
+    paddingHorizontal: 48,
+    paddingTop: 32,
+    flex: 1,
   },
   coverMetaRow: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 10,
   },
   coverMetaLabel: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.55)',
+    color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     width: 90,
   },
   coverMetaValue: {
     fontSize: 10,
-    color: '#ffffff',
+    color: C.ink,
     flex: 1,
   },
-  coverGoal: {
-    marginTop: 24,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 6,
-    padding: 14,
+  coverChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  coverChip: {
+    backgroundColor: C.cream,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    fontSize: 9,
+    color: C.green,
+    border: `1pt solid ${C.green}`,
+    fontFamily: 'Helvetica-Bold',
+  },
+  coverMetaDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginVertical: 20,
+  },
+  coverGoalBox: {
+    backgroundColor: C.cream,
+    borderLeft: `3pt solid ${C.green}`,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 2,
+    marginTop: 8,
   },
   coverGoalLabel: {
     fontSize: 8,
-    color: C.accent,
+    color: C.green,
     fontFamily: 'Helvetica-Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -232,10 +292,16 @@ const S = StyleSheet.create({
   },
   coverGoalText: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.85)',
+    color: C.ink,
     lineHeight: 1.5,
   },
-  // Per-drill page (session plan)
+  coverDrillListItem: {
+    fontSize: 10,
+    color: C.ink,
+    marginBottom: 5,
+    paddingLeft: 12,
+  },
+  // ─ Per-drill page header (session/batch pages) ─
   drillPageHeader: {
     backgroundColor: C.cream,
     paddingHorizontal: 32,
@@ -244,7 +310,7 @@ const S = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottom: `2px solid ${C.green}`,
+    borderBottom: `2pt solid ${C.green}`,
   },
   drillPageTitle: {
     fontFamily: 'Helvetica-Bold',
@@ -260,11 +326,6 @@ const S = StyleSheet.create({
   drillPageMetaText: {
     fontSize: 9,
     color: C.muted,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: C.border,
-    marginVertical: 14,
   },
 })
 
@@ -286,19 +347,36 @@ function categoryLabel(cat: string): string {
   return DRILL_CATEGORY_LABELS[cat as DrillCategory] ?? cat
 }
 
-// ─── Diagram area ────────────────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
-function DiagramArea({ thumbnail }: { thumbnail: Buffer | null }) {
+function LogoBox() {
+  return (
+    <View style={S.logoBox}>
+      <Text style={S.logoText}>OP</Text>
+    </View>
+  )
+}
+
+function DiagramArea({ thumbnail }: { thumbnail: Buffer }) {
   return (
     <View style={S.diagramArea}>
-      {thumbnail ? (
-        // eslint-disable-next-line jsx-a11y/alt-text
+      <View style={S.diagramPanel}>
+        {/* eslint-disable-next-line jsx-a11y/alt-text */}
         <Image src={thumbnail} style={S.diagramImage} />
-      ) : (
-        <View style={S.noPreview}>
-          <Text style={S.noPreviewText}>Preview pending</Text>
-        </View>
-      )}
+      </View>
+    </View>
+  )
+}
+
+function PageFooter({ generatedAt, pageNum, totalPages }: { generatedAt: string; pageNum: number; totalPages: number }) {
+  return (
+    <View style={S.footer}>
+      <View style={S.footerLeft}>
+        <LogoBox />
+        <Text style={S.footerBrand}>OffPitchOS</Text>
+      </View>
+      <Text style={S.footerDate}>Generated {generatedAt}</Text>
+      <Text style={S.footerPage}>Page {pageNum} / {totalPages}</Text>
     </View>
   )
 }
@@ -309,7 +387,7 @@ export interface DrillPDFProps {
   drill: DrillRow
   creatorName: string
   teamName: string
-  thumbnail: Buffer | null
+  thumbnail: Buffer
 }
 
 export function DrillPDF({ drill, creatorName, teamName, thumbnail }: DrillPDFProps) {
@@ -326,17 +404,22 @@ export function DrillPDF({ drill, creatorName, teamName, thumbnail }: DrillPDFPr
       subject="Drill Export"
     >
       <Page size="A4" style={S.page}>
-        {/* Header */}
+        {/* Header band */}
         <View style={S.header}>
           <View style={S.headerTop}>
-            <Text style={S.drillTitle}>{drill.title}</Text>
+            <View style={S.headerLeft}>
+              <View style={{ marginTop: 6, marginRight: 10 }}>
+                <LogoBox />
+              </View>
+              <Text style={S.drillTitle}>{drill.title}</Text>
+            </View>
             <View style={S.headerMeta}>
               <Text style={S.headerMetaText}>{creatorName}</Text>
               <Text style={S.headerMetaText}>{drillDate}</Text>
             </View>
           </View>
           <View style={S.chipRow}>
-            <Text style={S.chipAccent}>{categoryLabel(drill.category)}</Text>
+            <Text style={S.chip}>{categoryLabel(drill.category)}</Text>
             <Text style={S.chip}>{teamName}</Text>
           </View>
         </View>
@@ -355,11 +438,7 @@ export function DrillPDF({ drill, creatorName, teamName, thumbnail }: DrillPDFPr
         </View>
 
         {/* Footer */}
-        <View style={S.footer}>
-          <Text style={S.footerBrand}>OffPitchOS</Text>
-          <Text style={S.footerDate}>Generated {generatedAt}</Text>
-          <Text style={S.footerPage}>Page 1 / 1</Text>
-        </View>
+        <PageFooter generatedAt={generatedAt} pageNum={1} totalPages={1} />
       </Page>
     </Document>
   )
@@ -375,7 +454,7 @@ export interface SessionDrill {
   coachNotes: string | null
   title: string
   category: string
-  thumbnail: Buffer | null
+  thumbnail: Buffer
   description: string
 }
 
@@ -416,59 +495,62 @@ export function SessionPlanPDF({ event, drills }: SessionPlanPDFProps) {
       subject="Session Plan Export"
     >
       {/* Cover page */}
-      <Page size="A4" style={S.page}>
-        <View style={[S.cover, { paddingBottom: 80 }]}>
-          <Text style={S.coverBrand}>OffPitchOS</Text>
+      <Page size="A4" style={S.coverPage}>
+        <View style={S.coverHeader}>
+          {/* Brand row */}
+          <View style={[S.coverBrand, { flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={[S.logoBox, { marginRight: 8, backgroundColor: C.cream }]}>
+              <Text style={[S.logoText, { color: C.green }]}>OP</Text>
+            </View>
+            <Text style={S.coverBrandText}>OffPitchOS</Text>
+          </View>
           <Text style={S.coverTitle}>{event.title}</Text>
           <Text style={S.coverSubtitle}>Session Plan</Text>
+        </View>
 
-          <View style={S.coverMeta}>
-            <View style={S.coverMetaRow}>
-              <Text style={S.coverMetaLabel}>Team</Text>
-              <Text style={S.coverMetaValue}>{event.teamName}</Text>
-            </View>
-            <View style={S.coverMetaRow}>
-              <Text style={S.coverMetaLabel}>Date</Text>
-              <Text style={S.coverMetaValue}>{sessionDate} at {sessionTime}</Text>
-            </View>
-            <View style={S.coverMetaRow}>
-              <Text style={S.coverMetaLabel}>Coach</Text>
-              <Text style={S.coverMetaValue}>{event.coachName}</Text>
-            </View>
-            <View style={S.coverMetaRow}>
-              <Text style={S.coverMetaLabel}>Duration</Text>
-              <Text style={S.coverMetaValue}>{totalMin} min</Text>
-            </View>
-            <View style={S.coverMetaRow}>
-              <Text style={S.coverMetaLabel}>Drills</Text>
-              <Text style={S.coverMetaValue}>
-                {drills.length === 0 ? 'None attached' : `${drills.length} drill${drills.length === 1 ? '' : 's'}`}
+        <View style={S.coverBody}>
+          <View style={S.coverMetaRow}>
+            <Text style={S.coverMetaLabel}>Team</Text>
+            <Text style={S.coverMetaValue}>{event.teamName}</Text>
+          </View>
+          <View style={S.coverMetaRow}>
+            <Text style={S.coverMetaLabel}>Date</Text>
+            <Text style={S.coverMetaValue}>{sessionDate} at {sessionTime}</Text>
+          </View>
+          <View style={S.coverMetaRow}>
+            <Text style={S.coverMetaLabel}>Coach</Text>
+            <Text style={S.coverMetaValue}>{event.coachName}</Text>
+          </View>
+          <View style={[S.coverMetaRow, { alignItems: 'center' }]}>
+            <Text style={S.coverMetaLabel}>Duration &amp; Drills</Text>
+            <View style={S.coverChipRow}>
+              <Text style={S.coverChip}>{totalMin} min</Text>
+              <Text style={S.coverChip}>
+                {drills.length === 0 ? 'No drills' : `${drills.length} drill${drills.length === 1 ? '' : 's'}`}
               </Text>
             </View>
           </View>
 
           {event.notes && (
-            <View style={S.coverGoal}>
-              <Text style={S.coverGoalLabel}>Session Goal</Text>
-              <Text style={S.coverGoalText}>{truncateWords(event.notes, 80)}</Text>
-            </View>
+            <>
+              <View style={S.coverMetaDivider} />
+              <View style={S.coverGoalBox}>
+                <Text style={S.coverGoalLabel}>Session Goal</Text>
+                <Text style={S.coverGoalText}>{truncateWords(event.notes, 80)}</Text>
+              </View>
+            </>
           )}
 
           {drills.length === 0 && (
-            <View style={[S.coverGoal, { marginTop: 32 }]}>
-              <Text style={[S.coverGoalText, { textAlign: 'center', color: 'rgba(255,255,255,0.55)' }]}>
+            <View style={[S.coverGoalBox, { marginTop: 32 }]}>
+              <Text style={[S.coverGoalText, { color: C.muted, textAlign: 'center' }]}>
                 No drills attached yet.
               </Text>
             </View>
           )}
         </View>
 
-        {/* Footer */}
-        <View style={S.footer}>
-          <Text style={S.footerBrand}>OffPitchOS</Text>
-          <Text style={S.footerDate}>Generated {generatedAt}</Text>
-          <Text style={S.footerPage}>Page 1 / {totalPages}</Text>
-        </View>
+        <PageFooter generatedAt={generatedAt} pageNum={1} totalPages={totalPages} />
       </Page>
 
       {/* One page per drill */}
@@ -508,12 +590,102 @@ export function SessionPlanPDF({ event, drills }: SessionPlanPDFProps) {
               <DiagramArea thumbnail={d.thumbnail} />
             </View>
 
-            {/* Footer */}
-            <View style={S.footer}>
-              <Text style={S.footerBrand}>OffPitchOS</Text>
-              <Text style={S.footerDate}>Generated {generatedAt}</Text>
-              <Text style={S.footerPage}>Page {pageNum} / {totalPages}</Text>
+            <PageFooter generatedAt={generatedAt} pageNum={pageNum} totalPages={totalPages} />
+          </Page>
+        )
+      })}
+    </Document>
+  )
+}
+
+// ─── BatchDrillPDF ────────────────────────────────────────────────────────────
+
+export interface BatchDrill {
+  id: string
+  title: string
+  category: string
+  description: string
+  thumbnail: Buffer
+}
+
+export interface BatchDrillPDFProps {
+  drills: BatchDrill[]
+}
+
+export function BatchDrillPDF({ drills }: BatchDrillPDFProps) {
+  const generatedAt = new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  })
+
+  const totalPages = drills.length + 1
+
+  return (
+    <Document
+      title={`Drill Pack — ${drills.length} drill${drills.length === 1 ? '' : 's'}`}
+      author="OffPitchOS"
+      subject="Drill Pack Export"
+    >
+      {/* Cover page */}
+      <Page size="A4" style={S.coverPage}>
+        <View style={S.coverHeader}>
+          <View style={[S.coverBrand, { flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={[S.logoBox, { marginRight: 8, backgroundColor: C.cream }]}>
+              <Text style={[S.logoText, { color: C.green }]}>OP</Text>
             </View>
+            <Text style={S.coverBrandText}>OffPitchOS</Text>
+          </View>
+          <Text style={S.coverTitle}>Drill Pack</Text>
+          <Text style={S.coverSubtitle}>
+            {drills.length} drill{drills.length === 1 ? '' : 's'} · {generatedAt}
+          </Text>
+        </View>
+
+        <View style={S.coverBody}>
+          <View style={S.coverChipRow}>
+            <Text style={S.coverChip}>{drills.length} drill{drills.length === 1 ? '' : 's'}</Text>
+            <Text style={S.coverChip}>{generatedAt}</Text>
+          </View>
+
+          <View style={S.coverMetaDivider} />
+
+          <Text style={[S.sectionLabel, { marginBottom: 10 }]}>Included drills</Text>
+          {drills.map((d, i) => (
+            <Text key={d.id} style={S.coverDrillListItem}>
+              {i + 1}. {d.title} — {categoryLabel(d.category)}
+            </Text>
+          ))}
+        </View>
+
+        <PageFooter generatedAt={generatedAt} pageNum={1} totalPages={totalPages} />
+      </Page>
+
+      {/* One page per drill */}
+      {drills.map((d, idx) => {
+        const pageNum = idx + 2
+        const descTruncated = d.description ? truncateWords(d.description, 100) : ''
+
+        return (
+          <Page key={d.id} size="A4" style={S.page}>
+            <View style={S.drillPageHeader}>
+              <Text style={S.drillPageTitle}>{d.title}</Text>
+              <View style={S.drillPageMeta}>
+                <Text style={S.drillPageMetaText}>{categoryLabel(d.category)}</Text>
+              </View>
+            </View>
+
+            <View style={S.body}>
+              {descTruncated ? (
+                <>
+                  <Text style={S.sectionLabel}>Description</Text>
+                  <Text style={S.description}>{descTruncated}</Text>
+                </>
+              ) : null}
+
+              <Text style={S.sectionLabel}>Diagram</Text>
+              <DiagramArea thumbnail={d.thumbnail} />
+            </View>
+
+            <PageFooter generatedAt={generatedAt} pageNum={pageNum} totalPages={totalPages} />
           </Page>
         )
       })}
