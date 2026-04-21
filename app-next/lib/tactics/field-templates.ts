@@ -168,10 +168,15 @@ const FORMATIONS: Record<FormationName, PlayerTemplate[]> = {
  */
 export function generateFormation(name: FormationName, field: Field): BoardObject[] {
   const templates = FORMATIONS[name]
+  // When half-field mode is on, only the attacking half (x in [length/2, length])
+  // is visually marked. Scale formation x-fractions into that half so every
+  // player sits on the visible side of the pitch with the goal behind the GK.
+  const xScale = field.half_field ? 0.5 : 1.0
+  const xOffset = field.half_field ? 0.5 : 0.0
   return templates.map(t => ({
     id: crypto.randomUUID(),
     type: 'player' as const,
-    x: t.x_frac * field.length_m,
+    x: (xOffset + t.x_frac * xScale) * field.length_m,
     y: t.y_frac * field.width_m,
     role: t.role,
     position: t.position,
