@@ -243,7 +243,7 @@ function drawZone(ctx: SKRSContext2D, obj: ZoneObj, field: Field, layout: FieldL
   ctx.lineWidth = 1
   ctx.strokeRect(x, y, w, h)
   if (obj.label) {
-    const fontSize = Math.max(10, mLen(1.5, layout))
+    const fontSize = Math.max(10, mLen(1.5, layout)) * (obj.scale ?? 1)
     ctx.font = `${fontSize}px sans-serif`
     ctx.fillStyle = '#ffffff'
     ctx.shadowColor = '#000000'
@@ -262,7 +262,7 @@ function drawZoneLine(ctx: SKRSContext2D, obj: ZoneLineObj, field: Field, layout
   const p1 = mToPx(obj.points[2], obj.points[3], field, layout)
   ctx.save()
   ctx.strokeStyle = obj.color
-  ctx.lineWidth = 2
+  ctx.lineWidth = 2 * (obj.scale ?? 1)
   ctx.setLineDash([8, 6])
   ctx.beginPath()
   ctx.moveTo(p0.x, p0.y)
@@ -275,7 +275,7 @@ function drawZoneLine(ctx: SKRSContext2D, obj: ZoneLineObj, field: Field, layout
 type ConeObj = Extract<BoardObject, { type: 'cone' }>
 function drawCone(ctx: SKRSContext2D, obj: ConeObj, field: Field, layout: FieldLayout) {
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(0.8, layout)
+  const radius = mLen(0.8, layout) * (obj.scale ?? 1)
   const fill = CONE_COLORS[obj.color] ?? obj.color
   ctx.save()
   ctx.fillStyle = fill
@@ -301,8 +301,9 @@ type GoalObj = Extract<BoardObject, { type: 'goal' }>
 function drawGoal(ctx: SKRSContext2D, obj: GoalObj, field: Field, layout: FieldLayout) {
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
-  const w = mLen(size.w, layout)
-  const h = mLen(size.h, layout)
+  const scaleFactor = obj.scale ?? 1
+  const w = mLen(size.w, layout) * scaleFactor
+  const h = mLen(size.h, layout) * scaleFactor
   const rotation = (obj.rotation ?? 0) * (Math.PI / 180)
   ctx.save()
   ctx.translate(x, y)
@@ -319,7 +320,7 @@ function drawGoal(ctx: SKRSContext2D, obj: GoalObj, field: Field, layout: FieldL
 type BallObj = Extract<BoardObject, { type: 'ball' }>
 function drawBall(ctx: SKRSContext2D, obj: BallObj, field: Field, layout: FieldLayout) {
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(0.4, layout)
+  const radius = mLen(0.4, layout) * (obj.scale ?? 1)
   ctx.save()
   ctx.setLineDash([])
   ctx.fillStyle = '#ffffff'
@@ -340,7 +341,7 @@ function drawBall(ctx: SKRSContext2D, obj: BallObj, field: Field, layout: FieldL
 type PlayerObj = Extract<BoardObject, { type: 'player' }>
 function drawPlayer(ctx: SKRSContext2D, obj: PlayerObj, field: Field, layout: FieldLayout) {
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(1.2, layout)
+  const radius = mLen(1.2, layout) * (obj.scale ?? 1)
   const fill = PLAYER_COLORS[obj.role] ?? '#9CA3AF'
   const label = obj.number != null ? String(obj.number) : (obj.position ?? '')
   ctx.save()
@@ -374,7 +375,8 @@ function drawArrow(ctx: SKRSContext2D, obj: ArrowObj, field: Field, layout: Fiel
   if (pxPoints.length < 2) return
 
   const style = ARROW_STYLES[obj.style] ?? ARROW_STYLES['pass']
-  const strokeWidth = obj.thickness ?? 3
+  const scaleFactor = obj.scale ?? 1
+  const strokeWidth = (obj.thickness ?? 3) * scaleFactor
 
   ctx.save()
   ctx.strokeStyle = style.stroke
@@ -393,7 +395,7 @@ function drawArrow(ctx: SKRSContext2D, obj: ArrowObj, field: Field, layout: Fiel
   const last = pxPoints[pxPoints.length - 1]
   const prev = pxPoints[pxPoints.length - 2]
   const angle = Math.atan2(last.y - prev.y, last.x - prev.x)
-  const headLen = 10
+  const headLen = 10 * scaleFactor
   const headAngle = Math.PI / 6
 
   ctx.setLineDash([])

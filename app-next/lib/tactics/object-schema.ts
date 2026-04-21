@@ -18,17 +18,20 @@ export const PlayerObject = z.object({
   role: PlayerRole,
   number: z.number().int().min(0).max(99).optional(),
   position: z.string().max(8).optional(),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const ConeObject = z.object({
   ...base, type: z.literal('cone'),
   x: z.number(), y: z.number(),
   color: ConeColor,
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const BallObject = z.object({
   ...base, type: z.literal('ball'),
   x: z.number(), y: z.number(),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const GoalObject = z.object({
@@ -36,6 +39,7 @@ export const GoalObject = z.object({
   x: z.number(), y: z.number(),
   variant: GoalVariant,
   rotation: z.number().optional(),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const ArrowObject = z.object({
@@ -43,6 +47,7 @@ export const ArrowObject = z.object({
   points: z.array(z.number()).min(4),
   style: ArrowStyle,
   thickness: z.number().min(1).max(8).optional(),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const ZoneObject = z.object({
@@ -52,12 +57,14 @@ export const ZoneObject = z.object({
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
   opacity: z.number().min(0).max(1),
   label: z.string().max(40).optional(),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const ZoneLineObject = z.object({
   ...base, type: z.literal('zone-line'),
   points: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
+  scale: z.number().min(0.3).max(3).optional(),
 })
 
 export const BoardObject = z.discriminatedUnion('type', [

@@ -431,6 +431,18 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray uppercase tracking-wide">Player</p>
           <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={p.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: p.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(p.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
+          <div>
             {label('Role')}
             <div className="flex flex-wrap gap-1.5 mt-1">
               {PLAYER_ROLE_OPTIONS.map(o => (
@@ -471,6 +483,18 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray uppercase tracking-wide">Cone</p>
           <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={c.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: c.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(c.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
+          <div>
             {label('Color')}
             <div className="flex gap-1.5 mt-1 flex-wrap">
               {CONE_COLOR_OPTIONS.map(o => (
@@ -492,6 +516,18 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
       return (
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray uppercase tracking-wide">Arrow</p>
+          <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={ar.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(ar.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
           <div>
             {label('Style')}
             <div className="flex gap-2 mt-1">
@@ -516,11 +552,65 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
       )
     }
 
+    if (single.type === 'ball') {
+      const b = single
+      return (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Ball</p>
+          <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={b.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: b.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(b.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (single.type === 'zone-line') {
+      const zl = single
+      return (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Zone Line</p>
+          <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={zl.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: zl.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(zl.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     if (single.type === 'zone') {
       const z = single
       return (
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray uppercase tracking-wide">Zone</p>
+          <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={z.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: z.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(z.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
           <div>
             {label('Color')}
             <div className="flex gap-1.5 mt-1 flex-wrap">
@@ -561,6 +651,18 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
         <div className="space-y-3">
           <p className="text-xs font-semibold text-gray uppercase tracking-wide">Goal</p>
           <div>
+            {label('Size')}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="range" min="0.5" max="2.5" step="0.1"
+                value={g.scale ?? 1}
+                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: g.id, patch: { scale: Number(e.target.value) } })}
+                className="flex-1 accent-green"
+              />
+              <span className="text-xs text-gray w-8 text-right">{(g.scale ?? 1).toFixed(1)}×</span>
+            </div>
+          </div>
+          <div>
             {label('Variant')}
             <div className="flex gap-2 mt-1">
               {(['mini-h', 'mini-v', 'full'] as const).map(v => (
@@ -586,7 +688,7 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
 
     return (
       <div className="text-gray text-sm">
-        <p className="font-semibold capitalize">{single.type}</p>
+        <p className="font-semibold capitalize">{(single as BoardObject).type}</p>
       </div>
     )
   }
@@ -649,6 +751,22 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
                 {btn.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          {label('Size')}
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min="0.5" max="2.5" step="0.1"
+              defaultValue={1}
+              onChange={e => {
+                const s = Number(e.target.value)
+                selectedObjs.forEach(o => dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch: { scale: s } }))
+              }}
+              className="flex-1 accent-green"
+            />
+            <span className="text-xs text-gray w-8 text-right">—×</span>
           </div>
         </div>
 

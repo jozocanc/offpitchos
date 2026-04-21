@@ -430,7 +430,7 @@ export function ZoneNode({
           shadowColor="#000000"
           shadowBlur={3}
           shadowOpacity={0.8}
-          fontSize={Math.max(10, mLen(1.5, layout))}
+          fontSize={Math.max(10, mLen(1.5, layout)) * (obj.scale ?? 1)}
           listening={false}
         />
       )}
@@ -458,7 +458,7 @@ export function ZoneLineNode({
     <Line
       points={[p0.x, p0.y, p1.x, p1.y]}
       stroke={selected ? SEL_COLOR : obj.color}
-      strokeWidth={2}
+      strokeWidth={2 * (obj.scale ?? 1)}
       dash={[8, 6]}
       listening={interactive}
       onClick={
@@ -495,7 +495,7 @@ export function ConeNode({
 }: NodeProps<ConeObj>) {
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(0.8, layout)
+  const radius = mLen(0.8, layout) * (obj.scale ?? 1)
   const draggable = interactive && !obj.locked
 
   const handlers = interactive
@@ -548,7 +548,7 @@ export function BallNode({
 }: NodeProps<BallObj>) {
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(0.4, layout)
+  const radius = mLen(0.4, layout) * (obj.scale ?? 1)
   const draggable = interactive && !obj.locked
 
   const handlers = interactive
@@ -612,8 +612,9 @@ export function GoalNode({
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
-  const w = mLen(size.w, layout)
-  const h = mLen(size.h, layout)
+  const scaleFactor = obj.scale ?? 1
+  const w = mLen(size.w, layout) * scaleFactor
+  const h = mLen(size.h, layout) * scaleFactor
   const draggable = interactive && !obj.locked
 
   const handlers = interactive
@@ -672,7 +673,7 @@ export function PlayerNode({
 }: NodeProps<PlayerObj>) {
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  const radius = mLen(1.2, layout)
+  const radius = mLen(1.2, layout) * (obj.scale ?? 1)
   const label =
     obj.number != null ? String(obj.number) : (obj.position ?? '')
   const draggable = interactive && !obj.locked
@@ -748,7 +749,8 @@ export function ArrowNode({
   }
 
   const arrowStyle = ARROW_STYLES[obj.style] ?? ARROW_STYLES['pass']
-  const strokeWidth = obj.thickness ?? 3
+  const scaleFactor = obj.scale ?? 1
+  const strokeWidth = (obj.thickness ?? 3) * scaleFactor
   const stroke = selected ? SEL_COLOR : arrowStyle.stroke
   const fill = selected ? SEL_COLOR : arrowStyle.fill
 
@@ -759,8 +761,8 @@ export function ArrowNode({
       fill={fill}
       strokeWidth={strokeWidth}
       dash={arrowStyle.dash}
-      pointerLength={10}
-      pointerWidth={10}
+      pointerLength={10 * scaleFactor}
+      pointerWidth={10 * scaleFactor}
       listening={interactive}
       onClick={
         interactive
