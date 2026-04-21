@@ -760,7 +760,7 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
         </div>
 
         <div>
-          {label('Size')}
+          {label('Size (applies to all selected)')}
           <div className="flex items-center gap-2 mt-1">
             <input
               type="range" min="0.5" max="2.5" step="0.1"
@@ -768,10 +768,12 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
               onChange={e => {
                 const s = Number(e.target.value)
                 selectedObjs.forEach(o => dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch: { scale: s } }))
+                const readout = e.currentTarget.nextElementSibling as HTMLElement | null
+                if (readout) readout.textContent = `${s.toFixed(1)}×`
               }}
               className="flex-1 accent-green"
             />
-            <span className="text-xs text-gray w-8 text-right">—×</span>
+            <span className="text-xs text-gray w-10 text-right">1.0×</span>
           </div>
         </div>
 
