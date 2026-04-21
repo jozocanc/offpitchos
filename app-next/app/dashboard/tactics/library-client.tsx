@@ -23,6 +23,11 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
   const [search, setSearch] = useState('')
   const [generateOpen, setGenerateOpen] = useState(false)
 
+  // Select mode
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [exporting, setExporting] = useState(false)
+
   // defaultTeamId for the modal — use the active filter if it's a real team
   const defaultTeamId = teamId !== 'all' && teamId !== 'none' ? teamId : (teams[0]?.id ?? undefined)
 
@@ -51,29 +56,70 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
     startTransition(async () => { await updateVisibility(id, v); router.refresh() })
   }
 
+  function toggleSelectMode() {
+    setSelectMode(m => !m)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleExportBatch() {
+    if (selectedIds.size === 0) return
+    setExporting(true)
+    try {
+      const ids = Array.from(selectedIds).join(',')
+      const url = `/api/tactics/pdf/batch?ids=${encodeURIComponent(ids)}`
+      window.open(url, '_blank')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Tactics Board</h1>
         <div className="flex items-center gap-2">
           {(role === 'doc' || role === 'coach') && (
-            <button
-              type="button"
-              onClick={() => setGenerateOpen(true)}
-              className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
-            >
-              Ask Pep
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setGenerateOpen(true)}
+                className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
+              >
+                Ask Pep
+              </button>
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className={`border px-4 py-2 rounded-lg font-medium transition ${
+                  selectMode
+                    ? 'border-green text-green bg-green/10'
+                    : 'border-white/20 text-white hover:bg-white/5'
+                }`}
+              >
+                {selectMode ? 'Selecting…' : 'Select'}
+              </button>
+            </>
           )}
-          <form action={createBlankDrillFormAction}>
-            {teamId !== 'all' && teamId !== 'none' && (
-              <input type="hidden" name="teamId" value={teamId} />
-            )}
-            <button
-              type="submit"
-              className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
-            >+ New drill</button>
-          </form>
+          {!selectMode && (
+            <form action={createBlankDrillFormAction}>
+              {teamId !== 'all' && teamId !== 'none' && (
+                <input type="hidden" name="teamId" value={teamId} />
+              )}
+              <button
+                type="submit"
+                className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
+              >+ New drill</button>
+            </form>
+          )}
         </div>
       </header>
 
@@ -119,6 +165,9 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
             <DrillCard
               key={d.id}
               drill={d}
+              selectMode={selectMode}
+              selected={selectedIds.has(d.id)}
+              onToggleSelect={toggleSelect}
               onDelete={handleDelete}
               onDuplicate={handleDuplicate}
               onVisibilityChange={handleVisibilityChange}
@@ -126,12 +175,39 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
           ))}
         </div>
       )}
+
+      {/* Floating action bar — visible in select mode */}
+      {selectMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-dark border border-white/15 rounded-xl px-5 py-3 shadow-2xl">
+          <span className="text-sm text-white/70 min-w-[80px]">
+            {selectedIds.size === 0 ? 'None selected' : `${selectedIds.size} selected`}
+          </span>
+          <button
+            type="button"
+            onClick={handleExportBatch}
+            disabled={selectedIds.size === 0 || exporting}
+            className="bg-green text-dark px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            {exporting ? 'Exporting…' : 'Export PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            className="border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function DrillCard({ drill, onDelete, onDuplicate, onVisibilityChange }: {
+function DrillCard({ drill, selectMode, selected, onToggleSelect, onDelete, onDuplicate, onVisibilityChange }: {
   drill: DrillSummary
+  selectMode: boolean
+  selected: boolean
+  onToggleSelect: (id: string) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onVisibilityChange: (id: string, v: 'private'|'team'|'club') => void
@@ -139,10 +215,40 @@ function DrillCard({ drill, onDelete, onDuplicate, onVisibilityChange }: {
   const [menuOpen, setMenuOpen] = useState(false)
   const vIcon = drill.visibility === 'private' ? '🔒' : drill.visibility === 'team' ? '👥' : '🌍'
 
+  function handleCardClick(e: React.MouseEvent) {
+    if (!selectMode) return
+    e.preventDefault()
+    onToggleSelect(drill.id)
+  }
+
+  const cardBorder = selected
+    ? 'border-[#2d6e42] ring-2 ring-[#2d6e42]'
+    : 'border-white/5 hover:border-white/20'
+
   return (
-    <div className="bg-dark-secondary rounded-lg border border-white/5 hover:border-white/20 transition">
-      <Link href={`/dashboard/tactics/${drill.id}`} className="block">
-        <div className="aspect-[16/10] bg-dark rounded-t-lg overflow-hidden flex items-center justify-center text-gray text-xs">
+    <div
+      className={`bg-dark-secondary rounded-lg border transition relative ${cardBorder} ${selectMode ? 'cursor-pointer' : ''}`}
+      onClick={selectMode ? handleCardClick : undefined}
+    >
+      {/* Checkbox overlay in select mode */}
+      {selectMode && (
+        <div
+          className={`absolute top-2 right-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+            selected
+              ? 'bg-[#2d6e42] border-[#2d6e42]'
+              : 'bg-dark/60 border-white/40'
+          }`}
+        >
+          {selected && (
+            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+              <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+      )}
+
+      {selectMode ? (
+        <div className="block aspect-[16/10] bg-dark rounded-t-lg overflow-hidden flex items-center justify-center text-gray text-xs">
           {drill.thumbnailUrl
             ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -150,34 +256,52 @@ function DrillCard({ drill, onDelete, onDuplicate, onVisibilityChange }: {
             )
             : <span>No preview yet</span>}
         </div>
-      </Link>
+      ) : (
+        <Link href={`/dashboard/tactics/${drill.id}`} className="block">
+          <div className="aspect-[16/10] bg-dark rounded-t-lg overflow-hidden flex items-center justify-center text-gray text-xs">
+            {drill.thumbnailUrl
+              ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={drill.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+              )
+              : <span>No preview yet</span>}
+          </div>
+        </Link>
+      )}
+
       <div className="p-3 space-y-2">
-        <Link href={`/dashboard/tactics/${drill.id}`} className="block font-medium truncate hover:text-green">{drill.title}</Link>
+        {selectMode ? (
+          <div className="font-medium truncate">{drill.title}</div>
+        ) : (
+          <Link href={`/dashboard/tactics/${drill.id}`} className="block font-medium truncate hover:text-green">{drill.title}</Link>
+        )}
         <div className="flex items-center gap-2 text-xs text-gray">
           <span>{vIcon} {drill.visibility}</span>
           {drill.teamName && <span>· {drill.teamName}</span>}
           <span>· {drill.category}</span>
         </div>
-        <div className="flex items-center justify-between text-xs text-gray">
-          <span className="truncate">{drill.createdByName ?? 'Unknown'}</span>
-          <div className="relative">
-            <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" className="px-2 py-1 hover:bg-white/5 rounded">⋯</button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-0" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-dark border border-white/10 rounded-lg shadow-lg z-20 min-w-[160px]">
-                  <button onClick={() => { setMenuOpen(false); onDuplicate(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Duplicate</button>
-                  {drill.canEdit && <>
-                    <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'private') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Private</button>
-                    <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'team') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Team</button>
-                    <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'club') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Club-wide</button>
-                  </>}
-                  {drill.canDelete && <button onClick={() => { setMenuOpen(false); onDelete(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5 text-red">Delete</button>}
-                </div>
-              </>
-            )}
+        {!selectMode && (
+          <div className="flex items-center justify-between text-xs text-gray">
+            <span className="truncate">{drill.createdByName ?? 'Unknown'}</span>
+            <div className="relative">
+              <button onClick={() => setMenuOpen(o => !o)} aria-label="More options" className="px-2 py-1 hover:bg-white/5 rounded">⋯</button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-0" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 bg-dark border border-white/10 rounded-lg shadow-lg z-20 min-w-[160px]">
+                    <button onClick={() => { setMenuOpen(false); onDuplicate(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Duplicate</button>
+                    {drill.canEdit && <>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'private') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Private</button>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'team') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Team</button>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'club') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Club-wide</button>
+                    </>}
+                    {drill.canDelete && <button onClick={() => { setMenuOpen(false); onDelete(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5 text-red">Delete</button>}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
