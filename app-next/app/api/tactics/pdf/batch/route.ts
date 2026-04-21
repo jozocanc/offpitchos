@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DrillRowSchema } from '@/lib/tactics/object-schema'
 import { renderToStream, type DocumentProps } from '@react-pdf/renderer'
 import { BatchDrillPDF } from '@/lib/tactics/pdf-document'
 import type { BatchDrill } from '@/lib/tactics/pdf-document'
@@ -21,7 +20,11 @@ async function resolveThumbnail(row: any): Promise<Buffer> {
       // fall through to on-the-fly render
     }
   }
-  const parsed = DrillRowSchema.safeParse(row)
+  // DrillRowSchema requires columns not fetched by the batch query (club_id,
+  // created_by, visibility, etc.).  Use DrillDocSchema instead — it only
+  // needs `field` + `objects`, which are always selected.
+  const { DrillDocSchema } = await import('@/lib/tactics/object-schema')
+  const parsed = DrillDocSchema.safeParse(row)
   if (parsed.success) {
     return renderThumbnailPng(parsed.data.field, parsed.data.objects)
   }
