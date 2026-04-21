@@ -1799,16 +1799,23 @@ export default function EditorClient({
             )}
           </div>
 
-          {/* Next placement size */}
-          <div className="px-2 py-2 border-t border-white/5">
+          {/* Size — also resizes selected objects while dragging */}
+          <div className="px-2 py-2 border-t border-white/5" title="Drags: resizes selection. Releases: becomes default size for new placements.">
             <div className="text-[10px] text-gray text-center mb-1">Size</div>
             <input
               type="range" min="0.5" max="2.5" step="0.1"
               value={state.nextPlaceScale}
-              onChange={e => dispatch({ type: 'SET_NEXT_PLACE_SCALE', scale: Number(e.target.value) })}
+              onChange={e => {
+                const s = Number(e.target.value)
+                dispatch({ type: 'SET_NEXT_PLACE_SCALE', scale: s })
+                // If anything is selected, also resize those objects immediately.
+                state.selectedIds.forEach(id => dispatch({ type: 'UPDATE_OBJECT', id, patch: { scale: s } }))
+              }}
               className="w-full accent-green"
             />
-            <div className="text-[10px] text-gray text-center mt-0.5">{state.nextPlaceScale.toFixed(1)}×</div>
+            <div className="text-[10px] text-gray text-center mt-0.5">
+              {state.nextPlaceScale.toFixed(1)}×{state.selectedIds.length > 0 ? ` · ${state.selectedIds.length} sel` : ''}
+            </div>
           </div>
 
           {/* Undo */}
