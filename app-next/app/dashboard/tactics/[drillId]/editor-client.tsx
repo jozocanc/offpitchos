@@ -396,23 +396,6 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
           </select>
         </div>
 
-        <div>
-          {label('Rotate field + objects')}
-          <div className="flex gap-2 mt-1">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'ROTATE_FIELD', direction: 'ccw' })}
-              title="Rotate 90° counter-clockwise"
-              className="flex-1 px-3 py-1 rounded text-sm border border-white/10 text-gray hover:border-green hover:text-green"
-            >↺ 90°</button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'ROTATE_FIELD', direction: 'cw' })}
-              title="Rotate 90° clockwise"
-              className="flex-1 px-3 py-1 rounded text-sm border border-white/10 text-gray hover:border-green hover:text-green"
-            >↻ 90°</button>
-          </div>
-        </div>
 
         <div>
           {label('Style')}
