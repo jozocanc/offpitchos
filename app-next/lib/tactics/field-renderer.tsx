@@ -85,12 +85,32 @@ export function useFieldLayout(
   return { pxPerMeter, fieldPxX, fieldPxY, fieldPxW, fieldPxH }
 }
 
-// helpers: convert field-meter coords to stage-pixel coords
-function mToPx(xM: number, yM: number, layout: FieldLayout) {
-  return {
-    x: layout.fieldPxX + xM * layout.pxPerMeter,
-    y: layout.fieldPxY + yM * layout.pxPerMeter,
+// helpers: convert field-meter coords to stage-pixel coords (orientation-aware)
+function mToPx(xM: number, yM: number, field: Field, layout: FieldLayout) {
+  if (field.orientation === 'horizontal') {
+    return {
+      x: layout.fieldPxX + xM * layout.pxPerMeter,
+      y: layout.fieldPxY + yM * layout.pxPerMeter,
+    }
   }
+  // vertical: length (x-meter) runs down pixel-y; width (y-meter) runs across pixel-x
+  return {
+    x: layout.fieldPxX + yM * layout.pxPerMeter,
+    y: layout.fieldPxY + xM * layout.pxPerMeter,
+  }
+}
+
+// Inverse: stage-pixel coords → field-meter coords (orientation-aware)
+export function pxToM(
+  px: number, py: number, field: Field, layout: FieldLayout
+): { xM: number; yM: number } {
+  const dx = px - layout.fieldPxX
+  const dy = py - layout.fieldPxY
+  if (field.orientation === 'horizontal') {
+    return { xM: dx / layout.pxPerMeter, yM: dy / layout.pxPerMeter }
+  }
+  // vertical: pixel-x → yM, pixel-y → xM
+  return { xM: dy / layout.pxPerMeter, yM: dx / layout.pxPerMeter }
 }
 
 function mLen(meters: number, layout: FieldLayout) {
@@ -328,6 +348,7 @@ export function FieldMarkings({ field, layout, style }: FieldMarkingsProps) {
 
 interface NodeProps<T extends BoardObject> {
   obj: T
+  field: Field
   layout: FieldLayout
   selected: boolean
   interactive: boolean
@@ -346,6 +367,7 @@ type ZoneObj = Extract<BoardObject, { type: 'zone' }>
 
 export function ZoneNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -355,9 +377,10 @@ export function ZoneNode({
   onContextMenu,
 }: NodeProps<ZoneObj>) {
   if (obj.hidden) return null
-  const { x, y } = mToPx(obj.x, obj.y, layout)
-  const w = mLen(obj.width, layout)
-  const h = mLen(obj.height, layout)
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
+  // In vertical orientation, the x/y axes are swapped, so pixel width = height_m * ppm and vice versa
+  const w = field.orientation === 'horizontal' ? mLen(obj.width, layout) : mLen(obj.height, layout)
+  const h = field.orientation === 'horizontal' ? mLen(obj.height, layout) : mLen(obj.width, layout)
   const draggable = interactive && !obj.locked
 
   const handlers = interactive
@@ -371,8 +394,7 @@ export function ZoneNode({
         },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
-          const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
-          const yM = (node.y() - layout.fieldPxY) / layout.pxPerMeter
+          const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
         },
       }
@@ -421,6 +443,7 @@ type ZoneLineObj = Extract<BoardObject, { type: 'zone-line' }>
 
 export function ZoneLineNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -428,8 +451,8 @@ export function ZoneLineNode({
   onContextMenu,
 }: NodeProps<ZoneLineObj>) {
   if (obj.hidden) return null
-  const p0 = mToPx(obj.points[0], obj.points[1], layout)
-  const p1 = mToPx(obj.points[2], obj.points[3], layout)
+  const p0 = mToPx(obj.points[0], obj.points[1], field, layout)
+  const p1 = mToPx(obj.points[2], obj.points[3], field, layout)
 
   return (
     <Line
@@ -461,6 +484,7 @@ type ConeObj = Extract<BoardObject, { type: 'cone' }>
 
 export function ConeNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -470,7 +494,7 @@ export function ConeNode({
   onContextMenu,
 }: NodeProps<ConeObj>) {
   if (obj.hidden) return null
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.8, layout)
   const draggable = interactive && !obj.locked
 
@@ -485,8 +509,7 @@ export function ConeNode({
         },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
-          const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
-          const yM = (node.y() - layout.fieldPxY) / layout.pxPerMeter
+          const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
         },
       }
@@ -514,6 +537,7 @@ type BallObj = Extract<BoardObject, { type: 'ball' }>
 
 export function BallNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -523,7 +547,7 @@ export function BallNode({
   onContextMenu,
 }: NodeProps<BallObj>) {
   if (obj.hidden) return null
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.4, layout)
   const draggable = interactive && !obj.locked
 
@@ -538,8 +562,7 @@ export function BallNode({
         },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
-          const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
-          const yM = (node.y() - layout.fieldPxY) / layout.pxPerMeter
+          const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
         },
       }
@@ -577,6 +600,7 @@ const GOAL_SIZES: Record<string, { w: number; h: number }> = {
 
 export function GoalNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -586,7 +610,7 @@ export function GoalNode({
   onContextMenu,
 }: NodeProps<GoalObj>) {
   if (obj.hidden) return null
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
   const w = mLen(size.w, layout)
   const h = mLen(size.h, layout)
@@ -603,8 +627,7 @@ export function GoalNode({
         },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
-          const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
-          const yM = (node.y() - layout.fieldPxY) / layout.pxPerMeter
+          const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
         },
       }
@@ -638,6 +661,7 @@ type PlayerObj = Extract<BoardObject, { type: 'player' }>
 
 export function PlayerNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -647,7 +671,7 @@ export function PlayerNode({
   onContextMenu,
 }: NodeProps<PlayerObj>) {
   if (obj.hidden) return null
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(1.2, layout)
   const label =
     obj.number != null ? String(obj.number) : (obj.position ?? '')
@@ -664,8 +688,7 @@ export function PlayerNode({
         },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
           const node = e.target
-          const xM = (node.x() - layout.fieldPxX) / layout.pxPerMeter
-          const yM = (node.y() - layout.fieldPxY) / layout.pxPerMeter
+          const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
         },
       }
@@ -710,6 +733,7 @@ type ArrowObj = Extract<BoardObject, { type: 'arrow' }>
 
 export function ArrowNode({
   obj,
+  field,
   layout,
   selected,
   interactive,
@@ -719,7 +743,7 @@ export function ArrowNode({
   if (obj.hidden) return null
   const pxPoints: number[] = []
   for (let i = 0; i < obj.points.length - 1; i += 2) {
-    const { x, y } = mToPx(obj.points[i], obj.points[i + 1], layout)
+    const { x, y } = mToPx(obj.points[i], obj.points[i + 1], field, layout)
     pxPoints.push(x, y)
   }
 
@@ -821,6 +845,7 @@ export default function FieldRenderer({
     const selected = selectedSet.has(obj.id)
     const commonProps = {
       obj,
+      field,
       layout,
       selected,
       interactive,
@@ -854,8 +879,8 @@ export default function FieldRenderer({
   let previewPxPoints: number[] | null = null
   let previewStroke = '#ffffff'
   if (previewArrow) {
-    const tail = mToPx(previewArrow.tail.x, previewArrow.tail.y, layout)
-    const head = mToPx(previewArrow.head.x, previewArrow.head.y, layout)
+    const tail = mToPx(previewArrow.tail.x, previewArrow.tail.y, field, layout)
+    const head = mToPx(previewArrow.head.x, previewArrow.head.y, field, layout)
     previewPxPoints = [tail.x, tail.y, head.x, head.y]
     const arrowStyle = ARROW_STYLES[previewArrow.style] ?? ARROW_STYLES['pass']
     previewStroke = arrowStyle.stroke

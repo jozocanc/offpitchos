@@ -71,10 +71,17 @@ function computeLayout(field: Field, W: number, H: number): FieldLayout {
   return { pxPerMeter, fieldPxX, fieldPxY, fieldPxW, fieldPxH }
 }
 
-function mToPx(xM: number, yM: number, layout: FieldLayout) {
+function mToPx(xM: number, yM: number, field: Field, layout: FieldLayout) {
+  if (field.orientation === 'horizontal') {
+    return {
+      x: layout.fieldPxX + xM * layout.pxPerMeter,
+      y: layout.fieldPxY + yM * layout.pxPerMeter,
+    }
+  }
+  // vertical: length (x-meter) runs down pixel-y; width (y-meter) runs across pixel-x
   return {
-    x: layout.fieldPxX + xM * layout.pxPerMeter,
-    y: layout.fieldPxY + yM * layout.pxPerMeter,
+    x: layout.fieldPxX + yM * layout.pxPerMeter,
+    y: layout.fieldPxY + xM * layout.pxPerMeter,
   }
 }
 
@@ -196,35 +203,36 @@ function drawObjects(ctx: SKRSContext2D, field: Field, objects: BoardObject[], W
 
     switch (obj.type) {
       case 'zone':
-        drawZone(ctx, obj, layout)
+        drawZone(ctx, obj, field, layout)
         break
       case 'zone-line':
-        drawZoneLine(ctx, obj, layout)
+        drawZoneLine(ctx, obj, field, layout)
         break
       case 'cone':
-        drawCone(ctx, obj, layout)
+        drawCone(ctx, obj, field, layout)
         break
       case 'goal':
-        drawGoal(ctx, obj, layout)
+        drawGoal(ctx, obj, field, layout)
         break
       case 'ball':
-        drawBall(ctx, obj, layout)
+        drawBall(ctx, obj, field, layout)
         break
       case 'player':
-        drawPlayer(ctx, obj, layout)
+        drawPlayer(ctx, obj, field, layout)
         break
       case 'arrow':
-        drawArrow(ctx, obj, layout)
+        drawArrow(ctx, obj, field, layout)
         break
     }
   }
 }
 
 type ZoneObj = Extract<BoardObject, { type: 'zone' }>
-function drawZone(ctx: SKRSContext2D, obj: ZoneObj, layout: FieldLayout) {
-  const { x, y } = mToPx(obj.x, obj.y, layout)
-  const w = mLen(obj.width, layout)
-  const h = mLen(obj.height, layout)
+function drawZone(ctx: SKRSContext2D, obj: ZoneObj, field: Field, layout: FieldLayout) {
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
+  // In vertical orientation axes are swapped, so pixel width = height_m * ppm and vice versa
+  const w = field.orientation === 'horizontal' ? mLen(obj.width, layout) : mLen(obj.height, layout)
+  const h = field.orientation === 'horizontal' ? mLen(obj.height, layout) : mLen(obj.width, layout)
   ctx.save()
   ctx.globalAlpha = obj.opacity
   ctx.fillStyle = obj.color
@@ -249,9 +257,9 @@ function drawZone(ctx: SKRSContext2D, obj: ZoneObj, layout: FieldLayout) {
 }
 
 type ZoneLineObj = Extract<BoardObject, { type: 'zone-line' }>
-function drawZoneLine(ctx: SKRSContext2D, obj: ZoneLineObj, layout: FieldLayout) {
-  const p0 = mToPx(obj.points[0], obj.points[1], layout)
-  const p1 = mToPx(obj.points[2], obj.points[3], layout)
+function drawZoneLine(ctx: SKRSContext2D, obj: ZoneLineObj, field: Field, layout: FieldLayout) {
+  const p0 = mToPx(obj.points[0], obj.points[1], field, layout)
+  const p1 = mToPx(obj.points[2], obj.points[3], field, layout)
   ctx.save()
   ctx.strokeStyle = obj.color
   ctx.lineWidth = 2
@@ -265,8 +273,8 @@ function drawZoneLine(ctx: SKRSContext2D, obj: ZoneLineObj, layout: FieldLayout)
 }
 
 type ConeObj = Extract<BoardObject, { type: 'cone' }>
-function drawCone(ctx: SKRSContext2D, obj: ConeObj, layout: FieldLayout) {
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+function drawCone(ctx: SKRSContext2D, obj: ConeObj, field: Field, layout: FieldLayout) {
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.8, layout)
   const fill = CONE_COLORS[obj.color] ?? obj.color
   ctx.save()
@@ -290,8 +298,8 @@ function drawCone(ctx: SKRSContext2D, obj: ConeObj, layout: FieldLayout) {
 }
 
 type GoalObj = Extract<BoardObject, { type: 'goal' }>
-function drawGoal(ctx: SKRSContext2D, obj: GoalObj, layout: FieldLayout) {
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+function drawGoal(ctx: SKRSContext2D, obj: GoalObj, field: Field, layout: FieldLayout) {
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
   const w = mLen(size.w, layout)
   const h = mLen(size.h, layout)
@@ -309,8 +317,8 @@ function drawGoal(ctx: SKRSContext2D, obj: GoalObj, layout: FieldLayout) {
 }
 
 type BallObj = Extract<BoardObject, { type: 'ball' }>
-function drawBall(ctx: SKRSContext2D, obj: BallObj, layout: FieldLayout) {
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+function drawBall(ctx: SKRSContext2D, obj: BallObj, field: Field, layout: FieldLayout) {
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.4, layout)
   ctx.save()
   ctx.setLineDash([])
@@ -330,8 +338,8 @@ function drawBall(ctx: SKRSContext2D, obj: BallObj, layout: FieldLayout) {
 }
 
 type PlayerObj = Extract<BoardObject, { type: 'player' }>
-function drawPlayer(ctx: SKRSContext2D, obj: PlayerObj, layout: FieldLayout) {
-  const { x, y } = mToPx(obj.x, obj.y, layout)
+function drawPlayer(ctx: SKRSContext2D, obj: PlayerObj, field: Field, layout: FieldLayout) {
+  const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(1.2, layout)
   const fill = PLAYER_COLORS[obj.role] ?? '#9CA3AF'
   const label = obj.number != null ? String(obj.number) : (obj.position ?? '')
@@ -356,12 +364,12 @@ function drawPlayer(ctx: SKRSContext2D, obj: PlayerObj, layout: FieldLayout) {
 }
 
 type ArrowObj = Extract<BoardObject, { type: 'arrow' }>
-function drawArrow(ctx: SKRSContext2D, obj: ArrowObj, layout: FieldLayout) {
+function drawArrow(ctx: SKRSContext2D, obj: ArrowObj, field: Field, layout: FieldLayout) {
   if (obj.points.length < 4) return
 
   const pxPoints: Array<{ x: number; y: number }> = []
   for (let i = 0; i < obj.points.length - 1; i += 2) {
-    pxPoints.push(mToPx(obj.points[i], obj.points[i + 1], layout))
+    pxPoints.push(mToPx(obj.points[i], obj.points[i + 1], field, layout))
   }
   if (pxPoints.length < 2) return
 

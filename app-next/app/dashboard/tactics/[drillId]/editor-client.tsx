@@ -5,7 +5,7 @@ import React, {
 } from 'react'
 import Link from 'next/link'
 import Konva from 'konva'
-import FieldRenderer, { useFieldLayout } from '@/lib/tactics/field-renderer'
+import FieldRenderer, { useFieldLayout, pxToM } from '@/lib/tactics/field-renderer'
 import type { PreviewArrow, MarqueeRect, AlignmentGuide } from '@/lib/tactics/field-renderer'
 import type { BoardObject, DrillRow, Field } from '@/lib/tactics/object-schema'
 import {
@@ -388,13 +388,7 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
           {label('Orientation')}
           <select
             value={field.orientation}
-            onChange={e => {
-              const next = e.target.value as 'horizontal' | 'vertical'
-              if (next === field.orientation) return
-              // Orientation change must rotate coords too, otherwise objects
-              // appear in the wrong places after switching.
-              dispatch({ type: 'ROTATE_FIELD', direction: 'cw' })
-            }}
+            onChange={e => dispatch({ type: 'SET_FIELD', patch: { orientation: e.target.value as 'horizontal' | 'vertical' } })}
             className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
           >
             <option value="horizontal">Horizontal</option>
@@ -949,16 +943,13 @@ export default function EditorClient({
     if (rafRef.current !== null) return // throttle via RAF
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
-      setPreviewHead({
-        x: (stageX - layout.fieldPxX) / layout.pxPerMeter,
-        y: (stageY - layout.fieldPxY) / layout.pxPerMeter,
-      })
+      const { xM, yM } = pxToM(stageX, stageY, state.field, layout)
+      setPreviewHead({ x: xM, y: yM })
     })
   }, [state.tool, state.arrowDraftTail, layout])
 
   const handleStageClick = useCallback((stageX: number, stageY: number) => {
-    const xM = (stageX - layout.fieldPxX) / layout.pxPerMeter
-    const yM = (stageY - layout.fieldPxY) / layout.pxPerMeter
+    const { xM, yM } = pxToM(stageX, stageY, state.field, layout)
 
     switch (state.tool) {
       case 'player':
@@ -1175,14 +1166,29 @@ export default function EditorClient({
       if (d < tol && d < bestYDist) { bestY = sy; bestYDist = d }
     }
 
+    const isH = field.orientation === 'horizontal'
     const guides: AlignmentGuide[] = []
     if (bestX !== xM) {
-      const px = fieldPxX + bestX * pxPerMeter
-      guides.push({ points: [px, fieldPxY, px, fieldPxY + fieldPxH] })
+      if (isH) {
+        // xM is a constant on the x-pixel axis → vertical guide line
+        const px = fieldPxX + bestX * pxPerMeter
+        guides.push({ points: [px, fieldPxY, px, fieldPxY + fieldPxH] })
+      } else {
+        // in vertical orientation, xM maps to pixel-y → horizontal guide line
+        const py = fieldPxY + bestX * pxPerMeter
+        guides.push({ points: [fieldPxX, py, fieldPxX + fieldPxW, py] })
+      }
     }
     if (bestY !== yM) {
-      const py = fieldPxY + bestY * pxPerMeter
-      guides.push({ points: [fieldPxX, py, fieldPxX + fieldPxW, py] })
+      if (isH) {
+        // yM is a constant on the y-pixel axis → horizontal guide line
+        const py = fieldPxY + bestY * pxPerMeter
+        guides.push({ points: [fieldPxX, py, fieldPxX + fieldPxW, py] })
+      } else {
+        // in vertical orientation, yM maps to pixel-x → vertical guide line
+        const px = fieldPxX + bestY * pxPerMeter
+        guides.push({ points: [px, fieldPxY, px, fieldPxY + fieldPxH] })
+      }
     }
 
     return { xM: bestX, yM: bestY, guides }
@@ -1240,10 +1246,14 @@ export default function EditorClient({
 
     // Convert marquee px to field-meter and find intersecting objects
     const lay = layout
-    const marqX1 = (mRect.x - lay.fieldPxX) / lay.pxPerMeter
-    const marqY1 = (mRect.y - lay.fieldPxY) / lay.pxPerMeter
-    const marqX2 = marqX1 + mRect.width / lay.pxPerMeter
-    const marqY2 = marqY1 + mRect.height / lay.pxPerMeter
+    const field = stateRef.current.field
+    const topLeft = pxToM(mRect.x, mRect.y, field, lay)
+    const bottomRight = pxToM(mRect.x + mRect.width, mRect.y + mRect.height, field, lay)
+    // In vertical orientation pxToM swaps axes, so we need min/max to get proper bounds
+    const marqX1 = Math.min(topLeft.xM, bottomRight.xM)
+    const marqY1 = Math.min(topLeft.yM, bottomRight.yM)
+    const marqX2 = Math.max(topLeft.xM, bottomRight.xM)
+    const marqY2 = Math.max(topLeft.yM, bottomRight.yM)
 
     const hit: string[] = []
     for (const o of stateRef.current.objects) {
@@ -1270,8 +1280,7 @@ export default function EditorClient({
   // We use a DOM approach: listen for Konva dragmove events on the stage
   const handleSnapDragMove = useCallback((id: string, stageX: number, stageY: number) => {
     const lay = layout
-    const xM = (stageX - lay.fieldPxX) / lay.pxPerMeter
-    const yM = (stageY - lay.fieldPxY) / lay.pxPerMeter
+    const { xM, yM } = pxToM(stageX, stageY, stateRef.current.field, lay)
     const result = computeSnap(
       xM, yM,
       stateRef.current.field, stateRef.current.objects, id,
@@ -1293,9 +1302,19 @@ export default function EditorClient({
       const id = node.id()
       if (!id) return
       const result = handleSnapDragMove(id, node.x(), node.y())
-      if (snapEnabled && (result.xM !== (node.x() - layout.fieldPxX) / layout.pxPerMeter || result.yM !== (node.y() - layout.fieldPxY) / layout.pxPerMeter)) {
-        node.x(layout.fieldPxX + result.xM * layout.pxPerMeter)
-        node.y(layout.fieldPxY + result.yM * layout.pxPerMeter)
+      const { xM: curXM, yM: curYM } = pxToM(node.x(), node.y(), stateRef.current.field, layout)
+      if (snapEnabled && (result.xM !== curXM || result.yM !== curYM)) {
+        // Convert snapped meter coords back to pixel using mToPx logic inline
+        // (we inline rather than import mToPx to avoid circular complexity)
+        const { fieldPxX, fieldPxY, pxPerMeter } = layout
+        const field = stateRef.current.field
+        if (field.orientation === 'horizontal') {
+          node.x(fieldPxX + result.xM * pxPerMeter)
+          node.y(fieldPxY + result.yM * pxPerMeter)
+        } else {
+          node.x(fieldPxX + result.yM * pxPerMeter)
+          node.y(fieldPxY + result.xM * pxPerMeter)
+        }
       }
     }
     function onDragEnd() {
