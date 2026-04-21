@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { DrillRowSchema } from '@/lib/tactics/object-schema'
+import { DrillDocSchema } from '@/lib/tactics/object-schema'
 import { renderToStream, type DocumentProps } from '@react-pdf/renderer'
 import { SessionPlanPDF } from '@/lib/tactics/pdf-document'
 import type { SessionDrill, SessionEvent } from '@/lib/tactics/pdf-document'
@@ -25,7 +25,7 @@ async function resolveDrillThumbnail(drillRow: any): Promise<Buffer> {
     }
   }
   // Render on the fly using field + objects from the drill row
-  const parsed = DrillRowSchema.safeParse(drillRow)
+  const parsed = DrillDocSchema.safeParse(drillRow)
   if (parsed.success) {
     return renderThumbnailPng(parsed.data.field, parsed.data.objects)
   }
