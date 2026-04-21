@@ -332,6 +332,22 @@ export function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: Pro
             min={1} max={8} step={1}
             onChange={v => dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { thickness: v } })}
           />
+          <div>
+            {label('Play order')}
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min={0} max={99}
+                value={ar.animate_order ?? 0}
+                onChange={e => {
+                  const v = Math.min(99, Math.max(0, Number(e.target.value) || 0))
+                  dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { animate_order: v === 0 ? undefined : v } as Partial<typeof ar> })
+                }}
+                className="w-20 bg-dark border border-white/10 focus:border-green/50 rounded px-2 py-1.5 text-sm text-white outline-none transition-colors tabular-nums"
+              />
+              <span className="text-[11px] text-gray/60">0 = not animated</span>
+            </div>
+          </div>
         </div>
       )
     }

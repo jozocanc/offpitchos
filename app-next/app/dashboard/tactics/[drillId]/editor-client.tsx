@@ -23,6 +23,10 @@ import {
   PLAYER_ROLE_OPTIONS,
   CONE_COLOR_OPTIONS,
 } from './editor-types'
+import AnimationOverlay from './animation-overlay'
+import type { AnimArrow } from './animation-overlay'
+import HistoryModal from './history-modal'
+import CommentsPanel from './comments-panel'
 
 // ─── Module-level clipboard (Phase A: in-memory only) ─────────────────────────
 let clipboard: BoardObject[] = []
@@ -190,6 +194,9 @@ function reducer(s: EditorState, a: Action): EditorState {
     case 'LOAD_FORMATION':
       return withHistory(s, { field: s.field, objects: a.objects })
 
+    case 'RESTORE_SNAPSHOT':
+      return withHistory(s, { field: a.field, objects: a.objects })
+
     default:
       return s
   }
@@ -321,6 +328,10 @@ export default function EditorClient({
   const formationBtnRef = useRef<HTMLButtonElement | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
   // Arrow preview: tracks current mouse position in field-meter coords
   const [previewHead, setPreviewHead] = useState<{ x: number; y: number } | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -1141,6 +1152,87 @@ export default function EditorClient({
             </span>
           </div>
 
+          {/* ▶ Play animation button */}
+          {(() => {
+            const animArrows = state.objects.filter(
+              o => o.type === 'arrow' && typeof (o as { animate_order?: number }).animate_order === 'number' && (o as { animate_order?: number }).animate_order! > 0
+            )
+            return (
+              <button
+                onClick={() => {
+                  if (isPlaying) {
+                    setIsPlaying(false)
+                    return
+                  }
+                  if (animArrows.length === 0) {
+                    // Gentle toast-like feedback via the save status area — a proper toast
+                    // would require a library; we use a temp state trick
+                    setSaveStatus('error')
+                    setTimeout(() => setSaveStatus('saved'), 2500)
+                    return
+                  }
+                  setIsPlaying(true)
+                }}
+                title={isPlaying ? 'Stop animation' : 'Play arrow animation'}
+                className={[
+                  'inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold border transition flex-shrink-0',
+                  isPlaying
+                    ? 'bg-green/20 border-green/50 text-green hover:bg-green/30'
+                    : 'bg-dark border-white/10 text-gray hover:text-white hover:border-white/20',
+                ].join(' ')}
+              >
+                {isPlaying ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Play
+                  </>
+                )}
+              </button>
+            )
+          })()}
+
+          {/* ⋯ More menu (History, etc.) */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setMoreMenuOpen(v => !v)}
+              title="More options"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-white/10 text-gray hover:text-white hover:border-white/20 transition text-base leading-none"
+            >
+              ⋯
+            </button>
+            {moreMenuOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 w-40 bg-dark-secondary border border-white/10 rounded-lg shadow-xl py-1"
+                onMouseLeave={() => setMoreMenuOpen(false)}
+              >
+                <button
+                  onClick={() => { setHistoryOpen(true); setMoreMenuOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray hover:text-white hover:bg-dark/60 flex items-center gap-2 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <polyline points="12 7 12 12 15 15"/>
+                  </svg>
+                  History
+                </button>
+                <button
+                  onClick={() => { setCommentsOpen(v => !v); setMoreMenuOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray hover:text-white hover:bg-dark/60 flex items-center gap-2 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  {commentsOpen ? 'Hide Comments' : 'Comments'}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Export menu */}
           <div className="relative flex-shrink-0">
             <button
@@ -1486,37 +1578,69 @@ export default function EditorClient({
           onPointerMove={handleCanvasPointerMove}
           onPointerUp={handleCanvasPointerUp}
         >
-          {canvasSize.w > 0 && canvasSize.h > 0 && (
-            <FieldRenderer
-              field={state.field}
-              objects={state.objects}
-              width={canvasSize.w}
-              height={canvasSize.h}
-              interactive={state.tool === 'select'}
-              selectedIds={state.selectedIds}
-              stageRef={stageRef}
-              onSelect={(id, additive) => {
-                if (id === null) {
-                  if (!isMarqueeRef.current) dispatch({ type: 'SELECT', ids: [] })
-                } else {
-                  dispatch({ type: 'SELECT', ids: [id], additive })
-                }
-              }}
-              onDragEnd={(id, x, y) => dispatch({ type: 'MOVE_OBJECT', id, x, y })}
-              onContextMenu={(id, clientX, clientY) => setContextMenu({ id, clientX, clientY })}
-              previewArrow={
-                state.tool === 'arrow' && state.arrowDraftTail && previewHead
-                  ? {
-                      tail: state.arrowDraftTail,
-                      head: previewHead,
-                      style: state.toolOption || 'pass',
-                    } as PreviewArrow
-                  : undefined
-              }
-              marquee={marquee}
-              alignmentGuides={alignmentGuides}
-            />
-          )}
+          {canvasSize.w > 0 && canvasSize.h > 0 && (() => {
+            // Arrows that are animated (animate_order >= 1) get hidden from renderer during playback
+            const animatedArrowIds = isPlaying
+              ? state.objects
+                  .filter(o => o.type === 'arrow' && typeof (o as { animate_order?: number }).animate_order === 'number' && (o as { animate_order?: number }).animate_order! > 0)
+                  .map(o => o.id)
+              : []
+            const animArrows: AnimArrow[] = state.objects
+              .filter((o): o is Extract<typeof o, { type: 'arrow' }> =>
+                o.type === 'arrow' &&
+                typeof (o as { animate_order?: number }).animate_order === 'number' &&
+                (o as { animate_order?: number }).animate_order! > 0
+              )
+              .map(o => ({
+                id: o.id,
+                points: o.points,
+                style: o.style,
+                animate_order: (o as { animate_order: number }).animate_order,
+              }))
+            return (
+              <>
+                <FieldRenderer
+                  field={state.field}
+                  objects={state.objects}
+                  width={canvasSize.w}
+                  height={canvasSize.h}
+                  interactive={!isPlaying && state.tool === 'select'}
+                  selectedIds={state.selectedIds}
+                  hiddenIds={animatedArrowIds}
+                  stageRef={stageRef}
+                  onSelect={(id, additive) => {
+                    if (id === null) {
+                      if (!isMarqueeRef.current) dispatch({ type: 'SELECT', ids: [] })
+                    } else {
+                      dispatch({ type: 'SELECT', ids: [id], additive })
+                    }
+                  }}
+                  onDragEnd={(id, x, y) => dispatch({ type: 'MOVE_OBJECT', id, x, y })}
+                  onContextMenu={(id, clientX, clientY) => setContextMenu({ id, clientX, clientY })}
+                  previewArrow={
+                    state.tool === 'arrow' && state.arrowDraftTail && previewHead
+                      ? {
+                          tail: state.arrowDraftTail,
+                          head: previewHead,
+                          style: state.toolOption || 'pass',
+                        } as PreviewArrow
+                      : undefined
+                  }
+                  marquee={marquee}
+                  alignmentGuides={alignmentGuides}
+                />
+                <AnimationOverlay
+                  arrows={animArrows}
+                  field={state.field}
+                  layout={layout}
+                  width={canvasSize.w}
+                  height={canvasSize.h}
+                  running={isPlaying}
+                  onStop={() => setIsPlaying(false)}
+                />
+              </>
+            )
+          })()}
 
           {/* ── Snap toggle pill ────────────────────────────────────────────── */}
           <button
@@ -1610,6 +1734,26 @@ export default function EditorClient({
           onToggleCollapse={() => setPropsPanelCollapsed(v => !v)}
         />
       </div>
+
+      {/* ── Comments panel (slides in below main area when open) ──────────── */}
+      {commentsOpen && (
+        <div className="flex-shrink-0 bg-dark-secondary border-t border-white/5 px-4 py-3 max-h-72 overflow-y-auto">
+          <CommentsPanel
+            drillId={drill.id}
+          />
+        </div>
+      )}
+
+      {/* ── History modal ─────────────────────────────────────────────────── */}
+      {historyOpen && (
+        <HistoryModal
+          drillId={drill.id}
+          onClose={() => setHistoryOpen(false)}
+          onRestore={(field, objects) => {
+            dispatch({ type: 'RESTORE_SNAPSHOT', field, objects })
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -41,6 +41,7 @@ export type Action =
   | { type: 'SET_ZONE_DRAFT'; corner?: { x: number; y: number } }
   | { type: 'LOAD_FORMATION'; objects: BoardObject[] }
   | { type: 'ROTATE_FIELD'; direction: 'cw' | 'ccw' }
+  | { type: 'RESTORE_SNAPSHOT'; field: Field; objects: BoardObject[] }
 
 export const ZONE_COLOR_PRESETS = [
   '#2C7BE5', '#E63946', '#FFD500', '#00FF87',

@@ -839,6 +839,7 @@ export interface FieldRendererProps {
   height: number
   interactive?: boolean
   selectedIds?: string[]
+  hiddenIds?: string[]
   onSelect?: (id: string | null, additive: boolean) => void
   onDragEnd?: (id: string, x: number, y: number) => void
   onDoubleClick?: (id: string) => void
@@ -856,6 +857,7 @@ export default function FieldRenderer({
   height,
   interactive = false,
   selectedIds = [],
+  hiddenIds = [],
   onSelect,
   onDragEnd,
   onDoubleClick,
@@ -867,6 +869,7 @@ export default function FieldRenderer({
 }: FieldRendererProps): React.JSX.Element {
   const layout = _useFieldLayout(field, width, height)
   const selectedSet = new Set(selectedIds)
+  const hiddenSet = new Set(hiddenIds)
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent>) {
     if (!interactive) return
@@ -876,6 +879,7 @@ export default function FieldRenderer({
   }
 
   function renderObject(obj: BoardObject) {
+    if (hiddenSet.has(obj.id)) return null
     const selected = selectedSet.has(obj.id)
     const commonProps = {
       obj,

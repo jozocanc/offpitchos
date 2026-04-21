@@ -48,6 +48,7 @@ export const ArrowObject = z.object({
   style: ArrowStyle,
   thickness: z.number().min(1).max(8).optional(),
   scale: z.number().min(0.3).max(3).optional(),
+  animate_order: z.number().int().min(0).max(99).optional(),
 })
 
 export const ZoneObject = z.object({
