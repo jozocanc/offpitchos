@@ -29,6 +29,7 @@ interface EditorState {
   selectedIds: string[]
   tool: Tool
   toolOption: string
+  nextPlaceScale: number
   arrowDraftTail?: { x: number; y: number }
   zoneDraftCorner?: { x: number; y: number }
   title: string
@@ -55,6 +56,7 @@ type Action =
   | { type: 'SET_VISIBILITY'; visibility: Visibility }
   | { type: 'UNDO' }
   | { type: 'REDO' }
+  | { type: 'SET_NEXT_PLACE_SCALE'; scale: number }
   | { type: 'SET_ARROW_DRAFT'; tail?: { x: number; y: number } }
   | { type: 'SET_ZONE_DRAFT'; corner?: { x: number; y: number } }
   | { type: 'LOAD_FORMATION'; objects: BoardObject[] }
@@ -210,6 +212,9 @@ function reducer(s: EditorState, a: Action): EditorState {
       const past = [...s.past, snapshot(s)]
       return { ...s, ...next, past, future }
     }
+
+    case 'SET_NEXT_PLACE_SCALE':
+      return { ...s, nextPlaceScale: a.scale }
 
     case 'SET_ARROW_DRAFT':
       return { ...s, arrowDraftTail: a.tail }
@@ -869,6 +874,7 @@ export default function EditorClient({
     selectedIds: [],
     tool: 'select',
     toolOption: 'red',
+    nextPlaceScale: 1,
     title: drill.title,
     description: drill.description,
     category: drill.category,
@@ -1061,6 +1067,7 @@ export default function EditorClient({
             type: 'player',
             x: xM, y: yM,
             role: state.toolOption as 'red' | 'blue' | 'neutral' | 'outside' | 'gk' | 'coach',
+            ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
           },
         })
         break
@@ -1073,6 +1080,7 @@ export default function EditorClient({
             type: 'cone',
             x: xM, y: yM,
             color: state.toolOption as 'orange' | 'yellow' | 'red' | 'blue' | 'white',
+            ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
           },
         })
         break
@@ -1080,7 +1088,12 @@ export default function EditorClient({
       case 'ball':
         dispatch({
           type: 'PLACE_OBJECT',
-          obj: { id: crypto.randomUUID(), type: 'ball', x: xM, y: yM },
+          obj: {
+            id: crypto.randomUUID(),
+            type: 'ball',
+            x: xM, y: yM,
+            ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
+          },
         })
         break
 
@@ -1092,6 +1105,7 @@ export default function EditorClient({
             type: 'goal',
             x: xM, y: yM,
             variant: (state.toolOption || 'full') as 'mini-h' | 'mini-v' | 'full',
+            ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
           },
         })
         break
@@ -1108,6 +1122,7 @@ export default function EditorClient({
               points: [state.arrowDraftTail.x, state.arrowDraftTail.y, xM, yM],
               style: (state.toolOption || 'pass') as 'pass' | 'run' | 'free',
               thickness: 3,
+              ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
             },
           })
           dispatch({ type: 'SET_ARROW_DRAFT', tail: undefined })
@@ -1131,6 +1146,7 @@ export default function EditorClient({
                 x, y, width, height,
                 color: state.toolOption || '#2C7BE5',
                 opacity: 0.25,
+                ...(state.nextPlaceScale !== 1 ? { scale: state.nextPlaceScale } : {}),
               },
             })
           }
@@ -1141,7 +1157,7 @@ export default function EditorClient({
       default:
         break
     }
-  }, [state.tool, state.toolOption, state.arrowDraftTail, state.zoneDraftCorner, layout])
+  }, [state.tool, state.toolOption, state.nextPlaceScale, state.arrowDraftTail, state.zoneDraftCorner, layout])
 
   // We attach a click listener on the stage container div for placement tools
   // (FieldRenderer handles select-mode clicks internally)
@@ -1779,6 +1795,18 @@ export default function EditorClient({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Next placement size */}
+          <div className="px-2 py-2 border-t border-white/5">
+            <div className="text-[10px] text-gray text-center mb-1">Size</div>
+            <input
+              type="range" min="0.5" max="2.5" step="0.1"
+              value={state.nextPlaceScale}
+              onChange={e => dispatch({ type: 'SET_NEXT_PLACE_SCALE', scale: Number(e.target.value) })}
+              className="w-full accent-green"
+            />
+            <div className="text-[10px] text-gray text-center mt-0.5">{state.nextPlaceScale.toFixed(1)}×</div>
           </div>
 
           {/* Undo */}
