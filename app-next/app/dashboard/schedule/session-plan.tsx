@@ -86,15 +86,27 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
 
   return (
     <section className="mt-4 border-t border-white/5 pt-4 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="font-semibold">Session plan</h3>
-        <button
-          type="button"
-          onClick={openPicker}
-          className="text-sm bg-green text-dark px-3 py-1.5 rounded hover:brightness-110"
-        >
-          + Add drill
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => window.open(`/api/tactics/pdf/session/${eventId}`, '_blank')}
+            className="text-sm border border-white/10 text-gray hover:text-white px-3 py-1.5 rounded hover:bg-dark/60 transition-colors flex items-center gap-1.5"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M7 3h8l4 4v14H7z"/><path d="M14 3v5h5"/>
+            </svg>
+            Print session plan
+          </button>
+          <button
+            type="button"
+            onClick={openPicker}
+            className="text-sm bg-green text-dark px-3 py-1.5 rounded hover:brightness-110"
+          >
+            + Add drill
+          </button>
+        </div>
       </div>
 
       {drills.length > 0 && (

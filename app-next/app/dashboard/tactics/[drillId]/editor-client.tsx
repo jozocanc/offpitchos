@@ -1173,15 +1173,17 @@ export default function EditorClient({
                   <span className="ml-auto text-[10px] text-gray/60">image</span>
                 </button>
                 <button
-                  disabled
-                  title="Coming soon"
-                  className="w-full text-left px-3 py-2 text-sm text-gray/40 cursor-not-allowed flex items-center gap-2"
+                  onClick={() => {
+                    setExportOpen(false)
+                    window.open(`/api/tactics/pdf/drill/${drill.id}`, '_blank')
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray hover:text-white hover:bg-dark/60 flex items-center gap-2 transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M7 3h8l4 4v14H7z"/><path d="M14 3v5h5"/>
                   </svg>
                   <span>Export PDF</span>
-                  <span className="ml-auto text-[10px] text-gray/50">soon</span>
+                  <span className="ml-auto text-[10px] text-gray/60">pdf</span>
                 </button>
               </div>
             )}
