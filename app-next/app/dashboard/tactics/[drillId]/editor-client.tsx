@@ -388,7 +388,13 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
           {label('Orientation')}
           <select
             value={field.orientation}
-            onChange={e => dispatch({ type: 'SET_FIELD', patch: { orientation: e.target.value as 'horizontal' | 'vertical' } })}
+            onChange={e => {
+              const next = e.target.value as 'horizontal' | 'vertical'
+              if (next === field.orientation) return
+              // Orientation change must rotate coords too, otherwise objects
+              // appear in the wrong places after switching.
+              dispatch({ type: 'ROTATE_FIELD', direction: 'cw' })
+            }}
             className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
           >
             <option value="horizontal">Horizontal</option>
