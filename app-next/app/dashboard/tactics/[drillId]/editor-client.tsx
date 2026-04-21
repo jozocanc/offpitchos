@@ -317,6 +317,8 @@ export default function EditorClient({
   const [openPicker, setOpenPicker] = useState<string | null>(null)
   const [clearConfirm, setClearConfirm] = useState(false)
   const [formationMenuOpen, setFormationMenuOpen] = useState(false)
+  const [formationAnchor, setFormationAnchor] = useState<{ top: number; left: number } | null>(null)
+  const formationBtnRef = useRef<HTMLButtonElement | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   // Arrow preview: tracks current mouse position in field-meter coords
@@ -1356,11 +1358,18 @@ export default function EditorClient({
           {/* ── Formation ─────────────────────────────────────────────── */}
           <PaletteSection label="Squad" />
 
-          <div className="relative">
+          <div className="relative" ref={el => {
+            const btn = el?.querySelector('button') as HTMLButtonElement | null
+            formationBtnRef.current = btn
+          }}>
             <ToolBtn
               label="Formation" shortcut=""
               active={formationMenuOpen}
-              onClick={() => setFormationMenuOpen(v => !v)}
+              onClick={() => {
+                const rect = formationBtnRef.current?.getBoundingClientRect()
+                if (rect) setFormationAnchor({ top: rect.top, left: rect.right + 4 })
+                setFormationMenuOpen(v => !v)
+              }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <circle cx="4"  cy="12" r="1.8" />
@@ -1372,28 +1381,31 @@ export default function EditorClient({
                 <circle cx="21" cy="12" r="1.8" />
               </svg>
             </ToolBtn>
-            {formationMenuOpen && (
-              <div
-                className="absolute left-full ml-1 top-0 z-50 bg-dark-secondary border border-white/10 rounded-lg py-1 shadow-xl w-36"
-                onMouseLeave={() => setFormationMenuOpen(false)}
-              >
-                <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-gray/70 font-semibold">Formations</div>
-                {FORMATION_NAMES.map((name: FormationName) => (
-                  <button
-                    key={name}
-                    onClick={() => {
-                      dispatch({
-                        type: 'LOAD_FORMATION',
-                        objects: generateFormation(name, state.field),
-                      })
-                      setFormationMenuOpen(false)
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-sm text-gray hover:text-white hover:bg-dark/60 transition-colors"
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
+            {formationMenuOpen && formationAnchor && (
+              <>
+                <div className="fixed inset-0 z-[99]" onClick={() => setFormationMenuOpen(false)} />
+                <div
+                  className="fixed z-[100] bg-white border border-black/10 rounded-lg py-1 shadow-xl w-40"
+                  style={{ top: formationAnchor.top, left: formationAnchor.left }}
+                >
+                  <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Formations</div>
+                  {FORMATION_NAMES.map((name: FormationName) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        dispatch({
+                          type: 'LOAD_FORMATION',
+                          objects: generateFormation(name, state.field),
+                        })
+                        setFormationMenuOpen(false)
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:text-black hover:bg-black/5 transition-colors"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
