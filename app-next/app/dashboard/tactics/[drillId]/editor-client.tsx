@@ -15,52 +15,17 @@ import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
 import { saveDrill, regenerateThumbnail } from './actions'
 import { generateFormation, FORMATION_NAMES } from '@/lib/tactics/field-templates'
 import type { FormationName } from '@/lib/tactics/field-templates'
+import { PropsPanel } from './props-panel'
+import {
+  type EditorState,
+  type Action,
+  ZONE_COLOR_PRESETS,
+  PLAYER_ROLE_OPTIONS,
+  CONE_COLOR_OPTIONS,
+} from './editor-types'
 
 // ─── Module-level clipboard (Phase A: in-memory only) ─────────────────────────
 let clipboard: BoardObject[] = []
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Tool = 'select' | 'player' | 'cone' | 'ball' | 'goal' | 'arrow' | 'zone'
-
-interface EditorState {
-  field: Field
-  objects: BoardObject[]
-  selectedIds: string[]
-  tool: Tool
-  toolOption: string
-  nextPlaceScale: number
-  arrowDraftTail?: { x: number; y: number }
-  zoneDraftCorner?: { x: number; y: number }
-  title: string
-  description: string
-  category: DrillCategory
-  visibility: Visibility
-  past: Array<{ field: Field; objects: BoardObject[] }>
-  future: Array<{ field: Field; objects: BoardObject[] }>
-}
-
-type Action =
-  | { type: 'SET_TOOL'; tool: Tool; option?: string }
-  | { type: 'PLACE_OBJECT'; obj: BoardObject }
-  | { type: 'BULK_PLACE'; objs: BoardObject[] }
-  | { type: 'MOVE_OBJECT'; id: string; x: number; y: number }
-  | { type: 'UPDATE_OBJECT'; id: string; patch: Partial<BoardObject> }
-  | { type: 'DELETE_SELECTED' }
-  | { type: 'CLEAR_ALL' }
-  | { type: 'SELECT'; ids: string[]; additive?: boolean }
-  | { type: 'SET_FIELD'; patch: Partial<Field> }
-  | { type: 'SET_TITLE'; title: string }
-  | { type: 'SET_DESCRIPTION'; description: string }
-  | { type: 'SET_CATEGORY'; category: DrillCategory }
-  | { type: 'SET_VISIBILITY'; visibility: Visibility }
-  | { type: 'UNDO' }
-  | { type: 'REDO' }
-  | { type: 'SET_NEXT_PLACE_SCALE'; scale: number }
-  | { type: 'SET_ARROW_DRAFT'; tail?: { x: number; y: number } }
-  | { type: 'SET_ZONE_DRAFT'; corner?: { x: number; y: number } }
-  | { type: 'LOAD_FORMATION'; objects: BoardObject[] }
-  | { type: 'ROTATE_FIELD'; direction: 'cw' | 'ccw' }
 
 const MAX_HISTORY = 100
 
@@ -247,11 +212,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 // ─── Palette Tool Button ──────────────────────────────────────────────────────
 
-const ZONE_COLOR_PRESETS = [
-  '#2C7BE5', '#E63946', '#FFD500', '#00FF87',
-  '#9333EA', '#F97316', '#06B6D4', '#F472B6',
-]
-
 interface ToolBtnProps {
   label: string
   shortcut: string
@@ -264,18 +224,42 @@ interface ToolBtnProps {
 function ToolBtn({ label, shortcut, active, onClick, onShiftClick, children }: ToolBtnProps) {
   return (
     <button
-      title={`${label} (${shortcut})${onShiftClick ? ' | Shift+click for options' : ''}`}
+      title={`${label}${shortcut ? ` (${shortcut})` : ''}${onShiftClick ? ' · right-click for options' : ''}`}
       onClick={onClick}
       onContextMenu={e => { e.preventDefault(); onShiftClick?.() }}
       className={[
-        'w-12 h-12 flex items-center justify-center rounded-lg text-xl transition-all relative',
+        'group relative w-12 h-12 flex items-center justify-center rounded-lg',
+        'transition-all duration-150 ease-out',
         active
-          ? 'bg-dark border-l-2 border-green text-green'
-          : 'text-gray hover:text-white hover:bg-dark/60',
+          ? 'bg-green/12 text-green ring-1 ring-green/30 shadow-[0_1px_2px_rgba(31,78,61,0.12)]'
+          : 'text-gray hover:text-white hover:bg-dark hover:shadow-sm active:translate-y-[0.5px]',
       ].join(' ')}
     >
+      {/* Green accent bar on active */}
+      {active && (
+        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-green" />
+      )}
       {children}
+      {shortcut && (
+        <span className="absolute bottom-0.5 right-1 text-[9px] text-gray/70 leading-none pointer-events-none select-none">
+          {shortcut}
+        </span>
+      )}
+      {onShiftClick && (
+        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-green/40 pointer-events-none" />
+      )}
     </button>
+  )
+}
+
+// Palette section header — tiny uppercase label + thin divider
+function PaletteSection({ label }: { label: string }) {
+  return (
+    <div className="w-full px-2 pt-2 pb-1 first:pt-0">
+      <div className="text-[9px] font-semibold tracking-[0.08em] uppercase text-gray/70 text-center">
+        {label}
+      </div>
+    </div>
   )
 }
 
@@ -315,519 +299,6 @@ function SwatchPicker({ options, current, onPick, onClose }: SwatchPickerProps) 
   )
 }
 
-// ─── Props Panel ──────────────────────────────────────────────────────────────
-
-interface PropsPanelProps {
-  state: EditorState
-  dispatch: React.Dispatch<Action>
-  collapsed: boolean
-  onToggleCollapse: () => void
-}
-
-const PLAYER_ROLE_OPTIONS = [
-  { value: 'red', color: '#E63946', label: 'Red' },
-  { value: 'blue', color: '#2C7BE5', label: 'Blue' },
-  { value: 'neutral', color: '#9CA3AF', label: 'Neutral' },
-  { value: 'outside', color: '#6B7280', label: 'Outside' },
-  { value: 'gk', color: '#FFD500', label: 'GK' },
-  { value: 'coach', color: '#111111', label: 'Coach' },
-]
-
-const CONE_COLOR_OPTIONS = [
-  { value: 'orange', color: '#FF8C00', label: 'Orange' },
-  { value: 'yellow', color: '#FFD500', label: 'Yellow' },
-  { value: 'red', color: '#E63946', label: 'Red' },
-  { value: 'blue', color: '#2C7BE5', label: 'Blue' },
-  { value: 'white', color: '#F3F4F6', label: 'White' },
-]
-
-function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanelProps) {
-  const { selectedIds, objects, field } = state
-
-  const selectedObjs = objects.filter(o => selectedIds.includes(o.id))
-  const single = selectedObjs.length === 1 ? selectedObjs[0] : null
-
-  function label(text: string) {
-    return <span className="text-xs text-gray">{text}</span>
-  }
-
-  function renderFieldEditor() {
-    return (
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-gray uppercase tracking-wide">Field</p>
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            {label('Width (m)')}
-            <input
-              type="number" min={5} max={120}
-              value={field.width_m}
-              onChange={e => dispatch({ type: 'SET_FIELD', patch: { width_m: Number(e.target.value) } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-          <div className="flex-1">
-            {label('Length (m)')}
-            <input
-              type="number" min={5} max={120}
-              value={field.length_m}
-              onChange={e => dispatch({ type: 'SET_FIELD', patch: { length_m: Number(e.target.value) } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-        </div>
-
-        <div>
-          {label('Units')}
-          <div className="flex gap-2 mt-1">
-            {(['m', 'yd'] as const).map(u => (
-              <button key={u}
-                onClick={() => dispatch({ type: 'SET_FIELD', patch: { units: u } })}
-                className={`px-3 py-1 rounded text-sm border ${field.units === u ? 'border-green text-green' : 'border-white/10 text-gray'}`}
-              >{u}</button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          {label('Orientation')}
-          <select
-            value={field.orientation}
-            onChange={e => dispatch({ type: 'SET_FIELD', patch: { orientation: e.target.value as 'horizontal' | 'vertical' } })}
-            className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-          >
-            <option value="horizontal">Horizontal</option>
-            <option value="vertical">Vertical</option>
-          </select>
-        </div>
-
-
-        <div>
-          {label('Style')}
-          <div className="flex gap-2 mt-1">
-            {(['schematic', 'realistic'] as const).map(s => (
-              <button key={s}
-                onClick={() => dispatch({ type: 'SET_FIELD', patch: { style: s } })}
-                className={`px-3 py-1 rounded text-sm border ${field.style === s ? 'border-green text-green' : 'border-white/10 text-gray'}`}
-              >{s}</button>
-            ))}
-          </div>
-        </div>
-
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={field.half_field}
-            onChange={e => dispatch({ type: 'SET_FIELD', patch: { half_field: e.target.checked } })}
-            className="accent-green"
-          />
-          <span className="text-sm text-gray">Half field</span>
-        </label>
-      </div>
-    )
-  }
-
-  function renderObjectEditor() {
-    if (!single) return null
-
-    if (single.type === 'player') {
-      const p = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Player</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={p.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: p.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(p.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-          <div>
-            {label('Role')}
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {PLAYER_ROLE_OPTIONS.map(o => (
-                <button key={o.value}
-                  title={o.label}
-                  onClick={() => dispatch({ type: 'UPDATE_OBJECT', id: p.id, patch: { role: o.value as typeof p.role } })}
-                  className={`w-6 h-6 rounded-full border-2 ${p.role === o.value ? 'border-green' : 'border-transparent'}`}
-                  style={{ background: o.color }}
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            {label('Number')}
-            <input
-              type="number" min={0} max={99}
-              value={p.number ?? ''}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: p.id, patch: { number: e.target.value ? Number(e.target.value) : undefined } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-          <div>
-            {label('Position')}
-            <input
-              type="text" maxLength={8}
-              value={p.position ?? ''}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: p.id, patch: { position: e.target.value || undefined } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'cone') {
-      const c = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Cone</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={c.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: c.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(c.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-          <div>
-            {label('Color')}
-            <div className="flex gap-1.5 mt-1 flex-wrap">
-              {CONE_COLOR_OPTIONS.map(o => (
-                <button key={o.value}
-                  title={o.label}
-                  onClick={() => dispatch({ type: 'UPDATE_OBJECT', id: c.id, patch: { color: o.value as typeof c.color } })}
-                  className={`w-6 h-6 rounded-full border-2 ${c.color === o.value ? 'border-green' : 'border-transparent'}`}
-                  style={{ background: o.color }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'arrow') {
-      const ar = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Arrow</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={ar.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(ar.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-          <div>
-            {label('Style')}
-            <div className="flex gap-2 mt-1">
-              {(['pass', 'run', 'free'] as const).map(s => (
-                <button key={s}
-                  onClick={() => dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { style: s } })}
-                  className={`px-2 py-1 rounded text-sm border ${ar.style === s ? 'border-green text-green' : 'border-white/10 text-gray'}`}
-                >{s}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            {label('Thickness')}
-            <input
-              type="range" min={1} max={8}
-              value={ar.thickness ?? 3}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: ar.id, patch: { thickness: Number(e.target.value) } })}
-              className="w-full mt-1 accent-green"
-            />
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'ball') {
-      const b = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Ball</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={b.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: b.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(b.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'zone-line') {
-      const zl = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Zone Line</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={zl.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: zl.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(zl.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'zone') {
-      const z = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Zone</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={z.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: z.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(z.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-          <div>
-            {label('Color')}
-            <div className="flex gap-1.5 mt-1 flex-wrap">
-              {ZONE_COLOR_PRESETS.map(hex => (
-                <button key={hex}
-                  onClick={() => dispatch({ type: 'UPDATE_OBJECT', id: z.id, patch: { color: hex } })}
-                  className={`w-6 h-6 rounded border-2 ${z.color === hex ? 'border-green' : 'border-transparent'}`}
-                  style={{ background: hex }}
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            {label('Opacity')}
-            <input
-              type="range" min={0} max={1} step={0.05}
-              value={z.opacity}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: z.id, patch: { opacity: Number(e.target.value) } })}
-              className="w-full mt-1 accent-green"
-            />
-          </div>
-          <div>
-            {label('Label')}
-            <input
-              type="text" maxLength={40}
-              value={z.label ?? ''}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: z.id, patch: { label: e.target.value || undefined } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-        </div>
-      )
-    }
-
-    if (single.type === 'goal') {
-      const g = single
-      return (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray uppercase tracking-wide">Goal</p>
-          <div>
-            {label('Size')}
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="range" min="0.5" max="2.5" step="0.1"
-                value={g.scale ?? 1}
-                onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: g.id, patch: { scale: Number(e.target.value) } })}
-                className="flex-1 accent-green"
-              />
-              <span className="text-xs text-gray w-8 text-right">{(g.scale ?? 1).toFixed(1)}×</span>
-            </div>
-          </div>
-          <div>
-            {label('Variant')}
-            <div className="flex gap-2 mt-1">
-              {(['mini-h', 'mini-v', 'full'] as const).map(v => (
-                <button key={v}
-                  onClick={() => dispatch({ type: 'UPDATE_OBJECT', id: g.id, patch: { variant: v } })}
-                  className={`px-2 py-1 rounded text-sm border ${g.variant === v ? 'border-green text-green' : 'border-white/10 text-gray'}`}
-                >{v}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            {label('Rotation (°)')}
-            <input
-              type="number" min={0} max={360}
-              value={g.rotation ?? 0}
-              onChange={e => dispatch({ type: 'UPDATE_OBJECT', id: g.id, patch: { rotation: Number(e.target.value) } })}
-              className="w-full mt-1 bg-dark border border-white/10 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="text-gray text-sm">
-        <p className="font-semibold capitalize">{(single as BoardObject).type}</p>
-      </div>
-    )
-  }
-
-  function getObjXY(o: BoardObject): { x: number; y: number } {
-    if (o.type === 'arrow' || o.type === 'zone-line') {
-      return { x: o.points[0], y: o.points[1] }
-    }
-    return { x: (o as { x: number; y: number }).x, y: (o as { x: number; y: number }).y }
-  }
-
-  function applyAlign(axis: 'x' | 'y', mode: 'min' | 'center' | 'max') {
-    const vals = selectedObjs.map(o => (axis === 'x' ? getObjXY(o).x : getObjXY(o).y))
-    const min = Math.min(...vals)
-    const max = Math.max(...vals)
-    const avg = (min + max) / 2
-    const target = mode === 'min' ? min : mode === 'max' ? max : avg
-
-    selectedObjs.forEach(o => {
-      const cur = getObjXY(o)
-      if (o.type === 'arrow' || o.type === 'zone-line') {
-        const dx = axis === 'x' ? target - cur.x : 0
-        const dy = axis === 'y' ? target - cur.y : 0
-        const newPts = o.points.map((v, i) => (i % 2 === 0 ? v + dx : v + dy))
-        dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch: { points: newPts } as Partial<BoardObject> })
-      } else {
-        const patch = axis === 'x'
-          ? { x: target } as Partial<BoardObject>
-          : { y: target } as Partial<BoardObject>
-        dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch })
-      }
-    })
-  }
-
-  function renderMultiSelect() {
-    const alignBtns: { label: string; title: string; action: () => void }[] = [
-      { label: '⊢', title: 'Align left', action: () => applyAlign('x', 'min') },
-      { label: '⊙', title: 'Align center (H)', action: () => applyAlign('x', 'center') },
-      { label: '⊣', title: 'Align right', action: () => applyAlign('x', 'max') },
-      { label: '⊤', title: 'Align top', action: () => applyAlign('y', 'min') },
-      { label: '⊕', title: 'Align middle (V)', action: () => applyAlign('y', 'center') },
-      { label: '⊥', title: 'Align bottom', action: () => applyAlign('y', 'max') },
-    ]
-    return (
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-gray uppercase tracking-wide">
-          {selectedObjs.length} items selected
-        </p>
-
-        <div>
-          <span className="text-xs text-gray">Align</span>
-          <div className="flex gap-1 mt-1 flex-wrap">
-            {alignBtns.map(btn => (
-              <button
-                key={btn.title}
-                title={btn.title}
-                onClick={btn.action}
-                className="flex-1 min-w-[2rem] py-1 rounded border border-white/10 text-gray text-sm hover:text-white hover:border-green/40 transition-colors"
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          {label('Size (applies to all selected)')}
-          <div className="flex items-center gap-2 mt-1">
-            <input
-              type="range" min="0.5" max="2.5" step="0.1"
-              defaultValue={1}
-              onChange={e => {
-                const s = Number(e.target.value)
-                selectedObjs.forEach(o => dispatch({ type: 'UPDATE_OBJECT', id: o.id, patch: { scale: s } }))
-                const readout = e.currentTarget.nextElementSibling as HTMLElement | null
-                if (readout) readout.textContent = `${s.toFixed(1)}×`
-              }}
-              className="flex-1 accent-green"
-            />
-            <span className="text-xs text-gray w-10 text-right">1.0×</span>
-          </div>
-        </div>
-
-        <button
-          onClick={() => dispatch({ type: 'DELETE_SELECTED' })}
-          className="w-full py-2 rounded bg-red/20 text-red text-sm border border-red/30 hover:bg-red/30 transition-colors"
-        >
-          Delete Selected
-        </button>
-      </div>
-    )
-  }
-
-  if (collapsed) {
-    return (
-      <div className="w-11 bg-dark-secondary border-l border-white/5 flex flex-col items-center pt-2">
-        <button
-          onClick={onToggleCollapse}
-          title="Expand panel"
-          className="text-gray hover:text-white text-lg"
-        >
-          ‹
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="w-[280px] bg-dark-secondary border-l border-white/5 flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
-        <span className="text-xs font-semibold text-gray uppercase tracking-wide">Properties</span>
-        <button onClick={onToggleCollapse} title="Collapse panel" className="text-gray hover:text-white">
-          ›
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3">
-        {selectedObjs.length === 0 && renderFieldEditor()}
-        {selectedObjs.length === 1 && renderObjectEditor()}
-        {selectedObjs.length > 1 && renderMultiSelect()}
-      </div>
-      {selectedIds.length > 0 && selectedObjs.length === 1 && (
-        <div className="p-3 border-t border-white/5">
-          <button
-            onClick={() => dispatch({ type: 'DELETE_SELECTED' })}
-            className="w-full py-1.5 rounded bg-red/20 text-red text-sm border border-red/30 hover:bg-red/30 transition-colors"
-          >
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ─── Main Editor ──────────────────────────────────────────────────────────────
 
 export default function EditorClient({
@@ -847,6 +318,7 @@ export default function EditorClient({
   const [clearConfirm, setClearConfirm] = useState(false)
   const [formationMenuOpen, setFormationMenuOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   // Arrow preview: tracks current mouse position in field-meter coords
   const [previewHead, setPreviewHead] = useState<{ x: number; y: number } | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -1548,88 +1020,181 @@ export default function EditorClient({
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <header className="flex-shrink-0 bg-dark-secondary border-b border-white/5">
-        <div className="h-12 flex items-center gap-3 px-3">
-          <Link href="/dashboard/tactics" className="text-gray hover:text-white text-sm flex-shrink-0">
-            ← Library
+        <div className="px-4 py-2.5 flex items-center gap-3">
+          {/* Library link */}
+          <Link
+            href="/dashboard/tactics"
+            className="group flex items-center gap-1 text-gray hover:text-white text-sm flex-shrink-0 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="transition-transform group-hover:-translate-x-0.5">
+              <polyline points="15 6 9 12 15 18"/>
+            </svg>
+            <span>Library</span>
           </Link>
 
+          <span className="w-px h-5 bg-white/10" />
+
+          {/* Title */}
           <input
             type="text"
             value={state.title}
             placeholder="Untitled drill"
             onChange={e => dispatch({ type: 'SET_TITLE', title: e.target.value })}
-            className="bg-transparent border-b border-white/10 focus:border-green outline-none text-white text-sm px-1 py-0.5 max-w-[200px] flex-shrink-0"
+            className="bg-transparent border-b border-transparent hover:border-white/15 focus:border-green outline-none text-white text-lg font-bold px-1 py-0.5 min-w-[160px] max-w-[360px] flex-shrink transition-colors placeholder:text-gray/40"
+            style={{ width: `${Math.max(16, Math.min(36, state.title.length + 2))}ch` }}
           />
 
-          {/* Notes toggle */}
-          <button
-            onClick={() => setNotesOpen(v => !v)}
-            title="Toggle notes"
-            className={[
-              'px-2 py-0.5 rounded text-xs border flex-shrink-0 transition-colors',
-              notesOpen
-                ? 'border-green text-green bg-green/10'
-                : 'border-white/10 text-gray hover:text-white',
-            ].join(' ')}
-          >
-            Notes
-          </button>
+          {/* Metadata chips */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs flex-shrink-0">
+            {/* Team chip */}
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-dark text-gray border border-white/5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="8" r="3"/>
+                <circle cx="17" cy="9" r="2.5"/>
+                <path d="M3 20c0-3 2.8-5 6-5s6 2 6 5"/>
+                <path d="M14 18c.3-2 2-3.5 4-3.5s3.5 1.5 4 3.5"/>
+              </svg>
+              {teamName}
+            </span>
 
-          <span className="text-xs text-gray bg-dark px-2 py-0.5 rounded flex-shrink-0">
-            {teamName}
-          </span>
+            {/* Category chip (select styled as chip) */}
+            <span className="inline-flex items-center rounded-md bg-dark border border-white/5">
+              <span className="pl-2 py-1 text-gray">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>
+                </svg>
+              </span>
+              <select
+                value={state.category}
+                onChange={e => dispatch({ type: 'SET_CATEGORY', category: e.target.value as DrillCategory })}
+                className="bg-transparent pr-2 py-1 text-gray hover:text-white text-xs outline-none cursor-pointer"
+              >
+                {DRILL_CATEGORIES.map(c => (
+                  <option key={c} value={c}>{DRILL_CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+            </span>
 
-          <select
-            value={state.visibility}
-            onChange={e => dispatch({ type: 'SET_VISIBILITY', visibility: e.target.value as Visibility })}
-            className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
-          >
-            {VISIBILITIES.map(v => (
-              <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
-            ))}
-          </select>
+            {/* Visibility chip */}
+            <span className="inline-flex items-center rounded-md bg-dark border border-white/5">
+              <span className="pl-2 py-1 text-gray">
+                {state.visibility === 'private' ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="10" width="14" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+                ) : state.visibility === 'team' ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.8-5 6-5s6 2 6 5"/></svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+                )}
+              </span>
+              <select
+                value={state.visibility}
+                onChange={e => dispatch({ type: 'SET_VISIBILITY', visibility: e.target.value as Visibility })}
+                className="bg-transparent pr-2 py-1 text-gray hover:text-white text-xs outline-none cursor-pointer capitalize"
+              >
+                {VISIBILITIES.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </span>
 
-          <select
-            value={state.category}
-            onChange={e => dispatch({ type: 'SET_CATEGORY', category: e.target.value as DrillCategory })}
-            className="bg-dark border border-white/10 rounded px-2 py-0.5 text-xs text-gray flex-shrink-0"
-          >
-            {DRILL_CATEGORIES.map(c => (
-              <option key={c} value={c}>{DRILL_CATEGORY_LABELS[c]}</option>
-            ))}
-          </select>
+            {/* Notes toggle */}
+            <button
+              onClick={() => setNotesOpen(v => !v)}
+              title="Toggle notes"
+              className={[
+                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors',
+                notesOpen
+                  ? 'border-green/40 text-green bg-green/10'
+                  : 'border-white/5 text-gray bg-dark hover:text-white',
+              ].join(' ')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 5h16M4 10h16M4 15h10"/>
+              </svg>
+              Notes
+            </button>
+          </div>
 
           <div className="flex-1" />
 
-          {/* Save status */}
-          <span className={[
-            'text-xs flex-shrink-0 transition-opacity',
-            saveStatus === 'saved' ? 'text-green' :
-            saveStatus === 'saving' ? 'text-gray animate-pulse' :
-            saveStatus === 'error' ? 'text-red' : 'opacity-0',
-          ].join(' ')}>
-            {saveStatus === 'saved' ? 'Saved' :
-             saveStatus === 'saving' ? 'Saving…' :
-             saveStatus === 'error' ? 'Error saving' : ''}
-          </span>
+          {/* Save status: dot + text */}
+          <div className="flex items-center gap-1.5 flex-shrink-0" aria-live="polite">
+            <span
+              className={[
+                'inline-block w-2 h-2 rounded-full transition-all',
+                saveStatus === 'saved'  ? 'bg-green shadow-[0_0_6px_rgba(31,78,61,0.5)]' :
+                saveStatus === 'saving' ? 'bg-gray animate-pulse' :
+                saveStatus === 'error'  ? 'bg-red' : 'bg-transparent',
+              ].join(' ')}
+            />
+            <span className={[
+              'text-xs tabular-nums',
+              saveStatus === 'saved'  ? 'text-gray' :
+              saveStatus === 'saving' ? 'text-gray' :
+              saveStatus === 'error'  ? 'text-red font-medium' : 'opacity-0',
+            ].join(' ')}>
+              {saveStatus === 'saved'  ? 'Saved' :
+               saveStatus === 'saving' ? 'Saving…' :
+               saveStatus === 'error'  ? 'Save failed' : ''}
+            </span>
+          </div>
 
-          <button
-            onClick={exportPng}
-            className="px-3 py-1 rounded bg-dark border border-white/10 text-xs text-gray hover:text-white flex-shrink-0"
-          >
-            Export PNG
-          </button>
+          {/* Export menu */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setExportOpen(v => !v)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green text-white text-xs font-semibold hover:brightness-110 transition shadow-sm"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+              </svg>
+              Export
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={exportOpen ? 'rotate-180 transition-transform' : 'transition-transform'}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {exportOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 w-44 bg-dark-secondary border border-white/10 rounded-lg shadow-xl py-1"
+                onMouseLeave={() => setExportOpen(false)}
+              >
+                <button
+                  onClick={() => { exportPng(); setExportOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray hover:text-white hover:bg-dark/60 flex items-center gap-2 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+                    <path d="M21 16l-5-5-8 8"/>
+                  </svg>
+                  <span>Export PNG</span>
+                  <span className="ml-auto text-[10px] text-gray/60">image</span>
+                </button>
+                <button
+                  disabled
+                  title="Coming soon"
+                  className="w-full text-left px-3 py-2 text-sm text-gray/40 cursor-not-allowed flex items-center gap-2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M7 3h8l4 4v14H7z"/><path d="M14 3v5h5"/>
+                  </svg>
+                  <span>Export PDF</span>
+                  <span className="ml-auto text-[10px] text-gray/50">soon</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notes row */}
         {notesOpen && (
-          <div className="px-3 pb-2">
+          <div className="px-4 pb-3">
             <textarea
               value={state.description}
               placeholder="Add notes about this drill…"
               rows={2}
               onChange={e => dispatch({ type: 'SET_DESCRIPTION', description: e.target.value })}
-              className="w-full bg-dark border border-white/10 focus:border-green/50 outline-none rounded px-2 py-1 text-sm text-white resize-none placeholder:text-gray/50"
+              className="w-full bg-dark border border-white/10 focus:border-green/50 outline-none rounded px-3 py-2 text-sm text-white resize-none placeholder:text-gray/50 transition-colors"
             />
           </div>
         )}
@@ -1639,11 +1204,15 @@ export default function EditorClient({
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Left palette ─────────────────────────────────────────────────── */}
-        <aside className="w-16 bg-dark-secondary border-r border-white/5 flex flex-col items-center py-2 gap-1 flex-shrink-0 relative">
+        <aside className="w-20 bg-dark-secondary border-r border-white/5 flex flex-col items-center py-1 flex-shrink-0 relative overflow-y-auto">
+
+          {/* ── People ────────────────────────────────────────────────── */}
+          <PaletteSection label="People" />
 
           {/* Select */}
           <ToolBtn label="Select" shortcut="V" active={state.tool === 'select'} onClick={() => dispatch({ type: 'SET_TOOL', tool: 'select' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 0l16 12-7 1.5L9 20z"/></svg>
+            {/* Cursor arrow */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"><path d="M6 3l13 10-6 1.2-1.2 6z"/></svg>
           </ToolBtn>
 
           {/* Player */}
@@ -1654,7 +1223,7 @@ export default function EditorClient({
               onClick={() => dispatch({ type: 'SET_TOOL', tool: 'player', option: state.toolOption })}
               onShiftClick={() => setOpenPicker(openPicker === 'player' ? null : 'player')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7z"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3.2-6 7-6s7 2 7 6z"/></svg>
             </ToolBtn>
             {openPicker === 'player' && (
               <SwatchPicker
@@ -1666,6 +1235,9 @@ export default function EditorClient({
             )}
           </div>
 
+          {/* ── Equipment ─────────────────────────────────────────────── */}
+          <PaletteSection label="Kit" />
+
           {/* Cone */}
           <div className="relative">
             <ToolBtn
@@ -1674,7 +1246,15 @@ export default function EditorClient({
               onClick={() => dispatch({ type: 'SET_TOOL', tool: 'cone', option: state.tool === 'cone' ? state.toolOption : 'orange' })}
               onShiftClick={() => setOpenPicker(openPicker === 'cone' ? null : 'cone')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 20h20z"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <defs>
+                  <linearGradient id="palConeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.95"/>
+                    <stop offset="100%" stopColor="currentColor" stopOpacity="0.7"/>
+                  </linearGradient>
+                </defs>
+                <path d="M12 3L4 20h16z" fill="url(#palConeGrad)"/>
+              </svg>
             </ToolBtn>
             {openPicker === 'cone' && (
               <SwatchPicker
@@ -1688,7 +1268,10 @@ export default function EditorClient({
 
           {/* Ball */}
           <ToolBtn label="Ball" shortcut="B" active={state.tool === 'ball'} onClick={() => dispatch({ type: 'SET_TOOL', tool: 'ball' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <circle cx="12" cy="12" r="9" />
+              <polygon points="12,7.5 15,10 14,13.5 10,13.5 9,10" fill="currentColor"/>
+            </svg>
           </ToolBtn>
 
           {/* Goal */}
@@ -1699,7 +1282,12 @@ export default function EditorClient({
               onClick={() => dispatch({ type: 'SET_TOOL', tool: 'goal', option: state.tool === 'goal' ? state.toolOption : 'full' })}
               onShiftClick={() => setOpenPicker(openPicker === 'goal' ? null : 'goal')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="8" width="18" height="10"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <rect x="3" y="7" width="18" height="11"/>
+                <line x1="7" y1="7" x2="7" y2="18"/>
+                <line x1="17" y1="7" x2="17" y2="18"/>
+                <line x1="3" y1="12" x2="21" y2="12" strokeOpacity="0.35"/>
+              </svg>
             </ToolBtn>
             {openPicker === 'goal' && (
               <SwatchPicker
@@ -1711,6 +1299,9 @@ export default function EditorClient({
             )}
           </div>
 
+          {/* ── Movement ──────────────────────────────────────────────── */}
+          <PaletteSection label="Move" />
+
           {/* Arrow */}
           <div className="relative">
             <ToolBtn
@@ -1719,7 +1310,10 @@ export default function EditorClient({
               onClick={() => dispatch({ type: 'SET_TOOL', tool: 'arrow', option: state.tool === 'arrow' ? state.toolOption : 'pass' })}
               onShiftClick={() => setOpenPicker(openPicker === 'arrow' ? null : 'arrow')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 12h12M14 8l4 4-4 4"/><line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2"/><polyline points="12 8 16 12 12 16" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="14" x2="18" y2="14"/>
+                <polyline points="13,9 18,14 13,19"/>
+              </svg>
             </ToolBtn>
             {openPicker === 'arrow' && (
               <SwatchPicker
@@ -1730,6 +1324,9 @@ export default function EditorClient({
               />
             )}
           </div>
+
+          {/* ── Zones ─────────────────────────────────────────────────── */}
+          <PaletteSection label="Zones" />
 
           {/* Zone */}
           <div className="relative">
@@ -1742,7 +1339,9 @@ export default function EditorClient({
               })}
               onShiftClick={() => setOpenPicker(openPicker === 'zone' ? null : 'zone')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeDasharray="3 2">
+                <rect x="3" y="5" width="18" height="14" rx="1"/>
+              </svg>
             </ToolBtn>
             {openPicker === 'zone' && (
               <SwatchPicker
@@ -1754,32 +1353,31 @@ export default function EditorClient({
             )}
           </div>
 
-          {/* Divider */}
-          <div className="w-8 h-px bg-white/10 my-1" />
+          {/* ── Formation ─────────────────────────────────────────────── */}
+          <PaletteSection label="Squad" />
 
-          {/* Formations */}
           <div className="relative">
             <ToolBtn
               label="Formation" shortcut=""
               active={formationMenuOpen}
               onClick={() => setFormationMenuOpen(v => !v)}
             >
-              {/* Simple 4-4-2 grid icon */}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="4"  cy="12" r="2" />
-                <circle cx="10" cy="6"  r="2" />
-                <circle cx="10" cy="12" r="2" />
-                <circle cx="10" cy="18" r="2" />
-                <circle cx="16" cy="9"  r="2" />
-                <circle cx="16" cy="15" r="2" />
-                <circle cx="21" cy="12" r="2" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="4"  cy="12" r="1.8" />
+                <circle cx="10" cy="6"  r="1.8" />
+                <circle cx="10" cy="12" r="1.8" />
+                <circle cx="10" cy="18" r="1.8" />
+                <circle cx="16" cy="9"  r="1.8" />
+                <circle cx="16" cy="15" r="1.8" />
+                <circle cx="21" cy="12" r="1.8" />
               </svg>
             </ToolBtn>
             {formationMenuOpen && (
               <div
-                className="absolute left-14 top-0 z-50 bg-dark-secondary border border-white/10 rounded-lg py-1 shadow-xl w-32"
+                className="absolute left-full ml-1 top-0 z-50 bg-dark-secondary border border-white/10 rounded-lg py-1 shadow-xl w-36"
                 onMouseLeave={() => setFormationMenuOpen(false)}
               >
+                <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-gray/70 font-semibold">Formations</div>
                 {FORMATION_NAMES.map((name: FormationName) => (
                   <button
                     key={name}
@@ -1799,78 +1397,69 @@ export default function EditorClient({
             )}
           </div>
 
-          {/* Size — also resizes selected objects while dragging */}
-          <div className="px-2 py-2 border-t border-white/5" title="Drags: resizes selection. Releases: becomes default size for new placements.">
-            <div className="text-[10px] text-gray text-center mb-1">Size</div>
+          {/* ── Size slider (next-placement + selection) ─────────────── */}
+          <div className="w-full px-2 pt-2 pb-1 mt-1 border-t border-white/5" title="Drag to resize selection. Release value becomes default size for new placements.">
+            <div className="text-[9px] text-gray/80 text-center mb-1 font-semibold uppercase tracking-wider">Size</div>
             <input
               type="range" min="0.5" max="2.5" step="0.1"
               value={state.nextPlaceScale}
               onChange={e => {
                 const s = Number(e.target.value)
                 dispatch({ type: 'SET_NEXT_PLACE_SCALE', scale: s })
-                // If anything is selected, also resize those objects immediately.
                 state.selectedIds.forEach(id => dispatch({ type: 'UPDATE_OBJECT', id, patch: { scale: s } }))
               }}
-              className="w-full accent-green"
+              className="w-full h-1.5 accent-green"
             />
-            <div className="text-[10px] text-gray text-center mt-0.5">
-              {state.nextPlaceScale.toFixed(1)}×{state.selectedIds.length > 0 ? ` · ${state.selectedIds.length} sel` : ''}
+            <div className="text-[10px] text-gray text-center mt-0.5 tabular-nums">
+              {state.nextPlaceScale.toFixed(1)}×
+              {state.selectedIds.length > 0 && (
+                <span className="block text-[9px] text-green/80">· {state.selectedIds.length} sel ·</span>
+              )}
             </div>
           </div>
 
-          {/* Undo */}
+          {/* ── History ───────────────────────────────────────────────── */}
+          <PaletteSection label="History" />
+
           <ToolBtn label="Undo" shortcut="⌘Z" active={false} onClick={() => dispatch({ type: 'UNDO' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h10a5 5 0 0 1 0 10H3"/><polyline points="7 3 3 7 7 11" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11a5 5 0 0 1 0 10H6"/><polyline points="7 3 3 7 7 11"/></svg>
           </ToolBtn>
 
-          {/* Redo */}
           <ToolBtn label="Redo" shortcut="⌘⇧Z" active={false} onClick={() => dispatch({ type: 'REDO' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 7H11a5 5 0 0 0 0 10h10"/><polyline points="17 3 21 7 17 11" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7H10a5 5 0 0 0 0 10h8"/><polyline points="17 3 21 7 17 11"/></svg>
           </ToolBtn>
 
-          {/* Clear */}
           {clearConfirm ? (
-            <div className="absolute bottom-2 left-0 z-50 bg-dark-secondary border border-white/10 rounded-lg p-2 shadow-xl w-32 text-xs text-gray">
-              <p className="mb-1">Clear all?</p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => { dispatch({ type: 'CLEAR_ALL' }); setClearConfirm(false) }}
-                  className="px-2 py-0.5 bg-red/20 text-red rounded border border-red/30 text-xs"
-                >Yes</button>
-                <button
-                  onClick={() => setClearConfirm(false)}
-                  className="px-2 py-0.5 bg-dark rounded border border-white/10 text-xs"
-                >No</button>
+            <div className="relative w-full px-2 mt-1">
+              <div className="bg-dark-secondary border border-white/10 rounded-lg p-2 shadow-xl text-xs text-gray">
+                <p className="mb-1.5 text-center">Clear all?</p>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => { dispatch({ type: 'CLEAR_ALL' }); setClearConfirm(false) }}
+                    className="flex-1 py-1 bg-red/20 text-red rounded border border-red/30 text-xs hover:bg-red/30 transition-colors"
+                  >Yes</button>
+                  <button
+                    onClick={() => setClearConfirm(false)}
+                    className="flex-1 py-1 bg-dark rounded border border-white/10 text-xs hover:border-white/20 transition-colors"
+                  >No</button>
+                </div>
               </div>
             </div>
           ) : (
             <ToolBtn label="Clear all" shortcut="" active={false} onClick={() => setClearConfirm(true)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
             </ToolBtn>
-          )}
-
-          {/* Draft indicators */}
-          {state.arrowDraftTail && (
-            <div className="absolute bottom-14 left-0 w-full px-1 text-center">
-              <span className="text-[10px] text-green bg-dark-secondary rounded px-1 py-0.5">
-                Click head
-              </span>
-            </div>
-          )}
-          {state.zoneDraftCorner && (
-            <div className="absolute bottom-14 left-0 w-full px-1 text-center">
-              <span className="text-[10px] text-green bg-dark-secondary rounded px-1 py-0.5">
-                Click corner
-              </span>
-            </div>
           )}
         </aside>
 
         {/* ── Canvas area ───────────────────────────────────────────────────── */}
         <main
           ref={wrapRef}
-          className="flex-1 overflow-hidden relative"
-          style={{ cursor: cursorStyle }}
+          className="flex-1 overflow-hidden relative bg-dark"
+          style={{
+            cursor: cursorStyle,
+            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.08)',
+          }}
           onClick={handleCanvasAreaClick}
           onMouseMove={handleCanvasMouseMove}
           onPointerDown={handleCanvasPointerDown}
@@ -1909,21 +1498,7 @@ export default function EditorClient({
             />
           )}
 
-          {/* Arrow draft tail indicator */}
-          {state.tool === 'arrow' && state.arrowDraftTail && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-dark-secondary/90 text-green text-xs px-3 py-1 rounded-full border border-green/30 pointer-events-none">
-              Arrow: tail placed — click to place head
-            </div>
-          )}
-
-          {/* Zone draft corner indicator */}
-          {state.tool === 'zone' && state.zoneDraftCorner && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-dark-secondary/90 text-green text-xs px-3 py-1 rounded-full border border-green/30 pointer-events-none">
-              Zone: first corner placed — click opposite corner
-            </div>
-          )}
-
-          {/* ── Snap toggle button ──────────────────────────────────────────── */}
+          {/* ── Snap toggle pill ────────────────────────────────────────────── */}
           <button
             onClick={() => setSnapEnabled(v => {
               const next = !v
@@ -1931,10 +1506,37 @@ export default function EditorClient({
               return next
             })}
             title="Toggle snap to grid / objects"
-            className="absolute bottom-3 right-3 bg-dark-secondary border border-white/10 rounded px-2 py-1 text-xs text-gray hover:text-white transition-colors select-none"
+            className={[
+              'absolute bottom-4 right-4 inline-flex items-center gap-1.5',
+              'rounded-full pl-3 pr-3.5 py-1.5 text-xs font-medium',
+              'border transition-all shadow-sm select-none',
+              snapEnabled
+                ? 'bg-green/10 text-green border-green/30 hover:bg-green/15'
+                : 'bg-dark-secondary text-gray border-white/10 hover:text-white hover:border-white/20',
+            ].join(' ')}
           >
-            {snapEnabled ? '⊞ Snap on' : '⊟ Snap off'}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {snapEnabled ? (
+                <>
+                  <rect x="3" y="3" width="18" height="18" rx="1"/>
+                  <path d="M3 8h18M3 13h18M3 18h18M8 3v18M13 3v18M18 3v18" strokeOpacity="0.6"/>
+                </>
+              ) : (
+                <>
+                  <rect x="3" y="3" width="18" height="18" rx="1"/>
+                  <line x1="3" y1="21" x2="21" y2="3"/>
+                </>
+              )}
+            </svg>
+            {snapEnabled ? 'Snap on' : 'Snap off'}
           </button>
+
+          {/* Bottom-left: arrow/zone draft indicator */}
+          {(state.arrowDraftTail || state.zoneDraftCorner) && (
+            <div className="absolute bottom-4 left-4 bg-dark-secondary/95 border border-green/30 text-green rounded-full text-xs px-3 py-1.5 font-medium shadow-sm pointer-events-none">
+              {state.arrowDraftTail ? 'Click to place arrow head' : 'Click opposite corner'}
+            </div>
+          )}
 
           {/* ── Context menu ────────────────────────────────────────────────── */}
           {contextMenu && (() => {
