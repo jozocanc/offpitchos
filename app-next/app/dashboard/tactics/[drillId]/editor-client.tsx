@@ -1131,8 +1131,8 @@ export default function EditorClient({
             />
             <span className={[
               'text-xs tabular-nums',
-              saveStatus === 'saved'  ? 'text-gray' :
-              saveStatus === 'saving' ? 'text-gray' :
+              saveStatus === 'saved'  ? 'text-white' :
+              saveStatus === 'saving' ? 'text-white' :
               saveStatus === 'error'  ? 'text-red font-medium' : 'opacity-0',
             ].join(' ')}>
               {saveStatus === 'saved'  ? 'Saved' :
@@ -1145,7 +1145,7 @@ export default function EditorClient({
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setExportOpen(v => !v)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green text-white text-xs font-semibold hover:brightness-110 transition shadow-sm"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green text-[#ffffff] text-xs font-semibold hover:brightness-110 transition shadow-sm"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
@@ -1381,32 +1381,38 @@ export default function EditorClient({
                 <circle cx="21" cy="12" r="1.8" />
               </svg>
             </ToolBtn>
-            {formationMenuOpen && formationAnchor && (
-              <>
-                <div className="fixed inset-0 z-[99]" onClick={() => setFormationMenuOpen(false)} />
-                <div
-                  className="fixed z-[100] bg-white border border-black/10 rounded-lg py-1 shadow-xl w-40"
-                  style={{ top: formationAnchor.top, left: formationAnchor.left }}
-                >
-                  <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Formations</div>
-                  {FORMATION_NAMES.map((name: FormationName) => (
-                    <button
-                      key={name}
-                      onClick={() => {
-                        dispatch({
-                          type: 'LOAD_FORMATION',
-                          objects: generateFormation(name, state.field),
-                        })
-                        setFormationMenuOpen(false)
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:text-black hover:bg-black/5 transition-colors"
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            {formationMenuOpen && formationAnchor && (() => {
+              // popover height estimate: header (~22px) + 8 items × 26px + padding ≈ 240
+              const estimatedH = 240
+              const bottomOverflow = formationAnchor.top + estimatedH - (typeof window !== 'undefined' ? window.innerHeight : 800) + 12
+              const top = bottomOverflow > 0 ? Math.max(12, formationAnchor.top - bottomOverflow) : formationAnchor.top
+              return (
+                <>
+                  <div className="fixed inset-0 z-[99]" onClick={() => setFormationMenuOpen(false)} />
+                  <div
+                    className="fixed z-[100] bg-[#0f1622] border border-white/15 rounded-lg py-1 shadow-2xl w-40"
+                    style={{ top, left: formationAnchor.left }}
+                  >
+                    <div className="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-white/60 font-semibold">Formations</div>
+                    {FORMATION_NAMES.map((name: FormationName) => (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          dispatch({
+                            type: 'LOAD_FORMATION',
+                            objects: generateFormation(name, state.field),
+                          })
+                          setFormationMenuOpen(false)
+                        }}
+                        className="w-full text-left px-3 py-1 text-sm text-white hover:bg-white/10 transition-colors"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* ── Size slider (next-placement + selection) ─────────────── */}
