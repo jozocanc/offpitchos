@@ -93,6 +93,43 @@ export const ARROW_STYLES: Record<
 const SEL_COLOR = '#00FF87'
 const SEL_GLOW_BLUR = 14
 
+// ─── Fade-in + drag-feedback hooks ──────────────────────────────────────────
+
+type KonvaRef = React.RefObject<Konva.Node | null>
+
+// Attaches a one-shot Konva fade-in tween on mount. Group starts at opacity 0
+// and tweens to 1 over ~180ms for a polished placement/load feel.
+function useFadeInOnMount(ref: KonvaRef) {
+  const didRun = React.useRef(false)
+  React.useEffect(() => {
+    if (didRun.current) return
+    didRun.current = true
+    const node = ref.current
+    if (!node) return
+    node.opacity(0)
+    node.to({ opacity: 1, duration: 0.18, easing: Konva.Easings.EaseOut })
+  }, [ref])
+}
+
+// Scale-up on drag start, scale back on drag end. Uses Konva tweens so the
+// animation runs smoothly without tearing react render.
+function useDragScale(ref: KonvaRef, scaleUp: number = 1.05) {
+  const handlers = React.useMemo(() => ({
+    onDragStart: () => {
+      const node = ref.current
+      if (!node) return
+      node.moveToTop()
+      node.to({ scaleX: scaleUp, scaleY: scaleUp, duration: 0.12, easing: Konva.Easings.EaseOut })
+    },
+    onDragEnd: () => {
+      const node = ref.current
+      if (!node) return
+      node.to({ scaleX: 1, scaleY: 1, duration: 0.14, easing: Konva.Easings.EaseOut })
+    },
+  }), [ref, scaleUp])
+  return handlers
+}
+
 // ─── Per-type object nodes ────────────────────────────────────────────────────
 
 interface NodeProps<T extends BoardObject> {
@@ -121,6 +158,10 @@ export function ZoneNode({
   onDoubleClick,
   onContextMenu,
 }: NodeProps<ZoneObj>) {
+  const groupRef = React.useRef<Konva.Group | null>(null)
+  useFadeInOnMount(groupRef as KonvaRef)
+  const dragScale = useDragScale(groupRef as KonvaRef, 1.03)
+
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const w = field.orientation === 'horizontal' ? mLen(obj.width, layout) : mLen(obj.height, layout)
@@ -136,7 +177,9 @@ export function ZoneNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
+        onDragStart: dragScale.onDragStart,
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
@@ -147,6 +190,7 @@ export function ZoneNode({
   return (
     <Group
       id={obj.id}
+      ref={groupRef}
       x={x}
       y={y}
       draggable={draggable}
@@ -254,6 +298,10 @@ export function ConeNode({
   onDoubleClick,
   onContextMenu,
 }: NodeProps<ConeObj>) {
+  const groupRef = React.useRef<Konva.Group | null>(null)
+  useFadeInOnMount(groupRef as KonvaRef)
+  const dragScale = useDragScale(groupRef as KonvaRef)
+
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.8, layout) * (obj.scale ?? 1)
@@ -270,7 +318,9 @@ export function ConeNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
+        onDragStart: dragScale.onDragStart,
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
@@ -281,6 +331,7 @@ export function ConeNode({
   return (
     <Group
       id={obj.id}
+      ref={groupRef}
       x={x}
       y={y}
       draggable={draggable}
@@ -348,6 +399,10 @@ export function BallNode({
   onDoubleClick,
   onContextMenu,
 }: NodeProps<BallObj>) {
+  const groupRef = React.useRef<Konva.Group | null>(null)
+  useFadeInOnMount(groupRef as KonvaRef)
+  const dragScale = useDragScale(groupRef as KonvaRef)
+
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(0.4, layout) * (obj.scale ?? 1)
@@ -362,7 +417,9 @@ export function BallNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
+        onDragStart: dragScale.onDragStart,
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
@@ -377,6 +434,7 @@ export function BallNode({
   return (
     <Group
       id={obj.id}
+      ref={groupRef}
       x={x}
       y={y}
       draggable={draggable}
@@ -453,6 +511,10 @@ export function GoalNode({
   onDoubleClick,
   onContextMenu,
 }: NodeProps<GoalObj>) {
+  const groupRef = React.useRef<Konva.Group | null>(null)
+  useFadeInOnMount(groupRef as KonvaRef)
+  const dragScale = useDragScale(groupRef as KonvaRef, 1.04)
+
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const size = GOAL_SIZES[obj.variant] ?? GOAL_SIZES['full']
@@ -470,7 +532,9 @@ export function GoalNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
+        onDragStart: dragScale.onDragStart,
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
@@ -483,6 +547,7 @@ export function GoalNode({
   return (
     <Group
       id={obj.id}
+      ref={groupRef}
       x={x}
       y={y}
       rotation={obj.rotation ?? 0}
@@ -541,6 +606,10 @@ export function PlayerNode({
   onDoubleClick,
   onContextMenu,
 }: NodeProps<PlayerObj>) {
+  const groupRef = React.useRef<Konva.Group | null>(null)
+  useFadeInOnMount(groupRef as KonvaRef)
+  const dragScale = useDragScale(groupRef as KonvaRef, 1.08)
+
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
   const radius = mLen(1.2, layout) * (obj.scale ?? 1)
@@ -560,7 +629,9 @@ export function PlayerNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
+        onDragStart: dragScale.onDragStart,
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
           onDragEnd?.(obj.id, xM, yM)
@@ -571,6 +642,7 @@ export function PlayerNode({
   return (
     <Group
       id={obj.id}
+      ref={groupRef}
       x={x}
       y={y}
       draggable={draggable}
