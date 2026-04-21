@@ -58,6 +58,7 @@ type Action =
   | { type: 'SET_ARROW_DRAFT'; tail?: { x: number; y: number } }
   | { type: 'SET_ZONE_DRAFT'; corner?: { x: number; y: number } }
   | { type: 'LOAD_FORMATION'; objects: BoardObject[] }
+  | { type: 'ROTATE_FIELD'; direction: 'cw' | 'ccw' }
 
 const MAX_HISTORY = 100
 
@@ -132,6 +133,54 @@ function reducer(s: EditorState, a: Action): EditorState {
     case 'SET_FIELD': {
       const field = { ...s.field, ...a.patch }
       return withHistory(s, { field, objects: s.objects })
+    }
+
+    case 'ROTATE_FIELD': {
+      // Rotate field + all objects 90°. Swap width_m ↔ length_m, flip
+      // orientation, and remap every (x, y) on the board.
+      // CW: (x, y) → (width_m - y, x)      CCW: (x, y) → (y, length_m - x)
+      const oldW = s.field.width_m
+      const oldL = s.field.length_m
+      const field: Field = {
+        ...s.field,
+        width_m: oldL,
+        length_m: oldW,
+        orientation: s.field.orientation === 'horizontal' ? 'vertical' : 'horizontal',
+      }
+      const cw = a.direction === 'cw'
+      const mapPoint = (x: number, y: number): [number, number] =>
+        cw ? [oldW - y, x] : [y, oldL - x]
+      const objects: BoardObject[] = s.objects.map(o => {
+        switch (o.type) {
+          case 'arrow': {
+            const pts: number[] = []
+            for (let i = 0; i < o.points.length; i += 2) {
+              const [nx, ny] = mapPoint(o.points[i], o.points[i + 1])
+              pts.push(nx, ny)
+            }
+            return { ...o, points: pts }
+          }
+          case 'zone-line': {
+            const [nx1, ny1] = mapPoint(o.points[0], o.points[1])
+            const [nx2, ny2] = mapPoint(o.points[2], o.points[3])
+            return { ...o, points: [nx1, ny1, nx2, ny2] }
+          }
+          case 'zone': {
+            // Zone is axis-aligned; rotating swaps width/height and relocates top-left
+            const [nx, ny] = mapPoint(o.x, o.y)
+            const w = o.height
+            const h = o.width
+            return cw
+              ? { ...o, x: nx - w, y: ny, width: w, height: h }
+              : { ...o, x: nx, y: ny - h, width: w, height: h }
+          }
+          default: {
+            const [nx, ny] = mapPoint(o.x, o.y)
+            return { ...o, x: nx, y: ny }
+          }
+        }
+      })
+      return withHistory(s, { field, objects })
     }
 
     case 'SET_TITLE':
@@ -345,6 +394,24 @@ function PropsPanel({ state, dispatch, collapsed, onToggleCollapse }: PropsPanel
             <option value="horizontal">Horizontal</option>
             <option value="vertical">Vertical</option>
           </select>
+        </div>
+
+        <div>
+          {label('Rotate field + objects')}
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'ROTATE_FIELD', direction: 'ccw' })}
+              title="Rotate 90° counter-clockwise"
+              className="flex-1 px-3 py-1 rounded text-sm border border-white/10 text-gray hover:border-green hover:text-green"
+            >↺ 90°</button>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'ROTATE_FIELD', direction: 'cw' })}
+              title="Rotate 90° clockwise"
+              className="flex-1 px-3 py-1 rounded text-sm border border-white/10 text-gray hover:border-green hover:text-green"
+            >↻ 90°</button>
+          </div>
         </div>
 
         <div>
