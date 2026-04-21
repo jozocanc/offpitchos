@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES } from '@/lib/tactics/drill-categories'
 import { createBlankDrillFormAction, deleteDrill, duplicateDrill, updateVisibility } from './actions'
 import type { DrillSummary } from './actions'
+import GenerateModal from './generate-modal'
 
 interface Props {
   drills: DrillSummary[]
@@ -13,7 +14,6 @@ interface Props {
   currentProfileId: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function LibraryClient({ drills, teams, role, currentProfileId }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -21,6 +21,10 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
   const [category, setCategory] = useState<string>('all')
   const [visibility, setVisibility] = useState<string>('all')
   const [search, setSearch] = useState('')
+  const [generateOpen, setGenerateOpen] = useState(false)
+
+  // defaultTeamId for the modal — use the active filter if it's a real team
+  const defaultTeamId = teamId !== 'all' && teamId !== 'none' ? teamId : (teams[0]?.id ?? undefined)
 
   const filtered = useMemo(() => drills.filter(d => {
     if (teamId !== 'all' && (teamId === 'none' ? d.teamId !== null : d.teamId !== teamId)) return false
@@ -51,16 +55,37 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
     <div className="p-4 md:p-6 space-y-4">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Tactics Board</h1>
-        <form action={createBlankDrillFormAction}>
-          {teamId !== 'all' && teamId !== 'none' && (
-            <input type="hidden" name="teamId" value={teamId} />
+        <div className="flex items-center gap-2">
+          {(role === 'doc' || role === 'coach') && (
+            <button
+              type="button"
+              onClick={() => setGenerateOpen(true)}
+              className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
+            >
+              Generate with AI ✨
+            </button>
           )}
-          <button
-            type="submit"
-            className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
-          >+ New drill</button>
-        </form>
+          <form action={createBlankDrillFormAction}>
+            {teamId !== 'all' && teamId !== 'none' && (
+              <input type="hidden" name="teamId" value={teamId} />
+            )}
+            <button
+              type="submit"
+              className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
+            >+ New drill</button>
+          </form>
+        </div>
       </header>
+
+      {(role === 'doc' || role === 'coach') && (
+        <GenerateModal
+          open={generateOpen}
+          onClose={() => setGenerateOpen(false)}
+          teams={teams}
+          role={role as 'doc' | 'coach'}
+          defaultTeamId={defaultTeamId}
+        />
+      )}
 
       <div className="flex flex-wrap gap-2">
         <select value={teamId} onChange={e => setTeamId(e.target.value)} className="bg-dark-secondary border border-white/10 rounded px-3 py-2 text-sm">
