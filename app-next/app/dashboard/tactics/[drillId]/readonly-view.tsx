@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import FieldRenderer from '@/lib/tactics/field-renderer'
 import type { DrillRow } from '@/lib/tactics/object-schema'
+import CommentsPanel from './comments-panel'
 
 export default function ReadonlyView({ drill }: { drill: DrillRow }) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -26,6 +27,13 @@ export default function ReadonlyView({ drill }: { drill: DrillRow }) {
       )}
       <div ref={wrapRef} className="bg-dark-secondary rounded-lg overflow-hidden">
         <FieldRenderer field={drill.field} objects={drill.objects} width={size.w} height={size.h} />
+      </div>
+      {/* Comments */}
+      <div className="bg-dark-secondary rounded-lg p-4 border border-white/5">
+        <CommentsPanel
+          drillId={drill.id}
+          readonly
+        />
       </div>
     </div>
   )
