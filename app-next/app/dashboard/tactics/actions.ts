@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
 
 export interface DrillSummary {
@@ -76,6 +77,15 @@ export async function listDrills(filters?: {
     canEdit: d.created_by === profile.id || profile.role === 'doc',
     canDelete: d.created_by === profile.id || profile.role === 'doc',
   }))
+}
+
+// Form-action variant: reads teamId from FormData and redirects to the new drill.
+// Invoked as `<form action={createBlankDrillFormAction}>` from the library.
+export async function createBlankDrillFormAction(formData: FormData): Promise<void> {
+  const raw = formData.get('teamId')
+  const teamId = typeof raw === 'string' && raw.length > 0 ? raw : null
+  const id = await createBlankDrill(teamId)
+  redirect(`/dashboard/tactics/${id}`)
 }
 
 export async function createBlankDrill(teamId: string | null): Promise<string> {

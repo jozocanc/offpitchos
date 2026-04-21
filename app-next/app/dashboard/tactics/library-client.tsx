@@ -3,7 +3,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES } from '@/lib/tactics/drill-categories'
-import { deleteDrill, duplicateDrill, updateVisibility } from './actions'
+import { createBlankDrillFormAction, deleteDrill, duplicateDrill, updateVisibility } from './actions'
 import type { DrillSummary } from './actions'
 
 interface Props {
@@ -47,16 +47,19 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
     startTransition(async () => { await updateVisibility(id, v); router.refresh() })
   }
 
-  const newDrillHref = `/dashboard/tactics/new${teamId !== 'all' && teamId !== 'none' ? `?teamId=${teamId}` : ''}`
-
   return (
     <div className="p-4 md:p-6 space-y-4">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Tactics Board</h1>
-        <Link
-          href={newDrillHref}
-          className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
-        >+ New drill</Link>
+        <form action={createBlankDrillFormAction}>
+          {teamId !== 'all' && teamId !== 'none' && (
+            <input type="hidden" name="teamId" value={teamId} />
+          )}
+          <button
+            type="submit"
+            className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
+          >+ New drill</button>
+        </form>
       </header>
 
       <div className="flex flex-wrap gap-2">
