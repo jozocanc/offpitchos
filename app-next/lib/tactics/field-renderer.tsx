@@ -7,351 +7,91 @@ import {
   Layer,
   Rect,
   Circle,
+  Ellipse,
   Line,
   Text,
   Group,
   RegularPolygon,
   Arrow,
+  Arc,
+  Path,
 } from 'react-konva'
 import type { BoardObject, Field } from '@/lib/tactics/object-schema'
+import { FieldMarkings, NetPattern } from './field-markings'
+import {
+  useFieldLayout as _useFieldLayout,
+  mToPx,
+  pxToM as _pxToM,
+  mLen,
+  type FieldLayout,
+} from './field-renderer-layout'
+
+// Re-export layout helpers so existing imports `from '@/lib/tactics/field-renderer'` keep working.
+export const useFieldLayout = _useFieldLayout
+export const pxToM = _pxToM
+export type { FieldLayout }
+export { FieldMarkings }
 
 // ─── Color maps ──────────────────────────────────────────────────────────────
 
+// Field backgrounds — kept for external consumers. Actual render uses a gradient.
 export const FIELD_BG = {
-  schematic: '#0A6B3C',
-  realistic: '#2B7A3F',
+  schematic: '#2d6e42',
+  realistic: '#2d6e42',
 } as const
 
+// Gradients for player tokens — `top` is the light (upper) color, `bottom` is
+// the darker shade used at the bottom of the fill. Builds a subtle 3D look.
+export interface TokenGradient { top: string; bottom: string }
+
+export const PLAYER_GRADIENTS: Record<string, TokenGradient> = {
+  red:     { top: '#ef4557', bottom: '#c62032' },
+  blue:    { top: '#3b82f6', bottom: '#1e40af' },
+  neutral: { top: '#a1a1aa', bottom: '#71717a' },
+  outside: { top: '#9ca3af', bottom: '#4b5563' },
+  gk:      { top: '#fde047', bottom: '#eab308' },
+  coach:   { top: '#374151', bottom: '#111111' },
+}
+
+// Flat fallback colors — kept as the `PLAYER_COLORS` public export for any
+// consumers (palette swatches etc.) that still read a single color.
 export const PLAYER_COLORS: Record<string, string> = {
-  red: '#E63946',
-  blue: '#2C7BE5',
-  neutral: '#9CA3AF',
-  outside: '#6B7280',
-  gk: '#FFD500',
-  coach: '#111111',
+  red:     PLAYER_GRADIENTS.red.bottom,
+  blue:    PLAYER_GRADIENTS.blue.bottom,
+  neutral: PLAYER_GRADIENTS.neutral.bottom,
+  outside: PLAYER_GRADIENTS.outside.bottom,
+  gk:      PLAYER_GRADIENTS.gk.bottom,
+  coach:   PLAYER_GRADIENTS.coach.bottom,
+}
+
+export const CONE_GRADIENTS: Record<string, TokenGradient> = {
+  orange: { top: '#ffb366', bottom: '#e06a00' },
+  yellow: { top: '#ffe066', bottom: '#e6b800' },
+  red:    { top: '#ef4557', bottom: '#b8192b' },
+  blue:   { top: '#60a5fa', bottom: '#1e40af' },
+  white:  { top: '#ffffff', bottom: '#cbd5e1' },
 }
 
 export const CONE_COLORS: Record<string, string> = {
-  orange: '#FF8C00',
-  yellow: '#FFD500',
-  red: '#E63946',
-  blue: '#2C7BE5',
-  white: '#F3F4F6',
+  orange: CONE_GRADIENTS.orange.bottom,
+  yellow: CONE_GRADIENTS.yellow.bottom,
+  red:    CONE_GRADIENTS.red.bottom,
+  blue:   CONE_GRADIENTS.blue.bottom,
+  white:  CONE_GRADIENTS.white.bottom,
 }
 
 export const ARROW_STYLES: Record<
   string,
-  { stroke: string; fill: string; dash?: number[] }
+  { stroke: string; fill: string; dash?: number[]; curved?: boolean }
 > = {
-  pass: { stroke: '#E63946', fill: '#E63946' },
-  run: { stroke: '#2C7BE5', fill: '#2C7BE5', dash: [10, 6] },
-  free: { stroke: '#FFD500', fill: '#FFD500' },
+  pass: { stroke: '#ef4557', fill: '#ef4557' },
+  run:  { stroke: '#3b82f6', fill: '#3b82f6', dash: [10, 6], curved: true },
+  free: { stroke: '#fde047', fill: '#fde047' },
 }
 
-// ─── Layout ──────────────────────────────────────────────────────────────────
-
-export interface FieldLayout {
-  pxPerMeter: number
-  fieldPxX: number
-  fieldPxY: number
-  fieldPxW: number
-  fieldPxH: number
-}
-
-const MARGIN = 24
-
-export function useFieldLayout(
-  field: Field,
-  width: number,
-  height: number
-): FieldLayout {
-  // available space after margin
-  const availW = width - MARGIN * 2
-  const availH = height - MARGIN * 2
-
-  // meters on each pixel axis
-  const mW = field.orientation === 'horizontal' ? field.length_m : field.width_m
-  const mH = field.orientation === 'horizontal' ? field.width_m : field.length_m
-
-  const pxPerMeter = Math.min(availW / mW, availH / mH)
-
-  const fieldPxW = mW * pxPerMeter
-  const fieldPxH = mH * pxPerMeter
-
-  // center within stage
-  const fieldPxX = (width - fieldPxW) / 2
-  const fieldPxY = (height - fieldPxH) / 2
-
-  return { pxPerMeter, fieldPxX, fieldPxY, fieldPxW, fieldPxH }
-}
-
-// helpers: convert field-meter coords to stage-pixel coords (orientation-aware)
-function mToPx(xM: number, yM: number, field: Field, layout: FieldLayout) {
-  if (field.orientation === 'horizontal') {
-    return {
-      x: layout.fieldPxX + xM * layout.pxPerMeter,
-      y: layout.fieldPxY + yM * layout.pxPerMeter,
-    }
-  }
-  // vertical: length (x-meter) runs down pixel-y; width (y-meter) runs across pixel-x
-  return {
-    x: layout.fieldPxX + yM * layout.pxPerMeter,
-    y: layout.fieldPxY + xM * layout.pxPerMeter,
-  }
-}
-
-// Inverse: stage-pixel coords → field-meter coords (orientation-aware)
-export function pxToM(
-  px: number, py: number, field: Field, layout: FieldLayout
-): { xM: number; yM: number } {
-  const dx = px - layout.fieldPxX
-  const dy = py - layout.fieldPxY
-  if (field.orientation === 'horizontal') {
-    return { xM: dx / layout.pxPerMeter, yM: dy / layout.pxPerMeter }
-  }
-  // vertical: pixel-x → yM, pixel-y → xM
-  return { xM: dy / layout.pxPerMeter, yM: dx / layout.pxPerMeter }
-}
-
-function mLen(meters: number, layout: FieldLayout) {
-  return meters * layout.pxPerMeter
-}
-
-// ─── Field markings ──────────────────────────────────────────────────────────
-
-interface FieldMarkingsProps {
-  field: Field
-  layout: FieldLayout
-  style: 'schematic' | 'realistic'
-}
-
-export function FieldMarkings({ field, layout, style }: FieldMarkingsProps) {
-  const { pxPerMeter, fieldPxX, fieldPxY, fieldPxW, fieldPxH } = layout
-  const isH = field.orientation === 'horizontal'
-  const half = field.half_field
-
-  // In "horizontal" mode: X axis = length_m (goal to goal), Y axis = width_m (sideline to sideline)
-  // In "vertical" mode:   Y axis = length_m, X axis = width_m
-  const lengthPx = field.length_m * pxPerMeter
-  const widthPx = field.width_m * pxPerMeter
-
-  const strokeColor = '#ffffff'
-  const strokeWidth = 2
-
-  // --- Realistic grass stripes ---
-  const grassStripes: React.ReactNode[] = []
-  if (style === 'realistic') {
-    const stripeStep = 5 * pxPerMeter
-    const stripeCount = Math.ceil((isH ? fieldPxW : fieldPxH) / stripeStep)
-    for (let i = 0; i < stripeCount; i++) {
-      if (i % 2 === 0) continue
-      grassStripes.push(
-        <Rect
-          key={`stripe-${i}`}
-          x={isH ? fieldPxX + i * stripeStep : fieldPxX}
-          y={isH ? fieldPxY : fieldPxY + i * stripeStep}
-          width={isH ? stripeStep : fieldPxW}
-          height={isH ? fieldPxH : stripeStep}
-          fill="rgba(255,255,255,0.04)"
-          listening={false}
-        />
-      )
-    }
-  }
-
-  // --- Center line (full-field only) ---
-  const centerLine = !half ? (
-    isH ? (
-      <Line
-        key="center-line"
-        points={[
-          fieldPxX + lengthPx / 2, fieldPxY,
-          fieldPxX + lengthPx / 2, fieldPxY + widthPx,
-        ]}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        listening={false}
-      />
-    ) : (
-      <Line
-        key="center-line"
-        points={[
-          fieldPxX,               fieldPxY + lengthPx / 2,
-          fieldPxX + widthPx,     fieldPxY + lengthPx / 2,
-        ]}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        listening={false}
-      />
-    )
-  ) : null
-
-  // --- Center circle (full-field only) ---
-  const centerCircleR = 9.15 * pxPerMeter
-  const centerCircle = !half ? (
-    <Circle
-      key="center-circle"
-      x={isH ? fieldPxX + lengthPx / 2 : fieldPxX + widthPx / 2}
-      y={isH ? fieldPxY + widthPx / 2 : fieldPxY + lengthPx / 2}
-      radius={centerCircleR}
-      stroke={strokeColor}
-      strokeWidth={strokeWidth}
-      fill="transparent"
-      listening={false}
-    />
-  ) : null
-
-  // --- Penalty & goal boxes ---
-  // Regulation: penalty box 16.5 × 40.3m, goal area 5.5 × 18.3m, goal 7.32m.
-  // On narrower fields (e.g. 40m), a 40.3m-wide box would span sideline-to-sideline
-  // and visually read as a line across the field. Cap every "across-the-field"
-  // dimension to leave at least a 1m margin inside each sideline, and cap the
-  // "depth" dimension to at most 30% of length so short pitches still look sane.
-  const penaltyWidthM = Math.min(40.3, Math.max(field.width_m - 2, field.width_m * 0.5))
-  const penaltyDepthM = Math.min(16.5, field.length_m * 0.3)
-  const goalAreaWidthM = Math.min(18.3, field.width_m * 0.4)
-  const goalAreaDepthM = Math.min(5.5, field.length_m * 0.12)
-  const goalPostWidthM = Math.min(7.32, field.width_m * 0.18)
-  const penaltyDepth = penaltyDepthM * pxPerMeter
-  const penaltyWidth = penaltyWidthM * pxPerMeter
-  const goalAreaDepth = goalAreaDepthM * pxPerMeter
-  const goalAreaWidth = goalAreaWidthM * pxPerMeter
-  const goalWidth = goalPostWidthM * pxPerMeter
-  const goalDepth = 0.5 * pxPerMeter
-
-  // Build boxes for each end. ends: 0 = left/top, 1 = right/bottom
-  const ends = half ? [1] : [0, 1] // attacking end = end 1 (right/bottom)
-
-  const penaltyBoxes: React.ReactNode[] = []
-  const goalAreaBoxes: React.ReactNode[] = []
-  const goalPosts: React.ReactNode[] = []
-
-  for (const end of ends) {
-    if (isH) {
-      // end 0 = left side (x=fieldPxX), end 1 = right side
-      const boxX = end === 0 ? fieldPxX : fieldPxX + lengthPx - penaltyDepth
-      const boxY = fieldPxY + (widthPx - penaltyWidth) / 2
-      penaltyBoxes.push(
-        <Rect
-          key={`penalty-${end}`}
-          x={boxX}
-          y={boxY}
-          width={penaltyDepth}
-          height={penaltyWidth}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          listening={false}
-        />
-      )
-
-      const gaX = end === 0 ? fieldPxX : fieldPxX + lengthPx - goalAreaDepth
-      const gaY = fieldPxY + (widthPx - goalAreaWidth) / 2
-      goalAreaBoxes.push(
-        <Rect
-          key={`goal-area-${end}`}
-          x={gaX}
-          y={gaY}
-          width={goalAreaDepth}
-          height={goalAreaWidth}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          listening={false}
-        />
-      )
-
-      // goal posts (drawn outside the field)
-      const gX = end === 0 ? fieldPxX - goalDepth : fieldPxX + lengthPx
-      const gY = fieldPxY + (widthPx - goalWidth) / 2
-      goalPosts.push(
-        <Rect
-          key={`goal-${end}`}
-          x={gX}
-          y={gY}
-          width={goalDepth}
-          height={goalWidth}
-          fill="#ffffff"
-          stroke="#ffffff"
-          strokeWidth={1}
-          listening={false}
-        />
-      )
-    } else {
-      // vertical orientation: length on Y axis
-      // end 0 = top (y=fieldPxY), end 1 = bottom
-      const boxY = end === 0 ? fieldPxY : fieldPxY + lengthPx - penaltyDepth
-      const boxX = fieldPxX + (widthPx - penaltyWidth) / 2
-      penaltyBoxes.push(
-        <Rect
-          key={`penalty-${end}`}
-          x={boxX}
-          y={boxY}
-          width={penaltyWidth}
-          height={penaltyDepth}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          listening={false}
-        />
-      )
-
-      const gaY = end === 0 ? fieldPxY : fieldPxY + lengthPx - goalAreaDepth
-      const gaX = fieldPxX + (widthPx - goalAreaWidth) / 2
-      goalAreaBoxes.push(
-        <Rect
-          key={`goal-area-${end}`}
-          x={gaX}
-          y={gaY}
-          width={goalAreaWidth}
-          height={goalAreaDepth}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          listening={false}
-        />
-      )
-
-      const gY = end === 0 ? fieldPxY - goalDepth : fieldPxY + lengthPx
-      const gX = fieldPxX + (widthPx - goalWidth) / 2
-      goalPosts.push(
-        <Rect
-          key={`goal-${end}`}
-          x={gX}
-          y={gY}
-          width={goalWidth}
-          height={goalDepth}
-          fill="#ffffff"
-          stroke="#ffffff"
-          strokeWidth={1}
-          listening={false}
-        />
-      )
-    }
-  }
-
-  return (
-    <>
-      {/* Field background */}
-      <Rect
-        x={fieldPxX}
-        y={fieldPxY}
-        width={fieldPxW}
-        height={fieldPxH}
-        fill={FIELD_BG[style]}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        listening={false}
-      />
-      {grassStripes}
-      {penaltyBoxes}
-      {goalAreaBoxes}
-      {goalPosts}
-      {centerLine}
-      {centerCircle}
-    </>
-  )
-}
+// Selection glow / ring
+const SEL_COLOR = '#00FF87'
+const SEL_GLOW_BLUR = 14
 
 // ─── Per-type object nodes ────────────────────────────────────────────────────
 
@@ -366,10 +106,6 @@ interface NodeProps<T extends BoardObject> {
   onDoubleClick?: (id: string) => void
   onContextMenu?: (id: string, clientX: number, clientY: number) => void
 }
-
-// Selection ring stroke
-const SEL_COLOR = '#00FF87'
-const SEL_WIDTH = 3
 
 // ── ZoneNode ──────────────────────────────────────────────────────────────────
 type ZoneObj = Extract<BoardObject, { type: 'zone' }>
@@ -387,7 +123,6 @@ export function ZoneNode({
 }: NodeProps<ZoneObj>) {
   if (obj.hidden) return null
   const { x, y } = mToPx(obj.x, obj.y, field, layout)
-  // In vertical orientation, the x/y axes are swapped, so pixel width = height_m * ppm and vice versa
   const w = field.orientation === 'horizontal' ? mLen(obj.width, layout) : mLen(obj.height, layout)
   const h = field.orientation === 'horizontal' ? mLen(obj.height, layout) : mLen(obj.width, layout)
   const draggable = interactive && !obj.locked
@@ -417,13 +152,25 @@ export function ZoneNode({
       draggable={draggable}
       {...handlers}
     >
+      {selected && (
+        <Rect
+          x={-3}
+          y={-3}
+          width={w + 6}
+          height={h + 6}
+          stroke={SEL_COLOR}
+          strokeWidth={2}
+          shadowColor={SEL_COLOR}
+          shadowBlur={SEL_GLOW_BLUR}
+          shadowOpacity={0.7}
+          listening={false}
+        />
+      )}
       <Rect
         width={w}
         height={h}
         fill={obj.color}
         opacity={obj.opacity}
-        stroke={selected ? SEL_COLOR : undefined}
-        strokeWidth={selected ? SEL_WIDTH : 0}
         listening={interactive}
       />
       {obj.label && (
@@ -439,6 +186,7 @@ export function ZoneNode({
           shadowColor="#000000"
           shadowBlur={3}
           shadowOpacity={0.8}
+          fontFamily="Inter, system-ui, sans-serif"
           fontSize={Math.max(10, mLen(1.5, layout)) * (obj.scale ?? 1)}
           listening={false}
         />
@@ -469,6 +217,10 @@ export function ZoneLineNode({
       stroke={selected ? SEL_COLOR : obj.color}
       strokeWidth={2 * (obj.scale ?? 1)}
       dash={[8, 6]}
+      lineCap="round"
+      shadowColor={selected ? SEL_COLOR : undefined}
+      shadowBlur={selected ? SEL_GLOW_BLUR : 0}
+      shadowOpacity={selected ? 0.6 : 0}
       listening={interactive}
       onClick={
         interactive
@@ -507,6 +259,8 @@ export function ConeNode({
   const radius = mLen(0.8, layout) * (obj.scale ?? 1)
   const draggable = interactive && !obj.locked
 
+  const grad = CONE_GRADIENTS[obj.color] ?? { top: '#ffb366', bottom: '#e06a00' }
+
   const handlers = interactive
     ? {
         onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
@@ -525,19 +279,58 @@ export function ConeNode({
     : {}
 
   return (
-    <RegularPolygon
+    <Group
       id={obj.id}
       x={x}
       y={y}
-      sides={3}
-      radius={radius}
-      fill={CONE_COLORS[obj.color] ?? obj.color}
-      stroke={selected ? SEL_COLOR : '#00000044'}
-      strokeWidth={selected ? SEL_WIDTH : 1}
       draggable={draggable}
       listening={interactive}
       {...handlers}
-    />
+    >
+      {/* Base shadow (subtle ellipse under cone) */}
+      <Ellipse
+        radiusX={radius * 0.75}
+        radiusY={radius * 0.22}
+        y={radius * 0.85}
+        fill="rgba(0,0,0,0.3)"
+        listening={false}
+      />
+      {/* Selection glow behind the cone */}
+      {selected && (
+        <RegularPolygon
+          sides={3}
+          radius={radius * 1.25}
+          stroke={SEL_COLOR}
+          strokeWidth={2}
+          shadowColor={SEL_COLOR}
+          shadowBlur={SEL_GLOW_BLUR}
+          shadowOpacity={0.8}
+          listening={false}
+        />
+      )}
+      {/* Cone body (gradient) */}
+      <RegularPolygon
+        sides={3}
+        radius={radius}
+        fillLinearGradientStartPoint={{ x: 0, y: -radius }}
+        fillLinearGradientEndPoint={{ x: 0, y: radius }}
+        fillLinearGradientColorStops={[0, grad.top, 1, grad.bottom]}
+        stroke="#00000055"
+        strokeWidth={0.75}
+        shadowColor="rgba(0,0,0,0.45)"
+        shadowBlur={4}
+        shadowOffsetY={2}
+        shadowOpacity={0.6}
+      />
+      {/* Highlight streak — thin line on upper-right edge */}
+      <Line
+        points={[-radius * 0.15, -radius * 0.55, radius * 0.35, radius * 0.1]}
+        stroke="rgba(255,255,255,0.55)"
+        strokeWidth={1}
+        lineCap="round"
+        listening={false}
+      />
+    </Group>
   )
 }
 
@@ -577,6 +370,10 @@ export function BallNode({
       }
     : {}
 
+  const centerPentR = radius * 0.32
+  const satPentR = radius * 0.2
+  const satDist = radius * 0.58
+
   return (
     <Group
       id={obj.id}
@@ -586,14 +383,52 @@ export function BallNode({
       listening={interactive}
       {...handlers}
     >
+      {selected && (
+        <Circle
+          radius={radius * 1.35}
+          stroke={SEL_COLOR}
+          strokeWidth={2}
+          shadowColor={SEL_COLOR}
+          shadowBlur={SEL_GLOW_BLUR}
+          shadowOpacity={0.8}
+          listening={false}
+        />
+      )}
       <Circle
         radius={radius}
-        fill="#ffffff"
-        stroke={selected ? SEL_COLOR : '#111111'}
-        strokeWidth={selected ? SEL_WIDTH : 1.5}
+        fillRadialGradientStartPoint={{ x: -radius * 0.3, y: -radius * 0.3 }}
+        fillRadialGradientStartRadius={0}
+        fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+        fillRadialGradientEndRadius={radius}
+        fillRadialGradientColorStops={[0, '#ffffff', 1, '#d8d8d8']}
+        stroke="#1a1a1a"
+        strokeWidth={0.75}
+        shadowColor="rgba(0,0,0,0.45)"
+        shadowBlur={4}
+        shadowOffsetY={2}
+        shadowOpacity={0.6}
       />
-      {/* Simple detail: small inner dark circle */}
-      <Circle radius={radius * 0.3} fill="#111111" listening={false} />
+      <RegularPolygon
+        sides={5}
+        radius={centerPentR}
+        fill="#1a1a1a"
+        listening={false}
+      />
+      {[0, 1, 2, 3, 4].map(i => {
+        const a = (i * 72 - 90) * (Math.PI / 180)
+        return (
+          <RegularPolygon
+            key={`pent-${i}`}
+            sides={5}
+            radius={satPentR}
+            x={Math.cos(a) * satDist}
+            y={Math.sin(a) * satDist}
+            rotation={i * 72 + 180}
+            fill="#1a1a1a"
+            listening={false}
+          />
+        )
+      })}
     </Group>
   )
 }
@@ -643,6 +478,8 @@ export function GoalNode({
       }
     : {}
 
+  const postThickness = Math.max(2, Math.min(w, h) * 0.08)
+
   return (
     <Group
       id={obj.id}
@@ -655,12 +492,36 @@ export function GoalNode({
       listening={interactive}
       {...handlers}
     >
+      {selected && (
+        <Rect
+          x={-3}
+          y={-3}
+          width={w + 6}
+          height={h + 6}
+          stroke={SEL_COLOR}
+          strokeWidth={2}
+          shadowColor={SEL_COLOR}
+          shadowBlur={SEL_GLOW_BLUR}
+          shadowOpacity={0.7}
+          listening={false}
+        />
+      )}
       <Rect
         width={w}
         height={h}
         fill="#ffffff"
-        stroke={selected ? SEL_COLOR : '#222222'}
-        strokeWidth={selected ? SEL_WIDTH : 2}
+        opacity={0.85}
+      />
+      <NetPattern x={0} y={0} w={w} h={h} />
+      <Rect x={0}                  y={0} width={postThickness} height={h} fill="#1a1a1a" />
+      <Rect x={w - postThickness} y={0} width={postThickness} height={h} fill="#1a1a1a" />
+      <Rect x={0}                  y={0} width={w}             height={postThickness} fill="#1a1a1a" />
+      <Rect
+        width={w}
+        height={h}
+        stroke="#222222"
+        strokeWidth={0.75}
+        listening={false}
       />
     </Group>
   )
@@ -686,6 +547,9 @@ export function PlayerNode({
   const label =
     obj.number != null ? String(obj.number) : (obj.position ?? '')
   const draggable = interactive && !obj.locked
+
+  const grad = PLAYER_GRADIENTS[obj.role] ?? PLAYER_GRADIENTS.neutral
+  const ringColor = obj.role === 'coach' ? '#f5f5f0' : '#ffffff'
 
   const handlers = interactive
     ? {
@@ -713,11 +577,37 @@ export function PlayerNode({
       listening={interactive}
       {...handlers}
     >
+      {selected && (
+        <Circle
+          radius={radius + 3}
+          stroke={SEL_COLOR}
+          strokeWidth={2.5}
+          shadowColor={SEL_COLOR}
+          shadowBlur={SEL_GLOW_BLUR}
+          shadowOpacity={0.9}
+          listening={false}
+        />
+      )}
       <Circle
         radius={radius}
-        fill={PLAYER_COLORS[obj.role] ?? '#9CA3AF'}
-        stroke={selected ? SEL_COLOR : '#ffffff'}
-        strokeWidth={selected ? SEL_WIDTH : 2}
+        fillLinearGradientStartPoint={{ x: 0, y: -radius }}
+        fillLinearGradientEndPoint={{ x: 0, y: radius }}
+        fillLinearGradientColorStops={[0, grad.top, 1, grad.bottom]}
+        stroke={ringColor}
+        strokeWidth={Math.max(1.5, radius * 0.12)}
+        shadowColor="rgba(0,0,0,0.5)"
+        shadowBlur={3}
+        shadowOffsetX={0}
+        shadowOffsetY={2}
+        shadowOpacity={0.8}
+      />
+      <Arc
+        innerRadius={radius * 0.88}
+        outerRadius={radius * 0.95}
+        angle={180}
+        rotation={180}
+        fill="rgba(255,255,255,0.35)"
+        listening={false}
       />
       {label !== '' && (
         <Text
@@ -729,7 +619,10 @@ export function PlayerNode({
           align="center"
           verticalAlign="middle"
           fill="#ffffff"
-          fontSize={Math.max(8, radius * 0.9)}
+          stroke="rgba(0,0,0,0.35)"
+          strokeWidth={0.5}
+          fontFamily="Inter, system-ui, sans-serif"
+          fontSize={Math.max(9, radius * 0.95)}
           fontStyle="bold"
           listening={false}
         />
@@ -740,6 +633,19 @@ export function PlayerNode({
 
 // ── ArrowNode ─────────────────────────────────────────────────────────────────
 type ArrowObj = Extract<BoardObject, { type: 'arrow' }>
+
+// Quadratic-bezier path between two points with a perpendicular offset mid-control.
+function buildCurvedPath(x1: number, y1: number, x2: number, y2: number): string {
+  const mx = (x1 + x2) / 2
+  const my = (y1 + y2) / 2
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.sqrt(dx * dx + dy * dy) || 1
+  const off = len * 0.08
+  const cx = mx + (-dy / len) * off
+  const cy = my + (dx / len) * off
+  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`
+}
 
 export function ArrowNode({
   obj,
@@ -759,9 +665,64 @@ export function ArrowNode({
 
   const arrowStyle = ARROW_STYLES[obj.style] ?? ARROW_STYLES['pass']
   const scaleFactor = obj.scale ?? 1
-  const strokeWidth = (obj.thickness ?? 3) * scaleFactor
+  const strokeWidth = (obj.thickness ?? 3.5) * scaleFactor
   const stroke = selected ? SEL_COLOR : arrowStyle.stroke
   const fill = selected ? SEL_COLOR : arrowStyle.fill
+
+  const commonHandlers = {
+    onClick: interactive
+      ? (e: Konva.KonvaEventObject<MouseEvent>) =>
+          onSelect?.(obj.id, e.evt.shiftKey)
+      : undefined,
+    onContextMenu:
+      interactive && onContextMenu
+        ? (e: Konva.KonvaEventObject<PointerEvent>) => {
+            e.evt.preventDefault()
+            onContextMenu(obj.id, e.evt.clientX, e.evt.clientY)
+          }
+        : undefined,
+  }
+
+  if (arrowStyle.curved && pxPoints.length >= 4) {
+    const x1 = pxPoints[0], y1 = pxPoints[1]
+    const x2 = pxPoints[pxPoints.length - 2]
+    const y2 = pxPoints[pxPoints.length - 1]
+    const data = buildCurvedPath(x1, y1, x2, y2)
+    const headLen = 12 * scaleFactor
+    const headWidth = 11 * scaleFactor
+    return (
+      <>
+        <Path
+          data={data}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          dash={arrowStyle.dash}
+          lineCap="round"
+          lineJoin="round"
+          fill={undefined}
+          shadowColor={selected ? SEL_COLOR : undefined}
+          shadowBlur={selected ? SEL_GLOW_BLUR : 0}
+          shadowOpacity={selected ? 0.7 : 0}
+          listening={interactive}
+          {...commonHandlers}
+        />
+        <Arrow
+          points={[
+            x2 - (x2 - x1) * 0.02,
+            y2 - (y2 - y1) * 0.02,
+            x2,
+            y2,
+          ]}
+          stroke={stroke}
+          fill={fill}
+          strokeWidth={strokeWidth}
+          pointerLength={headLen}
+          pointerWidth={headWidth}
+          listening={false}
+        />
+      </>
+    )
+  }
 
   return (
     <Arrow
@@ -770,23 +731,15 @@ export function ArrowNode({
       fill={fill}
       strokeWidth={strokeWidth}
       dash={arrowStyle.dash}
-      pointerLength={10 * scaleFactor}
-      pointerWidth={10 * scaleFactor}
+      lineCap="round"
+      lineJoin="round"
+      pointerLength={12 * scaleFactor}
+      pointerWidth={11 * scaleFactor}
+      shadowColor={selected ? SEL_COLOR : undefined}
+      shadowBlur={selected ? SEL_GLOW_BLUR : 0}
+      shadowOpacity={selected ? 0.7 : 0}
       listening={interactive}
-      onClick={
-        interactive
-          ? (e: Konva.KonvaEventObject<MouseEvent>) =>
-              onSelect?.(obj.id, e.evt.shiftKey)
-          : undefined
-      }
-      onContextMenu={
-        interactive && onContextMenu
-          ? (e: Konva.KonvaEventObject<PointerEvent>) => {
-              e.evt.preventDefault()
-              onContextMenu(obj.id, e.evt.clientX, e.evt.clientY)
-            }
-          : undefined
-      }
+      {...commonHandlers}
     />
   )
 }
@@ -804,7 +757,6 @@ export interface MarqueeRect {
 }
 
 export interface AlignmentGuide {
-  // stage-pixel coordinates for a single line
   points: [number, number, number, number]
 }
 
@@ -841,12 +793,11 @@ export default function FieldRenderer({
   marquee,
   alignmentGuides = [],
 }: FieldRendererProps): React.JSX.Element {
-  const layout = useFieldLayout(field, width, height)
+  const layout = _useFieldLayout(field, width, height)
   const selectedSet = new Set(selectedIds)
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent>) {
     if (!interactive) return
-    // Only fire if user clicked on the stage background (not a child shape)
     if (e.target === e.currentTarget) {
       onSelect?.(null, false)
     }
@@ -886,7 +837,6 @@ export default function FieldRenderer({
     }
   }
 
-  // Compute preview arrow pixel points if present
   let previewPxPoints: number[] | null = null
   let previewStroke = '#ffffff'
   if (previewArrow) {
@@ -926,6 +876,7 @@ export default function FieldRenderer({
               strokeWidth={2}
               dash={[8, 5]}
               opacity={0.7}
+              lineCap="round"
               listening={false}
             />
           )}
