@@ -168,14 +168,30 @@ const FORMATIONS: Record<FormationName, PlayerTemplate[]> = {
  */
 export function generateFormation(name: FormationName, field: Field): BoardObject[] {
   const templates = FORMATIONS[name]
-  // In full-pitch mode: GK near x=0 (own goal), strikers near x=length (opp goal).
-  // In half-field mode: only x ∈ [length/2, length] is drawn and the goal sits at
-  // x=length. Flip the formation so the GK defends THAT goal (x near length) and
-  // the attacking line sits near the center line (x ≈ length/2), matching how
-  // coaches draw half-pitch tactical drills.
+  // Normalize template x-fractions to [0, 1] so the formation fills the full
+  // length of the playable area regardless of how the template was designed.
+  // Then map to the visible range:
+  //   full-field  → [PAD, 1-PAD] of length_m (attacking team goes left → right)
+  //   half-field  → [0.5+PAD, 1-PAD] of length_m, flipped so GK is at the drawn
+  //                 goal (x near length_m) and the attackers sit near the
+  //                 centre line (x near length_m/2).
+  const PAD = 0.04
+  const xFracs = templates.map(t => t.x_frac)
+  const minX = Math.min(...xFracs)
+  const maxX = Math.max(...xFracs)
+  const span = maxX - minX || 1
   return templates.map(t => {
-    let xFrac = t.x_frac
-    if (field.half_field) xFrac = 0.5 + (1 - t.x_frac) * 0.5
+    const norm = (t.x_frac - minX) / span  // 0 at own GK → 1 at strikers
+    let xFrac: number
+    if (field.half_field) {
+      // Flip + map into the visible attacking half
+      const low = 0.5 + PAD
+      const high = 1 - PAD
+      xFrac = high - norm * (high - low)
+    } else {
+      // Full pitch: GK near left goal, strikers near right goal
+      xFrac = PAD + norm * (1 - 2 * PAD)
+    }
     return {
       id: crypto.randomUUID(),
       type: 'player' as const,
