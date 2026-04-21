@@ -202,12 +202,21 @@ export function FieldMarkings({ field, layout, style }: FieldMarkingsProps) {
   ) : null
 
   // --- Penalty & goal boxes ---
-  // penalty box: 16.5m × 40.3m (depth × width), centered on width axis, at each end
-  const penaltyDepth = 16.5 * pxPerMeter
-  const penaltyWidth = 40.3 * pxPerMeter
-  const goalAreaDepth = 5.5 * pxPerMeter
-  const goalAreaWidth = 18.3 * pxPerMeter
-  const goalWidth = 7.32 * pxPerMeter
+  // Regulation: penalty box 16.5 × 40.3m, goal area 5.5 × 18.3m, goal 7.32m.
+  // On narrower fields (e.g. 40m), a 40.3m-wide box would span sideline-to-sideline
+  // and visually read as a line across the field. Cap every "across-the-field"
+  // dimension to leave at least a 1m margin inside each sideline, and cap the
+  // "depth" dimension to at most 30% of length so short pitches still look sane.
+  const penaltyWidthM = Math.min(40.3, Math.max(field.width_m - 2, field.width_m * 0.5))
+  const penaltyDepthM = Math.min(16.5, field.length_m * 0.3)
+  const goalAreaWidthM = Math.min(18.3, field.width_m * 0.4)
+  const goalAreaDepthM = Math.min(5.5, field.length_m * 0.12)
+  const goalPostWidthM = Math.min(7.32, field.width_m * 0.18)
+  const penaltyDepth = penaltyDepthM * pxPerMeter
+  const penaltyWidth = penaltyWidthM * pxPerMeter
+  const goalAreaDepth = goalAreaDepthM * pxPerMeter
+  const goalAreaWidth = goalAreaWidthM * pxPerMeter
+  const goalWidth = goalPostWidthM * pxPerMeter
   const goalDepth = 0.5 * pxPerMeter
 
   // Build boxes for each end. ends: 0 = left/top, 1 = right/bottom

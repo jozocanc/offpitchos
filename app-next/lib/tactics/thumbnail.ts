@@ -147,11 +147,17 @@ function drawField(ctx: SKRSContext2D, field: Field, W: number, H: number) {
     ctx.stroke()
   }
 
-  const penaltyDepth = 16.5 * pxPerMeter
-  const penaltyWidth = 40.3 * pxPerMeter
-  const goalAreaDepth = 5.5 * pxPerMeter
-  const goalAreaWidth = 18.3 * pxPerMeter
-  const goalPostWidth = 7.32 * pxPerMeter
+  // Cap box dimensions to fit inside small fields (see field-renderer.tsx).
+  const penaltyWidthM = Math.min(40.3, Math.max(field.width_m - 2, field.width_m * 0.5))
+  const penaltyDepthM = Math.min(16.5, field.length_m * 0.3)
+  const goalAreaWidthM = Math.min(18.3, field.width_m * 0.4)
+  const goalAreaDepthM = Math.min(5.5, field.length_m * 0.12)
+  const goalPostWidthM = Math.min(7.32, field.width_m * 0.18)
+  const penaltyDepth = penaltyDepthM * pxPerMeter
+  const penaltyWidth = penaltyWidthM * pxPerMeter
+  const goalAreaDepth = goalAreaDepthM * pxPerMeter
+  const goalAreaWidth = goalAreaWidthM * pxPerMeter
+  const goalPostWidth = goalPostWidthM * pxPerMeter
   const goalPostDepth = 0.5 * pxPerMeter
 
   const ends = half ? [1] : [0, 1]
