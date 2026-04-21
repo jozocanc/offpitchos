@@ -99,7 +99,7 @@ export default function GenerateModal({
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h2 id="generate-modal-title" className="text-lg font-semibold">
-              Generate drill with AI ✨
+              Ask Pep ✨
             </h2>
             <button
               onClick={handleClose}

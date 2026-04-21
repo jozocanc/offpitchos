@@ -62,7 +62,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
               onClick={() => setGenerateOpen(true)}
               className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
             >
-              Generate with AI ✨
+              Ask Pep ✨
             </button>
           )}
           <form action={createBlankDrillFormAction}>
