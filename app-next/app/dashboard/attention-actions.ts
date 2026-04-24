@@ -9,10 +9,27 @@ const anthropic = new Anthropic({
 })
 
 // In-memory cache so every dashboard visit doesn't retrigger a Claude call.
-// TTL is short enough that the DOC still sees fresh data, but long enough
-// to cover typical navigation patterns (visit → navigate away → come back).
-const ATTENTION_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+// TTL balances two failure modes: too long leaves stale signals visible
+// after data changes (a demo-seed clear in 2026-04-24 testing showed "12
+// players missing gear sizes" for up to 2 min after the players were
+// deleted); too short hammers Haiku on rapid navigation. 30s covers the
+// common "navigate away and come back" window while keeping staleness
+// after single-row mutations bounded. Big-bang mutations (demo seed /
+// clear) additionally call bustAttentionCache so the change is visible
+// immediately. Per-lambda instance — not shared across serverless
+// workers; accepted limitation until the cache needs to be shared.
+const ATTENTION_CACHE_TTL_MS = 30 * 1000 // 30 seconds
 const attentionCache = new Map<string, { data: AttentionResult; expiresAt: number }>()
+
+// Explicit cache bust for callers that make atomic bulk data changes
+// large enough that 30s of stale is unacceptable UX. Deletes every
+// entry whose key starts with `${clubId}:` so all timezone variants
+// are invalidated together.
+export async function bustAttentionCache(clubId: string): Promise<void> {
+  for (const key of attentionCache.keys()) {
+    if (key.startsWith(`${clubId}:`)) attentionCache.delete(key)
+  }
+}
 
 function readCache(key: string): AttentionResult | null {
   const entry = attentionCache.get(key)

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
+import { bustAttentionCache } from './attention-actions'
 import {
   DEMO_COACHES,
   DEMO_EVENTS,
@@ -292,6 +293,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     await trackSeed('events', event.id)
   }
 
+  await bustAttentionCache(clubId)
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/teams')
@@ -379,6 +381,7 @@ export async function clearDemoData(): Promise<DemoClearResult> {
   // Finally, drop the tracking rows themselves.
   await admin.from('demo_seeds').delete().eq('club_id', profile.club_id)
 
+  await bustAttentionCache(profile.club_id)
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/teams')
