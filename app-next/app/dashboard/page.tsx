@@ -7,6 +7,8 @@ import AttentionPanel from './attention-panel'
 import CoachAttentionPanel from './coach-attention-panel'
 import ParentAttentionPanel from './parent-attention-panel'
 import OnboardingChecklist from './onboarding-checklist'
+import DemoSeedButton from './demo-seed-button'
+import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
 
 const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
@@ -122,6 +124,11 @@ export default async function DashboardPage() {
           dismissed, or running on a browser that can't install. Sits above
           the attention panels so it's visible but not blocking critical info. */}
       <InstallPrompt />
+
+      {/* Demo seed button (DOC only, gated by NEXT_PUBLIC_ALLOW_DEMO_SEED).
+          Component decides whether to render the load CTA, the loaded
+          banner, or nothing at all based on live state. */}
+      {userRole === 'doc' && <DemoSeedButton state={await getDemoSeedState()} />}
 
       {/* Post-wizard setup checklist — self-hides when the DOC dismisses
           it (only allowed after all four steps are done) or when the

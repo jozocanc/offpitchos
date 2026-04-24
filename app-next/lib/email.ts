@@ -10,12 +10,22 @@
 //   so callers can surface partial delivery if they want.
 // - Every failure is `console.error`'d with the Resend status code + name
 //   + message + target address so Vercel log triage is a one-grep job.
+// - Demo recipients (@example.test) short-circuit BEFORE Resend is called
+//   so seed operations don't generate failed-delivery noise.
 
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'OffPitchOS <onboarding@resend.dev>'
+
+// Any address on the demo TLD is a seeded fake account. Returning true
+// here means "pretend the send succeeded, never touch Resend" — callers
+// see a success, logs stay clean, Resend doesn't log a delivery failure
+// for a throwaway mailbox.
+export function isDemoRecipient(email: string): boolean {
+  return email.trim().toLowerCase().endsWith('@example.test')
+}
 
 // Resend's SDK returns error objects shaped like { name, message, statusCode? }.
 // Keep the extraction loose — Resend has shifted field names between versions
@@ -39,6 +49,7 @@ export async function sendCoachInviteEmail({
   clubName: string
   joinUrl: string
 }): Promise<void> {
+  if (isDemoRecipient(to)) return
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
@@ -91,6 +102,7 @@ export async function sendNotificationEmail({
   actionUrl?: string
   actionLabel?: string
 }): Promise<void> {
+  if (isDemoRecipient(to)) return
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
@@ -165,6 +177,13 @@ export async function sendEmailToProfiles(
 
     if (!email) {
       // Profile exists but no auth email — not a delivery failure, just a gap.
+      continue
+    }
+
+    if (isDemoRecipient(email)) {
+      // Seeded demo accounts: treat as delivered silently so the bulk
+      // toast count reflects real intent without hammering Resend.
+      result.sent++
       continue
     }
 
