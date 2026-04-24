@@ -13,6 +13,7 @@ import ParentCantAttendModal from './parent-cant-attend-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, restoreEvent, getPastEvents } from './actions'
 import { useToast } from '@/components/toast'
+import { formatRecipientToast } from '../notification-toast'
 
 interface Event {
   id: string
@@ -139,11 +140,11 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   }
 
   function handleCancel(eventId: string) {
-    if (!confirm('Cancel this event? Coaches and parents will be notified.')) return
+    if (!confirm('Cancel this event? Coaches and parents on this team will be notified.')) return
     startTransition(async () => {
       try {
-        await cancelEvent(eventId)
-        toast('Event cancelled · parents notified', 'success')
+        const counts = await cancelEvent(eventId)
+        toast(formatRecipientToast({ action: 'event_cancelled', ...counts }), 'success')
       } catch {
         toast('Failed to cancel event', 'error')
       }
@@ -151,11 +152,11 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   }
 
   function handleRestore(eventId: string) {
-    if (!confirm('Bring this event back? Coaches and parents will be notified it’s on again.')) return
+    if (!confirm('Bring this event back? Coaches and parents on this team will be notified.')) return
     startTransition(async () => {
       try {
-        await restoreEvent(eventId)
-        toast('Event restored · team notified', 'success')
+        const counts = await restoreEvent(eventId)
+        toast(formatRecipientToast({ action: 'event_restored', ...counts }), 'success')
       } catch {
         toast('Failed to restore event', 'error')
       }

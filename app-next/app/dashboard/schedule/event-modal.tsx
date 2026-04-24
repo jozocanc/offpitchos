@@ -7,6 +7,8 @@ import { checkConflicts, suggestAlternatives } from './conflict-actions'
 import type { Conflict, Suggestion } from './conflict-actions'
 import ConflictBanner from './conflict-banner'
 import SessionPlan from './session-plan'
+import { useToast } from '@/components/toast'
+import { formatRecipientToast } from '../notification-toast'
 
 interface Team {
   id: string
@@ -64,6 +66,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   const [updateFuture, setUpdateFuture] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
   const [conflicts, setConflicts] = useState<Conflict[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [checkingConflicts, setCheckingConflicts] = useState(false)
@@ -156,8 +159,9 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
 
     startTransition(async () => {
       try {
+        let counts
         if (isEditing) {
-          await updateEvent({
+          counts = await updateEvent({
             eventId: editEvent.id,
             title: finalTitle,
             startTime: startISO,
@@ -168,8 +172,9 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             notes: notes.trim() || null,
             updateFuture,
           })
+          toast(formatRecipientToast({ action: 'event_updated', ...counts }), 'success')
         } else {
-          await createEvent({
+          counts = await createEvent({
             teamId,
             type,
             title: finalTitle,
@@ -185,6 +190,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
               endDate: recurringEndDate,
             },
           })
+          toast(formatRecipientToast({ action: 'event_created', ...counts }), 'success')
         }
         onClose()
       } catch (err) {

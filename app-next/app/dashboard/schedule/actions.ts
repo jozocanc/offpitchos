@@ -111,7 +111,7 @@ async function notifyTeamMembers(
 
 // ---------- Actions ----------
 
-export async function createEvent(input: CreateEventInput) {
+export async function createEvent(input: CreateEventInput): Promise<NotifyCounts> {
   const { user, profile, supabase } = await getUserProfile()
 
   if (!input.recurring?.enabled) {
@@ -153,7 +153,11 @@ export async function createEvent(input: CreateEventInput) {
     const createdMessage = locationLabel
       ? `New event: ${input.title.trim()} at ${locationLabel}`
       : `New event: ${input.title.trim()}`
-    await notifyTeamMembers(event.id, input.teamId, 'event_created', createdMessage)
+    const counts = await notifyTeamMembers(event.id, input.teamId, 'event_created', createdMessage)
+
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard')
+    return counts
   } else {
     // Recurring — generate individual events
     const recurrenceGroup = crypto.randomUUID()
@@ -221,18 +225,20 @@ export async function createEvent(input: CreateEventInput) {
     if (error) throw new Error(`Failed to create recurring events: ${error.message}`)
 
     // Notify for the first event only (avoid spam)
+    let counts: NotifyCounts = { parents: 0, coaches: 0 }
     if (inserted && inserted.length > 0) {
-      await notifyTeamMembers(
+      counts = await notifyTeamMembers(
         inserted[0].id,
         input.teamId,
         'event_created',
         `New recurring schedule: ${input.title.trim()} (${events.length} events)`
       )
     }
-  }
 
-  revalidatePath('/dashboard/schedule')
-  revalidatePath('/dashboard')
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard')
+    return counts
+  }
 }
 
 async function resolveLocationLabel(

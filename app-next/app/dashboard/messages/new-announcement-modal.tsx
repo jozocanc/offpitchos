@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createAnnouncement } from './actions'
 import { useToast } from '@/components/toast'
+import { formatRecipientToast } from '../notification-toast'
 
 interface Team {
   id: string
@@ -74,11 +75,14 @@ export default function NewAnnouncementModal({
           body: body.trim(),
           pollEnabled: pollEnabled && !isParent,
         })
-        if (result.totalRecipients === 0) {
-          toast('Posted — but nobody is on this audience yet', 'error')
-        } else {
-          toast(`Posted · Sent to ${formatAudience({ parents: result.parentCount, coaches: result.coachCount })}`, 'success')
-        }
+        toast(
+          formatRecipientToast({
+            action: 'announcement_posted',
+            parents: result.parentCount,
+            coaches: result.coachCount,
+          }),
+          result.totalRecipients === 0 ? 'error' : 'success',
+        )
         onClose()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')

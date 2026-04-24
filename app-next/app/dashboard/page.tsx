@@ -107,7 +107,6 @@ export default async function DashboardPage() {
     ?? user.user_metadata?.full_name
     ?? user.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
     ?? 'there'
-  const isNewClub = (teamCount ?? 0) <= 1
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -241,32 +240,6 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Quick actions for new clubs — DOC only since these are admin setup steps */}
-      {isNewClub && userRole === 'doc' && (
-        <div>
-          <h2 className="text-lg font-bold mb-4">Quick actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <QuickAction
-              href="/dashboard/teams"
-              title="Add a team"
-              description="Create additional teams in your club."
-              icon="+"
-            />
-            <QuickAction
-              href="/dashboard/coaches"
-              title="Invite a coach"
-              description="Bring your coaching staff onto OffPitchOS."
-              icon="+"
-            />
-            <QuickAction
-              href="/dashboard/schedule"
-              title="Create a schedule"
-              description="Set up practices, games, and events for your teams."
-              icon="+"
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -297,25 +270,3 @@ function StatCard({
   )
 }
 
-function QuickAction({
-  href,
-  title,
-  description,
-  icon,
-}: {
-  href: string
-  title: string
-  description: string
-  icon: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="bg-dark-secondary rounded-2xl p-6 border border-white/5 hover:border-green/30 transition-colors group"
-    >
-      <span className="text-2xl mb-3 block">{icon}</span>
-      <h3 className="font-bold group-hover:text-green transition-colors">{title}</h3>
-      <p className="text-gray text-sm mt-1">{description}</p>
-    </Link>
-  )
-}

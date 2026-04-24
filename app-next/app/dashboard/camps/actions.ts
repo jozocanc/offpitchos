@@ -309,6 +309,8 @@ export async function createCamp(input: CreateCampInput) {
   // 3) Notify the team so parents know registration is open. We reuse the
   // 'event_created' notification type since that's what the notifications
   // table check constraint allows.
+  let parents = 0
+  let coaches = 0
   try {
     const service = createServiceClient()
     // If camp is tied to a team, notify that team's members.
@@ -338,6 +340,17 @@ export async function createCamp(input: CreateCampInput) {
       })
       // Fire and forget — email is best-effort, don't block the UI on it.
       void sendEmailToProfiles(memberIds, 'OffPitchOS — New camp', message, 'https://offpitchos.com/dashboard/camps')
+
+      // Split by role so the toast can say "notified N parents and M
+      // coaches" (matches the pattern used by schedule notifications).
+      const { data: profiles } = await service
+        .from('profiles')
+        .select('role')
+        .in('id', memberIds)
+      for (const p of profiles ?? []) {
+        if (p.role === 'parent') parents++
+        else if (p.role === 'coach' || p.role === 'doc') coaches++
+      }
     }
   } catch {
     // Creation itself succeeded; notification failure shouldn't fail the action.
@@ -345,7 +358,7 @@ export async function createCamp(input: CreateCampInput) {
 
   revalidatePath('/dashboard/camps')
 
-  return { eventId: event.id }
+  return { eventId: event.id, parents, coaches }
 }
 
 // DOC action: nudge parents who haven't paid for a given camp yet.

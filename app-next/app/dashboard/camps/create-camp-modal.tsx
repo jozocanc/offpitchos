@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createCamp } from './actions'
 import { useToast } from '@/components/toast'
+import { formatRecipientToast } from '../notification-toast'
 
 interface Team {
   id: string
@@ -76,7 +77,7 @@ export default function CreateCampModal({
 
     startTransition(async () => {
       try {
-        await createCamp({
+        const result = await createCamp({
           title: title.trim(),
           teamId: teamId || null,
           startTime: startLocal.toISOString(),
@@ -88,7 +89,7 @@ export default function CreateCampModal({
           description: description.trim() || null,
           notes: notes.trim() || null,
         })
-        toast('Camp created — parents notified', 'success')
+        toast(formatRecipientToast({ action: 'camp_created', parents: result.parents, coaches: result.coaches }), 'success')
         onClose()
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to create camp'

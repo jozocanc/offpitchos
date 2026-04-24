@@ -226,7 +226,7 @@ export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResu
       success: true,
       message: total > 0
         ? `Restored. Notified ${total} ${total === 1 ? 'person' : 'people'} the event is back on.`
-        : 'Restored.',
+        : 'Restored. No one on this team yet, so no notifications went out.',
     }
   } catch (err: any) {
     return { success: false, message: `Could not restore: ${err?.message ?? 'unknown error'}` }
@@ -419,7 +419,9 @@ export async function executeVoicePlan(
   const venues = venuesRes.data ?? []
 
   const formatNotified = (parents: number, coaches: number): string => {
-    if (parents === 0 && coaches === 0) return 'No one needed to be notified.'
+    if (parents === 0 && coaches === 0) {
+      return 'No parents on this team yet — invite them in Teams to start sending notifications.'
+    }
     const parts: string[] = []
     if (parents > 0) parts.push(`${parents} ${parents === 1 ? 'parent' : 'parents'}`)
     if (coaches > 0) parts.push(`${coaches} ${coaches === 1 ? 'coach' : 'coaches'}`)
@@ -500,7 +502,7 @@ export async function executeVoicePlan(
           const reasonTail = result.reason ? ` (${result.reason.toLowerCase()})` : ''
           return {
             success: true,
-            message: `Done — ${result.coveringCoachName} is covering "${result.eventTitle}" for you${reasonTail}. Parents notified.`,
+            message: `Done — ${result.coveringCoachName} is covering "${result.eventTitle}" for you${reasonTail}.`,
           }
         }
         return {
@@ -514,7 +516,7 @@ export async function executeVoicePlan(
         const team = teams.find(t => t.id === input.teamId)
         if (!team) return { success: false, message: 'Could not find that team.' }
 
-        await createEvent({
+        const counts = await createEvent({
           teamId: input.teamId,
           type: input.type,
           title: String(input.title ?? `${team.name} ${input.type}`).slice(0, 120),
@@ -530,7 +532,10 @@ export async function executeVoicePlan(
         const dateStr = start.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
         const venueName = input.venueId ? venues.find(v => v.id === input.venueId)?.name : null
         const venuePart = venueName ? ` at ${venueName}` : ''
-        return { success: true, message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. Parents will be notified.` }
+        return {
+          success: true,
+          message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. ${formatNotified(counts.parents, counts.coaches)}`,
+        }
       }
 
       default:
