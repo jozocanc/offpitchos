@@ -34,8 +34,13 @@ export async function completeOnboarding(formData: FormData) {
 
   if (teamError) throw new Error(`Failed to create team: ${teamError.message}`)
 
-  // 3. Upsert the profile
+  // 3. Upsert the profile.
+  // `display_name` (set by email signup at signup/page.tsx:30) is the
+  // canonical name field and must win the fallback, otherwise we
+  // overwrite the typed name with the email local-part — the 2026-04-24
+  // "Welcome back, jozo.cancar27+test12" bug.
   const displayName =
+    (user.user_metadata?.display_name as string) ||
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
     user.email?.split('@')[0] ||
