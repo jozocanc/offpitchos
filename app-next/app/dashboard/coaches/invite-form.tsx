@@ -32,11 +32,18 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
     const invitedEmail = email.trim()
     startTransition(async () => {
       try {
-        await inviteCoach(formData)
+        const result = await inviteCoach(formData)
         setEmail('')
         setTeamId('')
         setOpen(false)
-        toast(`Invite sent to ${invitedEmail}`, 'success')
+        if (result.emailSent) {
+          toast(`Invite sent to ${invitedEmail}`, 'success')
+        } else {
+          toast(
+            `Invite created — but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
+            'error',
+          )
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }

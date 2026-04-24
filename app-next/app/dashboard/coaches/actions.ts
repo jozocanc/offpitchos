@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendCoachInviteEmail } from '@/lib/email'
 
-export async function inviteCoach(formData: FormData) {
+export async function inviteCoach(
+  formData: FormData,
+): Promise<{ emailSent: boolean; emailError?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -42,7 +44,9 @@ export async function inviteCoach(formData: FormData) {
 
   if (error) throw new Error(`Failed to create invite: ${error.message}`)
 
-  // Send invite email (best-effort — don't block on failure)
+  // Send invite email. The invite row already exists; an email failure
+  // should not nuke the server action — the DOC can still copy the join
+  // link from Pending Invites. Surface the state truthfully to the UI.
   const { data: club } = await supabase
     .from('clubs')
     .select('name')
@@ -50,16 +54,27 @@ export async function inviteCoach(formData: FormData) {
     .single()
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  await sendCoachInviteEmail({
-    to: email.trim(),
-    clubName: club?.name ?? 'your club',
-    joinUrl: `${baseUrl}/join/${invite.token}`,
-  }).catch(err => console.error('Email send failed (non-blocking):', err))
 
   revalidatePath('/dashboard/coaches')
+
+  try {
+    await sendCoachInviteEmail({
+      to: email.trim(),
+      clubName: club?.name ?? 'your club',
+      joinUrl: `${baseUrl}/join/${invite.token}`,
+    })
+    return { emailSent: true }
+  } catch (err) {
+    return {
+      emailSent: false,
+      emailError: err instanceof Error ? err.message : 'Unknown email error',
+    }
+  }
 }
 
-export async function resendInvite(inviteId: string): Promise<{ emailSent: boolean }> {
+export async function resendInvite(
+  inviteId: string,
+): Promise<{ emailSent: boolean; emailError?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -111,7 +126,12 @@ export async function resendInvite(inviteId: string): Promise<{ emailSent: boole
       })
       emailSent = true
     } catch (err) {
-      console.error('Resend invite email failed (non-blocking):', err)
+      revalidatePath('/dashboard/coaches')
+      revalidatePath('/dashboard')
+      return {
+        emailSent: false,
+        emailError: err instanceof Error ? err.message : 'Unknown email error',
+      }
     }
   }
 

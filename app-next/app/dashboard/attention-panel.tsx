@@ -89,7 +89,14 @@ export default function AttentionPanel() {
     setPendingSignal(signalId)
     try {
       const result = await resendInvite(inviteId)
-      toast(result.emailSent ? 'Invite email resent' : 'Invite refreshed', 'success')
+      if (result.emailSent) {
+        toast('Invite email resent', 'success')
+      } else {
+        toast(
+          `Invite refreshed — but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
+          'error',
+        )
+      }
       setCompletedSignals(prev => new Set(prev).add(signalId))
       // Refresh after a short delay so the toast is visible
       setTimeout(() => load(true), 600)

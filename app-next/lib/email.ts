@@ -1,8 +1,34 @@
+// Email sending via Resend.
+//
+// Contract:
+// - 1:1 senders (sendCoachInviteEmail, sendNotificationEmail) THROW on any
+//   Resend failure. Callers must try/catch and surface the failure — the
+//   previous pattern of returning `{ error }` was silently swallowed by
+//   callers that used `.catch()` on a promise that never rejected.
+// - Bulk sender (sendEmailToProfiles) catches per recipient so one bad
+//   mailbox never kills a whole announcement. Returns `{ sent, failed }`
+//   so callers can surface partial delivery if they want.
+// - Every failure is `console.error`'d with the Resend status code + name
+//   + message + target address so Vercel log triage is a one-grep job.
+
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'OffPitchOS <onboarding@resend.dev>'
+
+// Resend's SDK returns error objects shaped like { name, message, statusCode? }.
+// Keep the extraction loose — Resend has shifted field names between versions
+// and we'd rather get a slightly generic log than throw while throwing.
+function describeResendError(error: unknown, to: string): string {
+  if (!error || typeof error !== 'object') return `Resend: unknown error (to=${to})`
+  const err = error as { name?: unknown; message?: unknown; statusCode?: unknown }
+  const name = typeof err.name === 'string' ? err.name : 'UnknownError'
+  const message = typeof err.message === 'string' ? err.message : String(err.message ?? 'no message')
+  const statusCode = typeof err.statusCode === 'number' ? err.statusCode : undefined
+  const statusPart = statusCode ? ` [${statusCode}]` : ''
+  return `Resend${statusPart} ${name}: ${message} (to=${to})`
+}
 
 export async function sendCoachInviteEmail({
   to,
@@ -12,7 +38,7 @@ export async function sendCoachInviteEmail({
   to: string
   clubName: string
   joinUrl: string
-}) {
+}): Promise<void> {
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
@@ -46,11 +72,10 @@ export async function sendCoachInviteEmail({
   })
 
   if (error) {
-    console.error('Failed to send invite email:', error)
-    return { error: error.message }
+    const detail = describeResendError(error, to)
+    console.error('[email] coach invite failed:', detail)
+    throw new Error(detail)
   }
-
-  return { success: true }
 }
 
 export async function sendNotificationEmail({
@@ -65,7 +90,7 @@ export async function sendNotificationEmail({
   message: string
   actionUrl?: string
   actionLabel?: string
-}) {
+}): Promise<void> {
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
@@ -95,11 +120,28 @@ export async function sendNotificationEmail({
   })
 
   if (error) {
-    console.error('Failed to send notification email:', error)
+    const detail = describeResendError(error, to)
+    console.error('[email] notification failed:', detail)
+    throw new Error(detail)
   }
 }
 
-export async function sendEmailToProfiles(profileIds: string[], subject: string, message: string, actionUrl?: string) {
+export interface BulkEmailResult {
+  sent: number
+  failed: Array<{ email: string; error: string }>
+}
+
+// Bulk fan-out. One failed recipient must never kill the whole batch —
+// a partial delivery is strictly better than an all-or-nothing toast.
+// Callers can inspect `failed.length` to surface partial state.
+export async function sendEmailToProfiles(
+  profileIds: string[],
+  subject: string,
+  message: string,
+  actionUrl?: string,
+): Promise<BulkEmailResult> {
+  const result: BulkEmailResult = { sent: 0, failed: [] }
+
   const { createServiceClient } = await import('@/lib/supabase/service')
   const service = createServiceClient()
 
@@ -108,17 +150,36 @@ export async function sendEmailToProfiles(profileIds: string[], subject: string,
     .select('user_id')
     .in('id', profileIds)
 
-  if (!profiles || profiles.length === 0) return
+  if (!profiles || profiles.length === 0) return result
 
-  // Use Supabase admin API to get user emails
   for (const profile of profiles) {
+    let email: string | undefined
     try {
       const { data: { user } } = await service.auth.admin.getUserById(profile.user_id)
-      if (user?.email) {
-        await sendNotificationEmail({ to: user.email, subject, message, actionUrl })
-      }
-    } catch {
-      // Skip if we can't get the email
+      email = user?.email ?? undefined
+    } catch (err) {
+      console.error('[email] getUserById failed:', err, 'profile:', profile.user_id)
+      result.failed.push({ email: profile.user_id, error: 'lookup_failed' })
+      continue
+    }
+
+    if (!email) {
+      // Profile exists but no auth email — not a delivery failure, just a gap.
+      continue
+    }
+
+    try {
+      await sendNotificationEmail({ to: email, subject, message, actionUrl })
+      result.sent++
+    } catch (err) {
+      // sendNotificationEmail already logs with describeResendError — we
+      // just record the per-recipient outcome here for the aggregate.
+      result.failed.push({
+        email,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
+
+  return result
 }
