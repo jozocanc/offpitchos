@@ -110,6 +110,12 @@ export default async function DashboardPage() {
     ?? user.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
     ?? 'there'
 
+  // Compute once: the demo button reads it for state, and AttentionPanel
+  // uses `demoState.loaded` as part of its `key` so a seed/clear remounts
+  // the panel and re-fires its load() effect. Non-DOC viewers skip the
+  // query entirely.
+  const demoState = userRole === 'doc' ? await getDemoSeedState() : null
+
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       {/* Welcome header */}
@@ -128,7 +134,7 @@ export default async function DashboardPage() {
       {/* Demo seed button (DOC only, gated by NEXT_PUBLIC_ALLOW_DEMO_SEED).
           Component decides whether to render the load CTA, the loaded
           banner, or nothing at all based on live state. */}
-      {userRole === 'doc' && <DemoSeedButton state={await getDemoSeedState()} />}
+      {userRole === 'doc' && <DemoSeedButton state={demoState!} />}
 
       {/* Post-wizard setup checklist — self-hides when the DOC dismisses
           it (only allowed after all four steps are done) or when the
@@ -136,8 +142,11 @@ export default async function DashboardPage() {
           club sees "invite parents" before the (empty) attention list. */}
       {userRole === 'doc' && <OnboardingChecklist />}
 
-      {/* AI-prioritized attention list (DOC only) */}
-      {userRole === 'doc' && <AttentionPanel />}
+      {/* AI-prioritized attention list (DOC only).
+          Key flips on seed/clear so React remounts the client component
+          and it re-runs its load(false) effect. router.refresh() alone
+          doesn't remount client components — that was the a913885 bug. */}
+      {userRole === 'doc' && <AttentionPanel key={`demo-${demoState?.loaded ? 'on' : 'off'}`} />}
 
       {/* Coach-scoped attention panel — surfaces coverage requests waiting
           for them, recently-ended events with no attendance marked, and
