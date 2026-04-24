@@ -11,7 +11,7 @@ import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
 import ParentCantAttendModal from './parent-cant-attend-modal'
 import AttendanceModal from './attendance-modal'
-import { cancelEvent, getPastEvents } from './actions'
+import { cancelEvent, restoreEvent, getPastEvents } from './actions'
 import { useToast } from '@/components/toast'
 
 interface Event {
@@ -150,6 +150,18 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     })
   }
 
+  function handleRestore(eventId: string) {
+    if (!confirm('Bring this event back? Coaches and parents will be notified it’s on again.')) return
+    startTransition(async () => {
+      try {
+        await restoreEvent(eventId)
+        toast('Event restored · team notified', 'success')
+      } catch {
+        toast('Failed to restore event', 'error')
+      }
+    })
+  }
+
   function handleAttendance(eventId: string, teamId: string) {
     const event = events.find(e => e.id === eventId)
     setAttendanceEvent({ eventId, teamId, title: event?.title ?? '' })
@@ -238,6 +250,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           events={filtered}
           onEdit={handleEdit}
           onCancel={handleCancel}
+          onRestore={handleRestore}
+          isDoc={userRole === ROLES.DOC}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
           onParentCantAttend={isParent ? ((eventId: string, teamId: string) => {
             const ev = [...events, ...pastEvents].find(e => e.id === eventId)

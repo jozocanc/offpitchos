@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import Wordmark from '@/components/wordmark'
+import ScrollHero from '@/components/scroll-hero'
 
 const cream = '#FAF7F2'
 const card = '#FFFFFF'
@@ -18,7 +19,7 @@ export default async function Home() {
   return (
     <main
       style={{ backgroundColor: cream, color: ink }}
-      className="min-h-screen antialiased"
+      className="min-h-screen antialiased overflow-x-hidden"
     >
       {/* Nav */}
       <nav
@@ -29,7 +30,14 @@ export default async function Home() {
           <span style={{ color: ink }}>
             <Wordmark size="md" />
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link
+              href="/pricing"
+              style={{ color: subtext }}
+              className="text-sm hover:text-black transition-colors px-2 sm:px-3 py-2"
+            >
+              Pricing
+            </Link>
             {signedIn ? (
               <Link
                 href="/dashboard"
@@ -43,7 +51,7 @@ export default async function Home() {
                 <Link
                   href="/login"
                   style={{ color: subtext }}
-                  className="text-sm hover:text-black transition-colors px-3 py-2"
+                  className="hidden sm:inline-block text-sm hover:text-black transition-colors px-3 py-2"
                 >
                   Sign in
                 </Link>
@@ -52,7 +60,7 @@ export default async function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ backgroundColor: forest, color: cream }}
-                  className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
+                  className="font-semibold text-sm px-3 sm:px-4 py-2 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Book a demo
                 </a>
@@ -62,49 +70,34 @@ export default async function Home() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-6 pt-24 pb-28 text-center">
-        <span
-          style={{ color: forest, backgroundColor: '#E8F1EB', borderColor: `${forest}20` }}
-          className="inline-block text-[11px] font-semibold uppercase tracking-[0.16em] border rounded-full px-3 py-1.5 mb-8"
-        >
-          Built by directors, for directors
-        </span>
-        <h1
-          style={{ color: ink }}
-          className="text-5xl md:text-7xl font-semibold tracking-[-0.035em] leading-[1.03] mb-7"
-        >
-          The calm club
-          <br />
-          operating system.
-        </h1>
-        <p
-          style={{ color: subtext }}
-          className="text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
-        >
-          Coaches drop out, venues change, parents have questions. OffPitchOS reacts automatically — so your director of coaching can lead, not firefight.
-        </p>
-        <div className="flex items-center justify-center gap-3 flex-wrap">
-          <a
-            href="https://calendly.com/jozo-cancar27/offpitchos-demo"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ backgroundColor: forest, color: cream }}
-            className="font-semibold px-6 py-3.5 rounded-full hover:opacity-90 transition-opacity text-base"
-          >
-            Book a demo →
-          </a>
-          <Link
-            href="/signup"
-            style={{ borderColor: border, color: ink }}
-            className="border font-semibold px-6 py-3.5 rounded-full hover:bg-[#FFFFFF] transition-colors text-base"
-          >
-            Start free
-          </Link>
+      {/* Scroll-reveal hero (headline + pitch video card) */}
+      <ScrollHero signedIn={signedIn} />
+
+      {/* Product demo video — see it in action */}
+      <section className="max-w-5xl mx-auto px-6 pt-4 pb-16">
+        <div className="text-center mb-8">
+          <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
+            See it in action
+          </span>
+          <h2 style={{ color: ink }} className="mt-3 text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
+            One change. Everyone notified.
+          </h2>
         </div>
-        <p style={{ color: subtext }} className="text-xs mt-8">
-          15-min call · See it run your club · Replaces SportsEngine, TeamSnap, GroupMe &amp; spreadsheets
-        </p>
+        <div
+          style={{ backgroundColor: card, borderColor: border }}
+          className="rounded-3xl border overflow-hidden shadow-[0_8px_24px_rgba(15,21,16,0.06)]"
+        >
+          <video
+            key="product-demo-v3"
+            src="/hero/product-demo-v3.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="w-full h-auto block"
+          />
+        </div>
       </section>
 
       {/* Product mockups */}
@@ -160,71 +153,107 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Problem */}
-      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
-        <div className="max-w-5xl mx-auto px-6 py-24">
-          <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-3">
-            Running a club is chaos.
-          </h2>
-          <p style={{ color: subtext }} className="text-center max-w-2xl mx-auto mb-14">
-            The DOC logs into six apps just to answer one question. We fixed that.
-          </p>
-          <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto">
-            {[
-              'Coach cancels 30 min before practice — who covers?',
-              'Parent asks "what time Saturday?" for the 50th time',
-              'Tournament gear order stuck in a spreadsheet',
-              'Camp payments missing and registrations unclear',
-              'Announcements buried in group texts',
-              '"Where\'s the venue?" — asked by every new parent',
-            ].map((pain, i) => (
-              <div
-                key={i}
-                style={{ backgroundColor: cream, borderColor: border }}
-                className="rounded-2xl p-4 border flex items-start gap-3"
-              >
-                <span style={{ color: forest }} className="text-sm leading-none mt-1">—</span>
-                <p style={{ color: ink }} className="text-sm">{pain}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
+      {/* Comparison — "vs the tools you're using today" */}
       <section className="max-w-6xl mx-auto px-6 py-28">
-        <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-3">
-          OffPitchOS handles it.
-        </h2>
-        <p style={{ color: subtext }} className="text-center max-w-2xl mx-auto mb-16">
-          Every feature is judged by one question: does this help the DOC handle sudden changes without manual work?
-        </p>
+        <div className="text-center mb-14 max-w-3xl mx-auto">
+          <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+            The difference
+          </span>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.025em] mt-4 mb-5 leading-[1.05]">
+            Other tools move the work around. <span style={{ color: forest }}>We do the work.</span>
+          </h2>
+          <p style={{ color: subtext }} className="text-base md:text-lg leading-relaxed">
+            Every other club platform gives you a faster way to click through the same tasks. OffPitchOS does the tasks.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FeatureCard
-            title="Voice-driven scheduling"
-            body='Say "Cancel U14 practice tonight" — the event moves, every parent gets notified, the coach sees the update. No forms.'
-          />
-          <FeatureCard
-            title="AI-ranked coverage"
-            body="Coach taps Can't Attend → OffPitchOS ranks available coaches by workload + team fit, messages the top match, logs the reason."
-          />
-          <FeatureCard
-            title="Prioritized morning triage"
-            body="When the DOC logs in, the attention panel shows what matters — unpaid camps, unlinked players, pending requests — ranked by urgency."
-          />
-          <FeatureCard
-            title="Ask Ref"
-            body="Parents ask questions in plain English: &ldquo;When is my son's next game?&rdquo; — the assistant pulls live schedule data and answers."
-          />
-          <FeatureCard
-            title="Gear & camps without the spreadsheets"
-            body="Request sizes with one tap. Run camps with Stripe checkout, shareable registration links, payment reminders — built in."
-          />
-          <FeatureCard
-            title="Direct messaging, masked"
-            body="Parents message coaches inside the app — no personal phone numbers exchanged. Safer, cleaner, compliant."
-          />
+        <div className="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
+          {/* Them */}
+          <div
+            style={{ backgroundColor: card, borderColor: border }}
+            className="rounded-3xl border p-8 md:p-10"
+          >
+            <span
+              style={{ color: subtext }}
+              className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+            >
+              SportsEngine · TeamSnap
+            </span>
+            <h3
+              style={{ color: ink }}
+              className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] mt-3 mb-7 leading-[1.1]"
+            >
+              You do it.
+            </h3>
+            <ul className="space-y-4">
+              {[
+                'Log in, find the event, change every field by hand',
+                'Copy-paste the update into every parent chat',
+                'Schedule in one app, comms in another, payments in a third',
+                'You notice the problem first — if you ever do',
+              ].map((item, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 text-[15px]"
+                  style={{ color: subtext }}
+                >
+                  <span style={{ color: subtext }} className="mt-2 text-xs">—</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Us */}
+          <div
+            style={{
+              backgroundColor: forest,
+              borderColor: forest,
+              boxShadow: '0 12px 32px -12px rgba(31, 78, 61, 0.35)',
+            }}
+            className="rounded-3xl border p-8 md:p-10 relative overflow-hidden"
+          >
+            {/* subtle radial highlight */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(ellipse 60% 50% at 30% 0%, rgba(250,247,242,0.12), transparent 70%)',
+              }}
+            />
+            <div className="relative">
+              <span
+                style={{ color: 'rgba(250,247,242,0.7)' }}
+                className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+              >
+                OffPitchOS
+              </span>
+              <h3
+                style={{ color: cream }}
+                className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] mt-3 mb-7 leading-[1.1]"
+              >
+                The system does it.
+              </h3>
+              <ul className="space-y-4">
+                {[
+                  '“Move U14 to 5pm at Riverside” — done',
+                  'Parents notified in seconds, no message typed',
+                  'Schedule, comms, coverage, payments — one platform',
+                  'AI surfaces what actually needs your attention',
+                ].map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-[15px]"
+                    style={{ color: 'rgba(250,247,242,0.92)' }}
+                  >
+                    <span style={{ color: cream }} className="mt-0.5 font-bold">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -352,32 +381,93 @@ export default async function Home() {
       </section>
 
       {/* CTA */}
-      <section style={{ backgroundColor: forest }}>
-        <div className="max-w-3xl mx-auto px-6 py-28 text-center">
-          <h2 style={{ color: cream }} className="text-4xl md:text-5xl font-semibold tracking-[-0.025em] mb-6">
+      <section style={{ backgroundColor: forest }} className="relative overflow-hidden">
+        {/* Radial spotlight behind heading */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 55% 50% at 50% 35%, rgba(250, 247, 242, 0.14), transparent 70%)',
+          }}
+        />
+        {/* Subtle dotted texture */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(250, 247, 242, 0.28) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            opacity: 0.12,
+            maskImage:
+              'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
+            WebkitMaskImage:
+              'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
+          }}
+        />
+
+        <div className="relative max-w-3xl mx-auto px-6 py-28 text-center">
+          {/* Live pill */}
+          <div
+            className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border"
+            style={{
+              backgroundColor: 'rgba(250, 247, 242, 0.08)',
+              color: cream,
+              borderColor: 'rgba(250, 247, 242, 0.18)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <span className="relative flex size-2">
+              <span className="absolute inset-0 rounded-full bg-emerald-300 opacity-60 animate-ping" />
+              <span className="relative size-2 rounded-full bg-emerald-300" />
+            </span>
+            Founding club spots — limited
+          </div>
+
+          <h2
+            style={{ color: cream }}
+            className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-[-0.025em] mb-6"
+          >
             Ready to stop firefighting?
           </h2>
-          <p style={{ color: '#C8D7D0' }} className="text-lg mb-10">
+          <p
+            style={{ color: 'rgba(250, 247, 242, 0.72)' }}
+            className="text-lg md:text-xl mb-10 max-w-xl mx-auto"
+          >
             Set up your club in under five minutes. Free while we grow with you.
           </p>
+
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
               href="/signup"
-              style={{ backgroundColor: cream, color: forest }}
-              className="font-semibold px-8 py-4 rounded-full hover:opacity-95 transition-opacity text-base"
+              style={{
+                backgroundColor: cream,
+                color: forest,
+                boxShadow:
+                  '0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08)',
+              }}
+              className="font-semibold px-8 py-4 rounded-full hover:-translate-y-0.5 hover:shadow-2xl transition-all duration-200 text-base"
             >
               Start free →
             </Link>
             <a
               href="https://calendly.com/jozo-cancar27/offpitchos-demo"
-            target="_blank"
-            rel="noopener noreferrer"
-              style={{ color: cream, borderColor: `${cream}40` }}
-              className="border font-semibold px-8 py-4 rounded-full hover:bg-[rgba(250,247,242,0.12)] transition-colors text-base"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: cream, borderColor: 'rgba(250, 247, 242, 0.28)' }}
+              className="border font-semibold px-8 py-4 rounded-full hover:bg-[rgba(250,247,242,0.12)] hover:border-[rgba(250,247,242,0.45)] transition-all duration-200 text-base"
             >
               Book a demo
             </a>
           </div>
+
+          <p
+            className="mt-8 text-xs tracking-wide"
+            style={{ color: 'rgba(250, 247, 242, 0.5)' }}
+          >
+            No credit card · 5-minute setup · Cancel anytime
+          </p>
         </div>
       </section>
 
@@ -399,18 +489,6 @@ export default async function Home() {
         </div>
       </footer>
     </main>
-  )
-}
-
-function FeatureCard({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{ backgroundColor: card, borderColor: border }}
-      className="rounded-3xl p-7 border hover:shadow-[0_8px_24px_rgba(15,21,16,0.06)] transition-shadow"
-    >
-      <h3 style={{ color: ink }} className="font-semibold text-lg tracking-[-0.01em] mb-2">{title}</h3>
-      <p style={{ color: subtext }} className="text-[15px] leading-relaxed">{body}</p>
-    </div>
   )
 }
 

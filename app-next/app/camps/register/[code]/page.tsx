@@ -12,12 +12,12 @@ export default async function PublicCampPage({
 
   if (!camp || camp.status === 'cancelled') {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#0A1628] px-4">
+      <main className="min-h-screen flex items-center justify-center bg-[#FAF7F2] px-4">
         <div className="w-full max-w-md text-center">
-          <Wordmark size="xl" className="mb-2" />
-          <div className="bg-[#12203A] rounded-2xl p-8 mt-8 border border-red-500/20">
-            <p className="text-red-400 text-lg font-bold mb-2">Camp Not Found</p>
-            <p className="text-[#94A3B8] text-sm">
+          <Wordmark size="xl" className="mb-2 text-[#0F1510]" />
+          <div className="bg-[#FFFFFF] rounded-3xl p-8 mt-8 border border-[#E8E3DC] shadow-[0_8px_24px_rgba(15,21,16,0.06)]">
+            <p className="text-red-600 text-lg font-semibold mb-2 tracking-[-0.02em]">Camp Not Found</p>
+            <p className="text-[#5C6660] text-sm">
               {camp?.status === 'cancelled'
                 ? 'This camp has been cancelled.'
                 : 'This registration link is invalid. Check with your club for the correct link.'}
@@ -31,41 +31,41 @@ export default async function PublicCampPage({
   const fee = camp.feeCents > 0 ? `$${(camp.feeCents / 100).toFixed(2)}` : 'Free'
 
   return (
-    <main className="min-h-screen bg-[#0A1628] px-4 py-12">
+    <main className="min-h-screen bg-[#FAF7F2] px-4 py-12">
       <div className="w-full max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <Wordmark size="xl" className="mb-2" />
-          <p className="text-[#94A3B8] text-sm">Camp Registration</p>
+          <Wordmark size="xl" className="mb-2 text-[#0F1510]" />
+          <p className="text-[#5C6660] text-xs uppercase tracking-[0.14em] font-semibold">Camp Registration</p>
         </div>
 
-        <div className="bg-[#12203A] rounded-2xl p-8 border border-white/10 shadow-2xl mb-6">
-          <h2 className="text-2xl font-black text-white mb-2">{camp.title}</h2>
+        <div className="bg-[#FFFFFF] rounded-3xl p-8 border border-[#E8E3DC] shadow-[0_8px_24px_rgba(15,21,16,0.06)] mb-6">
+          <h2 className="text-2xl font-semibold text-[#0F1510] mb-2 tracking-[-0.02em]">{camp.title}</h2>
           {camp.description && (
-            <p className="text-[#00FF87] font-semibold text-sm mb-4">{camp.description}</p>
+            <p className="text-[#1F4E3D] font-semibold text-sm mb-4">{camp.description}</p>
           )}
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Dates</span>
-              <span className="text-white font-semibold text-sm">{camp.date}{camp.endDate && camp.endDate !== camp.date ? ` – ${camp.endDate}` : ''}</span>
+              <span className="text-[#5C6660] text-sm">Dates</span>
+              <span className="text-[#0F1510] font-semibold text-sm">{camp.date}{camp.endDate && camp.endDate !== camp.date ? ` – ${camp.endDate}` : ''}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Daily Hours</span>
-              <span className="text-white font-semibold text-sm">{camp.startTime} – {camp.endTime}</span>
+              <span className="text-[#5C6660] text-sm">Daily Hours</span>
+              <span className="text-[#0F1510] font-semibold text-sm">{camp.startTime} – {camp.endTime}</span>
             </div>
             {camp.team && (
               <div className="flex items-center justify-between">
-                <span className="text-[#94A3B8] text-sm">Team</span>
-                <span className="text-white font-semibold text-sm">
+                <span className="text-[#5C6660] text-sm">Team</span>
+                <span className="text-[#0F1510] font-semibold text-sm">
                   {camp.team}
-                  {camp.ageGroup && <span className="text-[#94A3B8] ml-1">({camp.ageGroup})</span>}
+                  {camp.ageGroup && <span className="text-[#5C6660] ml-1">({camp.ageGroup})</span>}
                 </span>
               </div>
             )}
             {camp.venue && (
               <div className="flex items-center justify-between">
-                <span className="text-[#94A3B8] text-sm">Location</span>
-                <span className="text-white font-semibold text-sm">{camp.venue}</span>
+                <span className="text-[#5C6660] text-sm">Location</span>
+                <span className="text-[#0F1510] font-semibold text-sm">{camp.venue}</span>
               </div>
             )}
             {camp.address && (
@@ -74,20 +74,20 @@ export default async function PublicCampPage({
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(camp.address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#00FF87] hover:opacity-80 transition-opacity"
+                  className="text-xs text-[#1F4E3D] hover:text-[#2D6B56] font-semibold transition-colors"
                 >
                   Open in Maps →
                 </a>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-[#94A3B8] text-sm">Fee</span>
-              <span className="text-[#00FF87] font-bold text-sm">{fee}</span>
+              <span className="text-[#5C6660] text-sm">Fee</span>
+              <span className="text-[#1F4E3D] font-semibold text-sm">{fee}</span>
             </div>
             {camp.spotsLeft !== null && (
               <div className="flex items-center justify-between">
-                <span className="text-[#94A3B8] text-sm">Spots Left</span>
-                <span className={`font-bold text-sm ${camp.spotsLeft <= 5 ? 'text-red-400' : 'text-white'}`}>
+                <span className="text-[#5C6660] text-sm">Spots Left</span>
+                <span className={`font-semibold text-sm ${camp.spotsLeft <= 5 ? 'text-red-600' : 'text-[#0F1510]'}`}>
                   {camp.spotsLeft} of {camp.capacity}
                 </span>
               </div>
@@ -96,16 +96,16 @@ export default async function PublicCampPage({
 
           {camp.isFull ? (
             <div className="text-center py-6">
-              <p className="text-red-400 font-bold text-lg">This camp is full</p>
-              <p className="text-[#94A3B8] text-sm mt-2">Contact the club to be added to the waitlist.</p>
+              <p className="text-red-600 font-semibold text-lg tracking-[-0.02em]">This camp is full</p>
+              <p className="text-[#5C6660] text-sm mt-2">Contact the club to be added to the waitlist.</p>
             </div>
           ) : (
             <RegisterForm campDetailId={camp.detailId} feeCents={camp.feeCents} />
           )}
         </div>
 
-        <p className="text-center text-[#94A3B8] text-xs">
-          Powered by <span className="text-white font-bold">OffPitchOS</span>
+        <p className="text-center text-[#5C6660] text-xs">
+          Powered by <span className="text-[#0F1510] font-semibold">OffPitchOS</span>
         </p>
       </div>
     </main>

@@ -22,7 +22,9 @@ interface AgendaViewProps {
   events: Event[]
   onEdit: (eventId: string) => void
   onCancel: (eventId: string) => void
+  onRestore?: (eventId: string) => void
   canEdit: boolean
+  isDoc?: boolean
   onCantAttend?: (eventId: string) => void
   coverageRequests: Array<{
     id: string
@@ -40,7 +42,7 @@ interface AgendaViewProps {
   coachesByTeam?: Record<string, string[]>
 }
 
-export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam }: AgendaViewProps) {
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -69,7 +71,9 @@ export default function AgendaView({ events, onEdit, onCancel, canEdit, onCantAt
                 event={event}
                 onEdit={onEdit}
                 onCancel={onCancel}
+                onRestore={onRestore}
                 canEdit={canEdit}
+                isDoc={isDoc}
                 onCantAttend={onCantAttend}
                 onParentCantAttend={onParentCantAttend}
                 onAttendance={onAttendance}

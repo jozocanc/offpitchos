@@ -22,7 +22,9 @@ interface EventCardProps {
   }
   onEdit: (eventId: string) => void
   onCancel: (eventId: string) => void
+  onRestore?: (eventId: string) => void
   canEdit: boolean
+  isDoc?: boolean
   onCantAttend?: (eventId: string) => void
   onParentCantAttend?: (eventId: string, teamId: string) => void
   onAttendance?: (eventId: string, teamId: string) => void
@@ -41,7 +43,7 @@ interface EventCardProps {
   showCoaches?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
@@ -193,6 +195,16 @@ export default function EventCard({ event, onEdit, onCancel, canEdit, onCantAtte
               className="text-red hover:text-red/80 text-sm transition-colors"
             >
               Cancel
+            </button>
+          </div>
+        )}
+        {isDoc && isCancelled && onRestore && (
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => onRestore(event.id)}
+              className="text-xs font-semibold bg-green/10 hover:bg-green/20 text-green border border-green/20 rounded-full px-3 py-1 transition-colors"
+            >
+              ↺ Restore
             </button>
           </div>
         )}

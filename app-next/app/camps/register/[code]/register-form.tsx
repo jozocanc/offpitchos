@@ -83,13 +83,13 @@ export default function RegisterForm({
   if (success) {
     return (
       <div className="text-center py-8">
-        <div className="text-4xl mb-4">✓</div>
-        <p className="text-[#00FF87] font-bold text-xl mb-2">Registered!</p>
-        <p className="text-[#94A3B8] text-sm">
+        <div className="text-4xl mb-4 text-[#1F4E3D]">✓</div>
+        <p className="text-[#1F4E3D] font-semibold text-xl mb-2 tracking-[-0.02em]">Registered!</p>
+        <p className="text-[#5C6660] text-sm">
           {registeredCount} {registeredCount === 1 ? 'child' : 'children'} signed up. The club will reach out with details before the camp.
         </p>
         {feeCents > 0 && (
-          <p className="text-yellow-400 text-xs mt-4">
+          <p className="text-[#5C6660] text-xs mt-4">
             Payment of ${((feeCents * registeredCount) / 100).toFixed(2)} total will be collected by the club.
           </p>
         )}
@@ -101,51 +101,51 @@ export default function RegisterForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="border-t border-white/5 pt-4 mb-2">
-        <p className="text-xs text-[#94A3B8] uppercase tracking-wide font-bold mb-4">Parent / Guardian</p>
+      <div className="border-t border-[#E8E3DC] pt-4 mb-2">
+        <p className="text-xs text-[#5C6660] uppercase tracking-[0.14em] font-semibold mb-4">Parent / Guardian</p>
       </div>
 
       <div>
-        <label className="block text-sm text-[#94A3B8] mb-1">Full Name</label>
+        <label className="block text-sm text-[#5C6660] mb-1">Full Name</label>
         <input
           required
           value={parentName}
           onChange={e => setParentName(e.target.value)}
           placeholder="John Smith"
-          className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#00FF87] transition-colors"
+          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
         />
       </div>
 
       <div>
-        <label className="block text-sm text-[#94A3B8] mb-1">Email</label>
+        <label className="block text-sm text-[#5C6660] mb-1">Email</label>
         <input
           required
           type="email"
           value={parentEmail}
           onChange={e => setParentEmail(e.target.value)}
           placeholder="john@email.com"
-          className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#00FF87] transition-colors"
+          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
         />
       </div>
 
       <div>
-        <label className="block text-sm text-[#94A3B8] mb-1">Phone (optional)</label>
+        <label className="block text-sm text-[#5C6660] mb-1">Phone (optional)</label>
         <input
           type="tel"
           value={parentPhone}
           onChange={e => setParentPhone(e.target.value)}
           placeholder="(555) 123-4567"
-          className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#00FF87] transition-colors"
+          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
         />
       </div>
 
-      <div className="border-t border-white/5 pt-4">
+      <div className="border-t border-[#E8E3DC] pt-4">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-xs text-[#94A3B8] uppercase tracking-wide font-bold">Children</p>
+          <p className="text-xs text-[#5C6660] uppercase tracking-[0.14em] font-semibold">Children</p>
           <button
             type="button"
             onClick={addKid}
-            className="text-xs font-bold text-[#00FF87] hover:opacity-80 transition-opacity"
+            className="text-xs font-semibold text-[#1F4E3D] hover:text-[#2D6B56] transition-colors"
           >
             + Add another child
           </button>
@@ -153,14 +153,14 @@ export default function RegisterForm({
       </div>
 
       {kids.map((kid, index) => (
-        <div key={index} className="bg-[#0A1628]/50 rounded-xl p-3 border border-white/5">
+        <div key={index} className="bg-[#FAF7F2] rounded-xl p-3 border border-[#E8E3DC]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-[#94A3B8] font-bold">Child {index + 1}</p>
+            <p className="text-xs text-[#5C6660] font-semibold">Child {index + 1}</p>
             {kids.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeKid(index)}
-                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                className="text-xs text-red-600 hover:text-red-700 transition-colors"
               >
                 Remove
               </button>
@@ -173,7 +173,7 @@ export default function RegisterForm({
                 value={kid.name}
                 onChange={e => updateKid(index, 'name', e.target.value)}
                 placeholder="Child's full name"
-                className="w-full bg-[#0A1628] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#00FF87] transition-colors"
+                className="w-full bg-[#FFFFFF] border border-[#E8E3DC] rounded-lg px-3 py-2.5 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
               />
             </div>
             <div>
@@ -182,7 +182,7 @@ export default function RegisterForm({
                 value={kid.age}
                 onChange={e => updateKid(index, 'age', e.target.value)}
                 placeholder="Age"
-                className="w-full bg-[#0A1628] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#94A3B8]/50 focus:outline-none focus:border-[#00FF87] transition-colors"
+                className="w-full bg-[#FFFFFF] border border-[#E8E3DC] rounded-lg px-3 py-2.5 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
               />
             </div>
           </div>
@@ -190,13 +190,13 @@ export default function RegisterForm({
       ))}
 
       {error && (
-        <p className="text-red-400 text-sm">{error}</p>
+        <p className="text-red-600 text-sm">{error}</p>
       )}
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full bg-[#00FF87] text-[#0A1628] font-bold py-3 px-4 rounded-xl text-sm uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-60 mt-2"
+        className="w-full bg-[#1F4E3D] text-[#FAF7F2] font-semibold py-3 px-4 rounded-full text-sm uppercase tracking-[0.14em] hover:bg-[#2D6B56] transition-colors disabled:opacity-60 mt-2"
       >
         {isPending
           ? 'Registering...'

@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createHmac } from 'crypto'
 
-const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register', '/access']
+const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register', '/access', '/pricing']
 const publicExact = new Set(['/'])
 
 // Routes that still need early-access gating even though they're public.
