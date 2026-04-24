@@ -107,7 +107,7 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
               disabled={invitePending}
               className="text-xs font-bold bg-green text-dark px-4 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
-              {invitePending ? 'Generating…' : 'Invite parent'}
+              {invitePending ? 'Generating…' : 'Get parent invite link'}
             </button>
           )}
         </div>
