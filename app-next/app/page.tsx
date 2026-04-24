@@ -280,7 +280,7 @@ export default async function Home() {
               points={[
                 'Coverage inbox — accept or decline with one tap',
                 'Attendance + per-player feedback in the same flow',
-                'Push alerts the moment anything changes',
+                'Email + push alerts the moment anything changes',
                 'Mobile-first — works on the sideline',
               ]}
             />
@@ -291,7 +291,7 @@ export default async function Home() {
                 'Every practice and game with directions',
                 'DM your kid\'s coach without sharing phones',
                 'Camp registration and payment in two taps',
-                'Push notifications for real-time changes',
+                'Email + push notifications for real-time changes',
               ]}
             />
           </div>
@@ -644,7 +644,7 @@ function AttentionMockup() {
             <p style={{ color: mockText }} className="text-sm font-semibold">
               3 parents asked about Saturday tournament
             </p>
-            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Auto-draft reply ready</p>
+            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Reply to all in one tap</p>
           </div>
         </div>
 
