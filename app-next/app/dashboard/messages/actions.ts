@@ -30,6 +30,8 @@ export interface CreateAnnouncementResult {
   coachCount: number
   totalRecipients: number
   audienceLabel: string
+  // Count of Resend rejections across the fan-out. Part 1.5.
+  emailFailed: number
 }
 
 export async function createAnnouncement(input: {
@@ -103,6 +105,7 @@ export async function createAnnouncement(input: {
   // Count recipients by role for the delivery confirmation
   let parentCount = 0
   let coachCount = 0
+  let emailFailed = 0
   if (recipientIds.length > 0) {
     const { data: recipientProfiles } = await service
       .from('profiles')
@@ -123,7 +126,8 @@ export async function createAnnouncement(input: {
 
     await service.from('notifications').insert(notifications)
     await sendPushToProfiles(recipientIds, { title: 'OffPitchOS', message: `New: ${input.title}`, url: '/dashboard/messages', tag: 'announcement' })
-    sendEmailToProfiles(recipientIds, `OffPitchOS — ${input.title}`, message, 'https://offpitchos.com/dashboard/messages')
+    const emailResult = await sendEmailToProfiles(recipientIds, `OffPitchOS — ${input.title}`, message, 'https://offpitchos.com/dashboard/messages')
+    emailFailed = emailResult.failed.length
   }
 
   revalidatePath('/dashboard/messages')
@@ -134,6 +138,7 @@ export async function createAnnouncement(input: {
     coachCount,
     totalRecipients: recipientIds.length,
     audienceLabel,
+    emailFailed,
   }
 }
 

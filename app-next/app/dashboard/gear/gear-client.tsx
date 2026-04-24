@@ -84,8 +84,20 @@ export default function GearClient({
         toast('All sizes already submitted · nothing to request', 'success')
       } else if (result.parentsNotified === 0) {
         toast('No parents with notifications enabled were found', 'error')
+      } else if (result.emailFailed >= result.parentsNotified) {
+        // Every email failed. Push still went out, so the request is
+        // logged and parents may still see it on mobile.
+        toast(
+          `Sizes requested, but emails didn't deliver. Push notifications went out — tap 'Request sizes' again in a few minutes to retry emails.`,
+          'error',
+        )
       } else {
-        toast(`Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'} (${result.kidsNeedingSizes} ${result.kidsNeedingSizes === 1 ? 'kid' : 'kids'})`, 'success')
+        const base = `Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'} (${result.kidsNeedingSizes} ${result.kidsNeedingSizes === 1 ? 'kid' : 'kids'})`
+        if (result.emailFailed > 0) {
+          toast(`${base} · ${result.emailFailed} email${result.emailFailed === 1 ? '' : 's'} failed`, 'error')
+        } else {
+          toast(base, 'success')
+        }
       }
     } catch (err: any) {
       toast(err?.message ?? 'Failed to request sizes', 'error')

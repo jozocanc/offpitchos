@@ -222,12 +222,18 @@ export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResu
   try {
     const counts = await restoreEvent(eventId)
     const total = counts.parents + counts.coaches
-    return {
-      success: true,
-      message: total > 0
-        ? `Restored. Notified ${total} ${total === 1 ? 'person' : 'people'} the event is back on.`
-        : 'Restored. No one on this team yet, so no notifications went out.',
+    if (total === 0) {
+      return { success: true, message: 'Restored. No one on this team yet, so no notifications went out.' }
     }
+    const personWord = total === 1 ? 'person' : 'people'
+    const base = `Restored. Notified ${total} ${personWord} the event is back on.`
+    if (counts.emailFailed > 0) {
+      return {
+        success: true,
+        message: `${base} (${counts.emailFailed} email${counts.emailFailed === 1 ? '' : 's'} failed to deliver.)`,
+      }
+    }
+    return { success: true, message: base }
   } catch (err: any) {
     return { success: false, message: `Could not restore: ${err?.message ?? 'unknown error'}` }
   }
@@ -418,14 +424,20 @@ export async function executeVoicePlan(
   const teams = teamsRes.data ?? []
   const venues = venuesRes.data ?? []
 
-  const formatNotified = (parents: number, coaches: number): string => {
+  const formatNotified = (parents: number, coaches: number, emailFailed = 0): string => {
     if (parents === 0 && coaches === 0) {
       return 'No parents on this team yet — invite them in Teams to start sending notifications.'
     }
     const parts: string[] = []
     if (parents > 0) parts.push(`${parents} ${parents === 1 ? 'parent' : 'parents'}`)
     if (coaches > 0) parts.push(`${coaches} ${coaches === 1 ? 'coach' : 'coaches'}`)
-    return `Notified ${parts.join(' and ')}.`
+    const base = `Notified ${parts.join(' and ')}.`
+    // Part 1.5: mention email-delivery failures inline so voice toasts
+    // stay as honest as the rest of the UI. Dense by design.
+    if (emailFailed > 0) {
+      return `${base} (${emailFailed} email${emailFailed === 1 ? '' : 's'} failed to deliver.)`
+    }
+    return base
   }
 
   try {
@@ -436,7 +448,7 @@ export async function executeVoicePlan(
         const name = event?.title ?? 'Event'
         return {
           success: true,
-          message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches)}`,
+          message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
           undoEventId: input.eventId,
         }
       }
@@ -457,7 +469,7 @@ export async function executeVoicePlan(
         const newStart = new Date(input.newStartTime)
         const timeStr = newStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         const dateStr = newStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-        return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches)}` }
+        return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
 
       case 'update_event_venue': {
@@ -474,7 +486,7 @@ export async function executeVoicePlan(
           updateFuture: false,
         })
         const venue = venues.find(v => v.id === input.venueId)
-        return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches)}` }
+        return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
 
       case 'send_announcement': {
@@ -534,7 +546,7 @@ export async function executeVoicePlan(
         const venuePart = venueName ? ` at ${venueName}` : ''
         return {
           success: true,
-          message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. ${formatNotified(counts.parents, counts.coaches)}`,
+          message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
         }
       }
 

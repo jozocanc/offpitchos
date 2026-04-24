@@ -83,10 +83,18 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
         toast('No unpaid registrations', 'success')
       } else if (result.nudged === 0) {
         toast(`Couldn't nudge anyone — ${result.skipped} unlinked player(s)`, 'error')
+      } else if (result.emailFailed >= result.nudged) {
+        // Every email bounced. Push still went out, so the data action
+        // completed, but the parents who check email first won't see it.
+        toast(
+          `Reminders sent to ${result.nudged} parent${result.nudged === 1 ? '' : 's'}, but emails didn't deliver. Push notifications went out — nudge again in a few minutes to retry emails.`,
+          'error',
+        )
       } else {
         const parts = [`Nudged ${result.nudged} parent${result.nudged === 1 ? '' : 's'}`]
         if (result.skipped > 0) parts.push(`skipped ${result.skipped} unlinked`)
-        toast(parts.join(' · '), 'success')
+        if (result.emailFailed > 0) parts.push(`${result.emailFailed} email${result.emailFailed === 1 ? '' : 's'} failed`)
+        toast(parts.join(' · '), result.emailFailed > 0 ? 'error' : 'success')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to send reminders'

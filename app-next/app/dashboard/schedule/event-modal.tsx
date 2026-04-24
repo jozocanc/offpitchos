@@ -172,7 +172,10 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             notes: notes.trim() || null,
             updateFuture,
           })
-          toast(formatRecipientToast({ action: 'event_updated', ...counts }), 'success')
+          toast(
+            formatRecipientToast({ action: 'event_updated', ...counts }),
+            counts.emailFailed > 0 ? 'error' : 'success',
+          )
         } else {
           counts = await createEvent({
             teamId,
@@ -190,7 +193,10 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
               endDate: recurringEndDate,
             },
           })
-          toast(formatRecipientToast({ action: 'event_created', ...counts }), 'success')
+          toast(
+            formatRecipientToast({ action: 'event_created', ...counts }),
+            counts.emailFailed > 0 ? 'error' : 'success',
+          )
         }
         onClose()
       } catch (err) {

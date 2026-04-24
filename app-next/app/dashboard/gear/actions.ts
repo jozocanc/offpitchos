@@ -145,6 +145,8 @@ export interface RequestSizesResult {
   parentsNotified: number
   kidsNeedingSizes: number
   alreadyComplete: boolean
+  // Count of Resend rejections across the per-parent fan-out. Part 1.5.
+  emailFailed: number
 }
 
 export async function requestMissingSizes(): Promise<RequestSizesResult> {
@@ -165,7 +167,7 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
 
   if (error) throw new Error(`Failed to load players: ${error.message}`)
   if (!players || players.length === 0) {
-    return { parentsNotified: 0, kidsNeedingSizes: 0, alreadyComplete: true }
+    return { parentsNotified: 0, kidsNeedingSizes: 0, alreadyComplete: true, emailFailed: 0 }
   }
 
   // Group kids by parent auth-user id
@@ -178,7 +180,7 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
   }
 
   if (kidsByParent.size === 0) {
-    return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false }
+    return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false, emailFailed: 0 }
   }
 
   // Get parent profile ids (for push + email helpers). We specifically
@@ -194,14 +196,18 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
     .eq('role', 'parent')
 
   if (!parentProfiles || parentProfiles.length === 0) {
-    return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false }
+    return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false, emailFailed: 0 }
   }
 
-  // Notify each parent individually — personalized message per parent, but only one push+email per parent
-  await Promise.allSettled(
+  // Notify each parent individually — personalized message per parent,
+  // but only one push+email per parent. Part 1.5: await the email send
+  // and sum per-parent `failed.length` so the UI can surface delivery
+  // failures across the whole batch.
+  let emailFailed = 0
+  const sends = await Promise.allSettled(
     parentProfiles.map(async parent => {
       const kids = kidsByParent.get(parent.user_id) ?? []
-      if (kids.length === 0) return
+      if (kids.length === 0) return { failed: 0 }
 
       const kidNames = kids.map(k => `${k.first_name} ${k.last_name}`).join(' and ')
       const firstKidId = kids[0].id
@@ -215,14 +221,22 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
         tag: 'gear_sizes_requested',
       })
 
-      sendEmailToProfiles(
+      const emailResult = await sendEmailToProfiles(
         [parent.id],
         'OffPitchOS — Gear sizes needed',
         message + ' Open OffPitchOS and tap the notification to submit.',
         `https://offpitchos.com/dashboard/players/${firstKidId}`,
       )
+      return { failed: emailResult.failed.length }
     })
   )
+  for (const r of sends) {
+    if (r.status === 'fulfilled') emailFailed += r.value.failed
+    // Rejected settlements mean the push send itself threw — treat as
+    // an email delivery failure for UI purposes (the parent reached via
+    // push isn't actually confirmed here either).
+    else emailFailed += 1
+  }
 
   // Persist the request so we can show "last requested X ago" and track responses
   await service
@@ -242,5 +256,6 @@ export async function requestMissingSizes(): Promise<RequestSizesResult> {
     parentsNotified: parentProfiles.length,
     kidsNeedingSizes: players.length,
     alreadyComplete: false,
+    emailFailed,
   }
 }

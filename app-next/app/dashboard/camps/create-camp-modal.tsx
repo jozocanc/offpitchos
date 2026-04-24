@@ -89,7 +89,15 @@ export default function CreateCampModal({
           description: description.trim() || null,
           notes: notes.trim() || null,
         })
-        toast(formatRecipientToast({ action: 'camp_created', parents: result.parents, coaches: result.coaches }), 'success')
+        toast(
+          formatRecipientToast({
+            action: 'camp_created',
+            parents: result.parents,
+            coaches: result.coaches,
+            emailFailed: result.emailFailed,
+          }),
+          result.emailFailed > 0 ? 'error' : 'success',
+        )
         onClose()
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to create camp'

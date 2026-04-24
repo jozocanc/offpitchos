@@ -80,8 +80,9 @@ export default function NewAnnouncementModal({
             action: 'announcement_posted',
             parents: result.parentCount,
             coaches: result.coachCount,
+            emailFailed: result.emailFailed,
           }),
-          result.totalRecipients === 0 ? 'error' : 'success',
+          result.totalRecipients === 0 || result.emailFailed > 0 ? 'error' : 'success',
         )
         onClose()
       } catch (err) {

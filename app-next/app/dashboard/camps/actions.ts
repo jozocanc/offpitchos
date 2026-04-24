@@ -311,6 +311,7 @@ export async function createCamp(input: CreateCampInput) {
   // table check constraint allows.
   let parents = 0
   let coaches = 0
+  let emailFailed = 0
   try {
     const service = createServiceClient()
     // If camp is tied to a team, notify that team's members.
@@ -338,8 +339,11 @@ export async function createCamp(input: CreateCampInput) {
         url: '/dashboard/camps',
         tag: 'event_created',
       })
-      // Fire and forget — email is best-effort, don't block the UI on it.
-      void sendEmailToProfiles(memberIds, 'OffPitchOS — New camp', message, 'https://offpitchos.com/dashboard/camps')
+      // Part 1.5: await the bulk send so we can surface email-delivery
+      // failures to the DOC. Per-recipient failures are already logged
+      // in Vercel by describeResendError in lib/email.ts.
+      const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — New camp', message, 'https://offpitchos.com/dashboard/camps')
+      emailFailed = emailResult.failed.length
 
       // Split by role so the toast can say "notified N parents and M
       // coaches" (matches the pattern used by schedule notifications).
@@ -358,7 +362,7 @@ export async function createCamp(input: CreateCampInput) {
 
   revalidatePath('/dashboard/camps')
 
-  return { eventId: event.id, parents, coaches }
+  return { eventId: event.id, parents, coaches, emailFailed }
 }
 
 // DOC action: nudge parents who haven't paid for a given camp yet.
@@ -369,6 +373,7 @@ export async function sendCampPaymentReminders(eventId: string): Promise<{
   nudged: number
   skipped: number
   campTitle: string
+  emailFailed: number
 }> {
   const { profile, supabase } = await getUserProfile()
   if (profile.role !== 'doc') throw new Error('Only directors can send payment reminders')
@@ -405,7 +410,7 @@ export async function sendCampPaymentReminders(eventId: string): Promise<{
   }[]
 
   if (regs.length === 0) {
-    return { nudged: 0, skipped: 0, campTitle: event.title }
+    return { nudged: 0, skipped: 0, campTitle: event.title, emailFailed: 0 }
   }
 
   // Collect candidate user_ids (skipping registrations without a player row).
@@ -442,6 +447,7 @@ export async function sendCampPaymentReminders(eventId: string): Promise<{
     targetProfileIds.add(profileId)
   }
 
+  let emailFailed = 0
   if (targetProfileIds.size > 0) {
     const feeLabel =
       detail.fee_cents > 0
@@ -455,17 +461,19 @@ export async function sendCampPaymentReminders(eventId: string): Promise<{
       url: '/dashboard/camps',
       tag: 'payment_reminder',
     })
-    void sendEmailToProfiles(
+    const emailResult = await sendEmailToProfiles(
       ids,
       'OffPitchOS — Camp payment reminder',
       `${message}. Open the app to pay.`,
       'https://offpitchos.com/dashboard/camps',
     )
+    emailFailed = emailResult.failed.length
   }
 
   return {
     nudged: targetProfileIds.size,
     skipped,
     campTitle: event.title,
+    emailFailed,
   }
 }

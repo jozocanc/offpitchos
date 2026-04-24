@@ -144,7 +144,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     startTransition(async () => {
       try {
         const counts = await cancelEvent(eventId)
-        toast(formatRecipientToast({ action: 'event_cancelled', ...counts }), 'success')
+        toast(
+          formatRecipientToast({ action: 'event_cancelled', ...counts }),
+          counts.emailFailed > 0 ? 'error' : 'success',
+        )
       } catch {
         toast('Failed to cancel event', 'error')
       }
@@ -156,7 +159,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     startTransition(async () => {
       try {
         const counts = await restoreEvent(eventId)
-        toast(formatRecipientToast({ action: 'event_restored', ...counts }), 'success')
+        toast(
+          formatRecipientToast({ action: 'event_restored', ...counts }),
+          counts.emailFailed > 0 ? 'error' : 'success',
+        )
       } catch {
         toast('Failed to restore event', 'error')
       }

@@ -62,6 +62,10 @@ async function getUserProfile() {
 export interface NotifyCounts {
   parents: number
   coaches: number
+  // Count of email-delivery failures (Resend rejections) across the
+  // bulk send. Independent of push delivery — a parent whose email
+  // failed may still have gotten the push notification. Part 1.5.
+  emailFailed: number
 }
 
 async function notifyTeamMembers(
@@ -78,7 +82,7 @@ async function notifyTeamMembers(
     .select('profile_id')
     .eq('team_id', teamId)
 
-  if (!members || members.length === 0) return { parents: 0, coaches: 0 }
+  if (!members || members.length === 0) return { parents: 0, coaches: 0, emailFailed: 0 }
 
   const memberIds = members.map(m => m.profile_id)
 
@@ -91,7 +95,7 @@ async function notifyTeamMembers(
 
   await service.from('notifications').insert(notifications)
   await sendPushToProfiles(memberIds, { title: 'OffPitchOS', message, url: '/dashboard/schedule', tag: type })
-  sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
+  const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
 
   // Count by role so the caller can report "notified N parents and M coaches"
   const { data: profiles } = await service
@@ -106,7 +110,7 @@ async function notifyTeamMembers(
     else if (p.role === 'coach' || p.role === 'doc') coaches++
   }
 
-  return { parents, coaches }
+  return { parents, coaches, emailFailed: emailResult.failed.length }
 }
 
 // ---------- Actions ----------
@@ -225,7 +229,7 @@ export async function createEvent(input: CreateEventInput): Promise<NotifyCounts
     if (error) throw new Error(`Failed to create recurring events: ${error.message}`)
 
     // Notify for the first event only (avoid spam)
-    let counts: NotifyCounts = { parents: 0, coaches: 0 }
+    let counts: NotifyCounts = { parents: 0, coaches: 0, emailFailed: 0 }
     if (inserted && inserted.length > 0) {
       counts = await notifyTeamMembers(
         inserted[0].id,
