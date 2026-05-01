@@ -9,8 +9,8 @@ gsap.registerPlugin(ScrollTrigger);
 const PIN_VH_MULTIPLE = 3.2;
 const IMMERSE_OVERFILL = 1.04;
 const ENTRY_DELAY = 0.2;
-const CARD_START_SCALE_DESKTOP = 0.6;
-const CARD_START_SCALE_MOBILE = 0.82;
+const CARD_START_SCALE_DESKTOP = 0.88;
+const CARD_START_SCALE_MOBILE = 0.92;
 
 export type HeroScrubProps = {
   frameCount: number;
@@ -232,7 +232,7 @@ export function HeroScrub({
   return (
     <section
       ref={sectionRef}
-      className={`relative w-full overflow-clip text-white ${bgClassName}`}
+      className={`relative w-full overflow-clip text-[#FAF7F2] ${bgClassName}`}
       style={{ height: tallHeight }}
       aria-label="Cinematic scroll-scrubbed hero"
     >
@@ -250,8 +250,8 @@ export function HeroScrub({
         }} />
 
         <div className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-3 md:gap-4">
-          <h2 ref={titleTopRef} aria-hidden className="font-black uppercase" style={{
-            fontSize: "clamp(3.75rem, 12vw, 11rem)", lineHeight: 0.85, letterSpacing: "-0.04em",
+          <h2 ref={titleTopRef} aria-hidden className="font-black uppercase text-[#FAF7F2]" style={{
+            fontSize: "clamp(2.5rem, 7vw, 6rem)", lineHeight: 0.9, letterSpacing: "-0.04em",
           }}>{titleTop}</h2>
 
           <div ref={cardRef} className="relative overflow-hidden rounded-[12px] shadow-[0_20px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/10 will-change-transform md:rounded-[16px]" style={{
@@ -265,8 +265,8 @@ export function HeroScrub({
             )}
           </div>
 
-          <h2 ref={titleBottomRef} aria-hidden className="font-black uppercase" style={{
-            fontSize: "clamp(3.75rem, 12vw, 11rem)", lineHeight: 0.85, letterSpacing: "-0.04em",
+          <h2 ref={titleBottomRef} aria-hidden className="font-black uppercase text-[#FAF7F2]" style={{
+            fontSize: "clamp(2.5rem, 7vw, 6rem)", lineHeight: 0.9, letterSpacing: "-0.04em",
           }}>{titleBottom}</h2>
         </div>
       </div>
