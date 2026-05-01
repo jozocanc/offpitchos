@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import Wordmark from '@/components/wordmark'
-import ScrollHeroScrub from '@/components/scroll-hero-scrub'
+import ScrollHero from '@/components/scroll-hero'
 
 const cream = '#FAF7F2'
 const card = '#FFFFFF'
@@ -70,47 +70,8 @@ export default async function Home() {
         </div>
       </nav>
 
-      {/* Cinematic scroll-scrubbed hero — pitch frames, "OFF" / "PITCH" */}
-      <ScrollHeroScrub />
-
-      {/* CTA strip below the cinematic hero */}
-      <section className="max-w-3xl mx-auto px-6 pt-16 pb-4 text-center">
-        <span
-          style={{ color: forest, backgroundColor: '#E8F1EB', borderColor: '#1F4E3D33' }}
-          className="inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.14em] sm:tracking-[0.16em] border rounded-full px-3 py-1.5 mb-7"
-        >
-          AI-driven · Soccer-only · Built by a former D1 player
-        </span>
-        <h1 style={{ color: ink }} className="text-4xl md:text-6xl font-semibold tracking-[-0.035em] leading-[1.03]">
-          The AI operating system
-          <br />
-          for soccer clubs.
-        </h1>
-        <p style={{ color: subtext }} className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-          When coaches drop out, venues change, or parents pile in — OffPitchOS handles it. Your DOC leads, not firefights.
-        </p>
-        <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
-          <a
-            href="https://calendly.com/jozo-cancar27/offpitchos-demo"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ backgroundColor: forest, color: cream }}
-            className="font-semibold px-6 py-3.5 rounded-full hover:opacity-90 transition-opacity text-base"
-          >
-            Book a demo →
-          </a>
-          <Link
-            href={signedIn ? '/dashboard' : '/signup'}
-            style={{ backgroundColor: card, color: ink, borderColor: border }}
-            className="font-semibold px-6 py-3.5 rounded-full border hover:bg-[#F5F1EA] transition-colors text-base"
-          >
-            {signedIn ? 'Go to dashboard' : 'Start free'}
-          </Link>
-        </div>
-        <p style={{ color: subtext }} className="text-xs mt-7 max-w-md mx-auto leading-relaxed">
-          15-min call · See it run your club · Replaces SportsEngine, TeamSnap, GroupMe &amp; spreadsheets
-        </p>
-      </section>
+      {/* Scroll-reveal hero (headline + pitch video card) */}
+      <ScrollHero signedIn={signedIn} />
 
       {/* Product demo video — see it in action */}
       <section className="max-w-5xl mx-auto px-6 pt-4 pb-16">
