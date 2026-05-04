@@ -161,17 +161,9 @@ I'll check in Wednesday to see if it lands.
 — Jozo
 ```
 
+**Mechanism (locked 2026-05-04): access-code path.** Each "demo" reply gets a fresh access code → prospect signs up themselves → onboarding wizard runs → optionally drops in a CSV via step 3 to populate their own demo data. They own their account from minute one. Do NOT share a single demo-DOC login across prospects — confuses everybody and fake-data is less convincing than their own.
+
 After sending: set a Wed/Thu reminder ("did [name] log in? if no reply, send 'how'd it go?'"). Add to a follow-up list (CSV notes column: `· demo-sent YYYY-MM-DD`).
-
-Choice point: this template assumes the access-code path. If we'd rather pre-create a demo DOC account per prospect (admin.createUser → run demo-seed on their club → email creds), the body becomes:
-
-```
-Email: [demo-doc-email]
-Password: [demo-doc-password]
-URL: https://offpitchos.com/login
-```
-
-Pick one mechanism and lock the template to it. Mixing the two confuses your reply muscle.
 
 #### Reply Template 2 — "we use SportsEngine / TeamSnap / GotSport" (post-2026-05-04: real, not vapor)
 
@@ -217,10 +209,9 @@ Reply once. Mark `cold` in CSV notes column. Do not bump again this sprint.
 
 #### Reply setup checklist (do once before the first reply lands)
 
-- [ ] Generate one access code (or wire an access-code generator) so you don't fumble at reply-time
+- [ ] Have the access-code generator ready (locked path per Template 1) so you don't fumble at reply-time
 - [ ] Confirm Calendly link → paste it into Templates 2 and 3 to lock them
 - [ ] Replace or delete `[first name]` placeholder per send (Gmail Templates won't auto-fill)
-- [ ] Decide demo-account mechanism (access-code path vs pre-created demo DOC) and lock Template 1
 
 ## Things explicitly NOT in the sequence
 
