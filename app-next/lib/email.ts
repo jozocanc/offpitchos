@@ -89,6 +89,55 @@ export async function sendCoachInviteEmail({
   }
 }
 
+export async function sendRosterRecoveryEmail({
+  to,
+  clubName,
+  recoveryUrl,
+}: {
+  to: string
+  clubName: string
+  recoveryUrl: string
+}): Promise<void> {
+  if (isDemoRecipient(to)) return
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `${clubName} added you on OffPitchOS — set your password`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+        <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">
+          OffPitch<span style="color: #00FF87;">OS</span>
+        </h1>
+        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Club Operating System</p>
+
+        <p style="font-size: 16px; color: #333; margin-bottom: 8px;">
+          <strong>${clubName}</strong> just added you to OffPitchOS — the team management app for your kid's club.
+        </p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 32px;">
+          Click below to set your password and log in. You'll see your kid's schedule, get notified when practice changes, and message coaches directly.
+        </p>
+
+        <a href="${recoveryUrl}" style="display: inline-block; background: #00FF87; color: #0A1628; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+          Set My Password
+        </a>
+
+        <p style="font-size: 12px; color: #94A3B8; margin-top: 32px;">
+          Or copy this link: <a href="${recoveryUrl}" style="color: #00FF87;">${recoveryUrl}</a>
+        </p>
+        <p style="font-size: 12px; color: #94A3B8; margin-top: 16px;">
+          If you weren't expecting this, you can safely ignore the email — your account stays inactive until you set a password.
+        </p>
+      </div>
+    `,
+  })
+
+  if (error) {
+    const detail = describeResendError(error, to)
+    console.error('[email] roster recovery failed:', detail)
+    throw new Error(detail)
+  }
+}
+
 export async function sendNotificationEmail({
   to,
   subject,

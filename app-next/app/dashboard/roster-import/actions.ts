@@ -22,6 +22,7 @@ import {
   REQUIRED_FIELDS,
 } from './lib/types'
 import { normalizeEmail, normalizePhone, normalizeDate, trimName, teamKey } from './lib/normalize'
+import { sendRosterRecoveryEmail } from '@/lib/email'
 
 const MAX_ROWS = 1000
 
@@ -449,4 +450,81 @@ export async function commitImport(
       parentUserIds: Array.from(parentUserIdByEmail.values()),
     },
   }
+}
+
+export async function sendParentRecoveryEmails(
+  parentUserIds: string[]
+): Promise<
+  | { ok: true; data: { sent: number; failed: number; failures: { email: string; reason: string }[] } }
+  | ActionFailure
+> {
+  if (parentUserIds.length === 0) {
+    return { ok: true, data: { sent: 0, failed: 0, failures: [] } }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+  if (!profile?.club_id || profile.role !== 'doc') {
+    return { ok: false, error: 'DOC role required' }
+  }
+
+  // Security: verify these parent profiles all belong to the DOC's club
+  const { data: parentProfiles, error: profilesErr } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('club_id', profile.club_id)
+    .eq('role', 'parent')
+    .in('user_id', parentUserIds)
+  if (profilesErr) return { ok: false, error: profilesErr.message }
+
+  const allowed = new Set((parentProfiles ?? []).map(p => p.user_id))
+  const filteredIds = parentUserIds.filter(id => allowed.has(id))
+
+  // Get club name for email body
+  const { data: club } = await supabase
+    .from('clubs')
+    .select('name')
+    .eq('id', profile.club_id)
+    .single()
+  const clubName = club?.name ?? 'Your club'
+
+  const service = createServiceClient()
+  const failures: { email: string; reason: string }[] = []
+  let sent = 0
+
+  for (const userId of filteredIds) {
+    let email = ''
+    try {
+      const { data: authUser, error: lookupErr } = await service.auth.admin.getUserById(userId)
+      if (lookupErr || !authUser?.user?.email) throw new Error(lookupErr?.message ?? 'User lookup failed')
+      email = authUser.user.email
+
+      const { data: linkData, error: linkErr } = await service.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+      })
+      if (linkErr || !linkData?.properties?.action_link) {
+        throw new Error(linkErr?.message ?? 'Recovery-link generation failed')
+      }
+
+      await sendRosterRecoveryEmail({
+        to: email,
+        clubName,
+        recoveryUrl: linkData.properties.action_link,
+      })
+      sent++
+    } catch (e: unknown) {
+      const reason = e instanceof Error ? e.message : 'send failed'
+      failures.push({ email: email || userId, reason })
+    }
+  }
+
+  return { ok: true, data: { sent, failed: failures.length, failures } }
 }
