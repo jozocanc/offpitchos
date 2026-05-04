@@ -152,7 +152,7 @@ Hey [first name],
 Sending your login now.
 
 Sign up here: https://offpitchos.com/access
-Access code: [generate one + paste here]
+Access code: <PASTE SHARED CODE>
 
 Demo data is preloaded — voice commands, schedule, parent comms, tactics board, all of it. Takes 5 minutes to poke around.
 
@@ -161,9 +161,15 @@ I'll check in Wednesday to see if it lands.
 — Jozo
 ```
 
-**Mechanism (locked 2026-05-04): access-code path.** Each "demo" reply gets a fresh access code → prospect signs up themselves → onboarding wizard runs → optionally drops in a CSV via step 3 to populate their own demo data. They own their account from minute one. Do NOT share a single demo-DOC login across prospects — confuses everybody and fake-data is less convincing than their own.
+**Mechanism (locked 2026-05-04): shared access code via env var.** OffPitchOS's `/access` gate uses a single shared code stored in `ACCESS_CODE` (Vercel env var). Every "demo" reply gets the SAME code. The prospect signs up themselves → onboarding wizard → optionally drops in their own CSV via step 3 to populate demo data. They own their account from minute one.
+
+Paste the actual code value into the Gmail Template body once when saving the canned response. Never paste real codes into this spec or other repo files — keep them in Vercel env + Gmail Templates only.
+
+**Leak risk:** the code is shared, so any prospect can pass it on. Mitigation for now: at 0 customers and ~5-10 expected demo-yes replies this sprint, leak surface is small. If we end up running per-prospect attribution or volume grows past ~20 demos, revisit and build a per-code table (see "Future evolution" below).
 
 After sending: set a Wed/Thu reminder ("did [name] log in? if no reply, send 'how'd it go?'"). Add to a follow-up list (CSV notes column: `· demo-sent YYYY-MM-DD`).
+
+**Future evolution (not now):** when leak risk justifies the work, build a `public.access_codes` table (`code`, `created_for`, `created_at`, `used_at`, `revoked_at`) and tweak `app-next/app/access/page.tsx:submitCode` to accept either the env code OR a row from the table that's not used/revoked. Add a `/dashboard/admin/access-codes` page for one-click generation. Triggers: leak observed, attribution becomes valuable, or > 20 codes shared.
 
 #### Reply Template 2 — "we use SportsEngine / TeamSnap / GotSport" (post-2026-05-04: real, not vapor)
 
@@ -209,7 +215,7 @@ Reply once. Mark `cold` in CSV notes column. Do not bump again this sprint.
 
 #### Reply setup checklist (do once before the first reply lands)
 
-- [ ] Have the access-code generator ready (locked path per Template 1) so you don't fumble at reply-time
+- [ ] Paste the real `ACCESS_CODE` env value into Template 1's `<PASTE SHARED CODE>` slot when saving in Gmail Templates (do this once; lock it)
 - [ ] Confirm Calendly link → paste it into Templates 2 and 3 to lock them
 - [ ] Replace or delete `[first name]` placeholder per send (Gmail Templates won't auto-fill)
 
