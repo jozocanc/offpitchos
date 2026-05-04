@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import Papa from 'papaparse'
 import { previewImport, commitImport } from './actions'
 import { suggestMapping } from './lib/se-column-aliases'
@@ -267,9 +268,9 @@ export default function ImportWizard({
             </button>
           )}
           {variant === 'dashboard' && (
-            <a href="/dashboard/teams" className="text-green underline hover:opacity-90 transition-opacity">
+            <Link href="/dashboard/teams" className="text-green underline hover:opacity-90 transition-opacity">
               View teams &rarr;
-            </a>
+            </Link>
           )}
         </div>
       </div>

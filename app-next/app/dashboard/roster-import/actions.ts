@@ -382,7 +382,17 @@ export async function commitImport(
   }
 
   // 4) Pass 2 -- insert players
-  const playerInserts: any[] = []
+  type PlayerInsert = {
+    club_id: string
+    team_id: string
+    parent_id: string
+    first_name: string
+    last_name: string
+    jersey_number: number | null
+    position: string | null
+    date_of_birth: string | null
+  }
+  const playerInserts: PlayerInsert[] = []
   const seenPlayerKeys2 = new Set<string>()
 
   for (const row of rows) {
