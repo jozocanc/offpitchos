@@ -48,6 +48,7 @@ export default function ImportWizard({
     parentUserIds: string[]
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showReimportConfirm, setShowReimportConfirm] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function handleFile(file: File) {
@@ -102,6 +103,19 @@ export default function ImportWizard({
       setSuccess(res.data)
       setStep('success')
     })
+  }
+
+  function handleConfirmClick() {
+    if (
+      variant === 'dashboard' &&
+      preview &&
+      preview.counts.existingPlayerCount > 0 &&
+      !showReimportConfirm
+    ) {
+      setShowReimportConfirm(true)
+      return
+    }
+    handleConfirm()
   }
 
   // ---- RENDER ----
@@ -228,6 +242,28 @@ export default function ImportWizard({
             </div>
           )}
           {error && <p className="text-red text-sm mt-4">{error}</p>}
+          {showReimportConfirm && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mt-4">
+              <p className="text-sm text-white">
+                Adding to {preview.counts.existingPlayerCount} existing players. No duplicate detection — players or parents that already exist may be created again. Continue anyway?
+              </p>
+              <div className="mt-3 flex items-center gap-4">
+                <button
+                  onClick={() => setShowReimportConfirm(false)}
+                  className="text-gray text-sm hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={isPending}
+                  className="ml-auto bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPending ? 'Importing…' : 'Continue anyway'}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mt-6 flex items-center gap-4">
             <button
               onClick={() => setStep('map')}
@@ -236,8 +272,8 @@ export default function ImportWizard({
               &larr; Back to mapping
             </button>
             <button
-              onClick={handleConfirm}
-              disabled={preview.blockingErrors.length > 0 || isPending}
+              onClick={handleConfirmClick}
+              disabled={preview.blockingErrors.length > 0 || isPending || showReimportConfirm}
               className="ml-auto bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending ? 'Importing…' : `Confirm import (${preview.counts.newPlayers} players)`}
