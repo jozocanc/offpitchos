@@ -132,13 +132,95 @@ Same offer for the first 10 South FL clubs — 50% off forever. Reply "demo" if 
 | "demo" / "yes" / "send the login" | Send Supabase demo-account login email same-day. Add to follow-up list for D+2 check-in: "did you log in?" |
 | "interested but need to talk" / "can we hop on a call?" | Send Calendly link. **This is the only path to Calendly.** |
 | "we're not the right fit" / "no thanks" | Reply once: "Got it — appreciate the candor. If anything changes after the season, you have my email." Do not bump again. |
-| "we already use [SportsEngine / TeamSnap]" | Send the SE-import value-prop reply (one-liner: "Our SE-CSV import takes ~10 min — happy to show you the migration on a 15-min call." + Calendly). |
+| "we already use [SportsEngine / TeamSnap / GotSport]" | Use Reply Template 2 (SE-import objection). The CSV import was shipped 2026-05-04 — this is no longer vapor. |
 | Out-of-office / auto-reply | Note the OOO end date in `notes`. Re-send fresh (not a bump) 3 days after they're back. |
 | No reply after bump (day 4) | Mark `cold` in `notes`. Do not send again this sprint. Re-evaluate at week 4. |
 
 ### When to escalate to Calendly
 
 ONLY when the prospect explicitly asks for a call OR replies but doesn't want a login. Do not push Calendly to "demo" replies — send the login first, then a D+2 message: "Did you get a chance to poke around? Happy to walk you through it on a 15-min call — [Calendly]."
+
+### Reply templates (load into Gmail Templates)
+
+Save each as a canned response — Settings → See all settings → Advanced → Templates → "Save draft as template." Reply within the original thread (no new subject). All four match the brutal-cofounder voice — terse, no fluff, no "Hope you're well."
+
+#### Reply Template 1 — "demo" / "yes" / "send the login"
+
+```
+Hey [first name],
+
+Sending your login now.
+
+Sign up here: https://offpitchos.com/access
+Access code: [generate one + paste here]
+
+Demo data is preloaded — voice commands, schedule, parent comms, tactics board, all of it. Takes 5 minutes to poke around.
+
+I'll check in Wednesday to see if it lands.
+
+— Jozo
+```
+
+After sending: set a Wed/Thu reminder ("did [name] log in? if no reply, send 'how'd it go?'"). Add to a follow-up list (CSV notes column: `· demo-sent YYYY-MM-DD`).
+
+Choice point: this template assumes the access-code path. If we'd rather pre-create a demo DOC account per prospect (admin.createUser → run demo-seed on their club → email creds), the body becomes:
+
+```
+Email: [demo-doc-email]
+Password: [demo-doc-password]
+URL: https://offpitchos.com/login
+```
+
+Pick one mechanism and lock the template to it. Mixing the two confuses your reply muscle.
+
+#### Reply Template 2 — "we use SportsEngine / TeamSnap / GotSport" (post-2026-05-04: real, not vapor)
+
+```
+Hey [first name],
+
+Yeah — the migration is usually the dealbreaker. We just shipped a CSV import that does it in ~10 minutes. You drop your [SportsEngine] roster export, OffPitchOS auto-creates teams + players + parent accounts, then parents get an email to set their password and they're in.
+
+15-min Zoom and I'll walk you through the migration with your actual data:
+[Calendly link]
+
+— Jozo
+```
+
+Swap `[SportsEngine]` for `TeamSnap` / `GotSport` / etc. at send time. The roster-import column-mapper handles all of them — same flow either way. Spec for the import: `docs/superpowers/specs/2026-05-04-roster-import-design.md`.
+
+#### Reply Template 3 — "let's hop on a call" / "interested but need to talk"
+
+```
+Hey [first name],
+
+Yeah, let's do it:
+[Calendly link]
+
+Pick a 15-min slot that works.
+
+— Jozo
+```
+
+This is the ONLY path to Calendly per the spec. Don't push it on "demo" replies — those get a login first.
+
+#### Reply Template 4 — "not a fit" / "no thanks"
+
+```
+Hey [first name],
+
+Got it — appreciate the candor. If anything changes after the season, you have my email.
+
+— Jozo
+```
+
+Reply once. Mark `cold` in CSV notes column. Do not bump again this sprint.
+
+#### Reply setup checklist (do once before the first reply lands)
+
+- [ ] Generate one access code (or wire an access-code generator) so you don't fumble at reply-time
+- [ ] Confirm Calendly link → paste it into Templates 2 and 3 to lock them
+- [ ] Replace or delete `[first name]` placeholder per send (Gmail Templates won't auto-fill)
+- [ ] Decide demo-account mechanism (access-code path vs pre-created demo DOC) and lock Template 1
 
 ## Things explicitly NOT in the sequence
 
