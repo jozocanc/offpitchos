@@ -123,8 +123,8 @@ export interface PreviewResult {
     counts: {
       newTeams: number
       newPlayers: number
-      newInvites: number
-      uniqueParentEmails: number  // for "Send invites" preview later
+      uniqueParentEmails: number  // = parents that will be created
+      existingPlayerCount: number  // for re-import dialog (Phase 2)
     }
     teamsToCreate: { name: string; age_group: string }[]
     teamsExisting: { name: string; id: string }[]
@@ -140,7 +140,8 @@ export interface CommitResult {
   data: {
     teamsCreated: number
     playersCreated: number
-    invitesCreated: number
+    parentsCreated: number
+    parentUserIds: string[]  // for Phase 3 sendParentRecoveryEmails
   }
 }
 
@@ -458,8 +459,14 @@ export async function previewImport(
   const seenPlayerKeys = new Set<string>()
   const teamsToCreateMap = new Map<string, { name: string; age_group: string }>()
   const parentEmails = new Set<string>()
-  const inviteCount = new Map<string, number>()  // email → invite count, for sibling groups
+  const playersByEmail = new Map<string, number>()  // email → # of players, for sibling-group display
   let importablePlayerCount = 0
+
+  // Existing player count (for re-import dialog in dashboard variant)
+  const { count: existingPlayerCount } = await supabase
+    .from('players')
+    .select('id', { count: 'exact', head: true })
+    .eq('club_id', profile.club_id)
 
   for (const row of rows) {
     const firstName = trimName(get(row, 'player_first_name'))
@@ -541,11 +548,11 @@ export async function previewImport(
     }
 
     parentEmails.add(parent1Email)
-    inviteCount.set(parent1Email, (inviteCount.get(parent1Email) ?? 0) + 1)
+    playersByEmail.set(parent1Email, (playersByEmail.get(parent1Email) ?? 0) + 1)
     const parent2Email = normalizeEmail(parent2EmailRaw)
-    if (parent2Email) {
+    if (parent2Email && parent2Email !== parent1Email) {
       parentEmails.add(parent2Email)
-      inviteCount.set(parent2Email, (inviteCount.get(parent2Email) ?? 0) + 1)
+      playersByEmail.set(parent2Email, (playersByEmail.get(parent2Email) ?? 0) + 1)
     }
 
     importablePlayerCount++
@@ -555,7 +562,7 @@ export async function previewImport(
     blockingErrors.push({ rowNumber: 0, message: 'No importable rows after validation' })
   }
 
-  const siblingGroups = Array.from(inviteCount.entries())
+  const siblingGroups = Array.from(playersByEmail.entries())
     .filter(([, count]) => count > 1)
     .map(([email, playerCount]) => ({ email, playerCount }))
 
@@ -565,8 +572,8 @@ export async function previewImport(
       counts: {
         newTeams: teamsToCreateMap.size,
         newPlayers: importablePlayerCount,
-        newInvites: Array.from(inviteCount.values()).reduce((a, b) => a + b, 0),
         uniqueParentEmails: parentEmails.size,
+        existingPlayerCount: existingPlayerCount ?? 0,
       },
       teamsToCreate: Array.from(teamsToCreateMap.values()),
       teamsExisting: (existingTeams ?? []).map(t => ({ name: t.name, id: t.id })),
@@ -591,9 +598,23 @@ git commit -m "feat(roster-import): previewImport server action with validation 
 ## Task 5: commitImport server action
 
 **Files:**
-- Modify: `app-next/app/dashboard/roster-import/actions.ts` (append `commitImport`)
+- Modify: `app-next/app/dashboard/roster-import/actions.ts` (append `commitImport` + helpers)
+- Reference: `app-next/app/dashboard/demo-seed-actions.ts` lines 200-265 — match this pattern exactly for auth.users + profiles + team_members + players creation.
 
-- [ ] **Step 1: Append commitImport**
+- [ ] **Step 1: Append a `cryptoRandomPassword()` helper**
+
+Reuse demo-seed's helper if exported; otherwise duplicate it:
+
+```typescript
+function cryptoRandomPassword(): string {
+  // 24 random bytes → base64url. Long enough to be unguessable; parent will reset.
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Buffer.from(bytes).toString('base64url')
+}
+```
+
+- [ ] **Step 2: Append commitImport**
 
 ```typescript
 // Append to actions.ts
@@ -624,9 +645,8 @@ export async function commitImport(
 
   const service = createServiceClient()
   const clubId = profile.club_id
-  const docUserId = user.id
 
-  // Build the field-getter again (matches previewImport)
+  // Field-getter (matches previewImport)
   const fieldToHeader = (field: string): string | null => {
     for (const [header, mapped] of Object.entries(mapping)) {
       if (mapped === field) return header
@@ -658,10 +678,115 @@ export async function commitImport(
   }
   const teamIdByKey = new Map(allTeams.map(t => [teamKey(t.name), t.id]))
 
-  // 2) Build player + invite inserts
-  const playerInserts: any[] = []
-  const inviteInserts: any[] = []
+  // 2) Pass 1 — collect unique parents (deduped by email) + which teams each is on
+  type ParentRecord = {
+    email: string
+    firstName: string  // for invite metadata (display_name)
+    lastName: string
+    phone: string
+    teamIds: Set<string>  // unique teams this parent has at least one player on
+  }
+  const parentByEmail = new Map<string, ParentRecord>()
   const seenPlayerKeys = new Set<string>()
+
+  for (const row of rows) {
+    const firstName = trimName(get(row, 'player_first_name'))
+    const lastName = trimName(get(row, 'player_last_name'))
+    const teamName = trimName(get(row, 'team_name'))
+    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
+    if (!firstName || !lastName || !teamName || !parent1Email) continue
+    const teamId = teamIdByKey.get(teamKey(teamName))
+    if (!teamId) continue
+
+    const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
+    if (seenPlayerKeys.has(playerKey)) continue
+    seenPlayerKeys.add(playerKey)
+
+    // Parent 1
+    let p1 = parentByEmail.get(parent1Email)
+    if (!p1) {
+      p1 = {
+        email: parent1Email,
+        firstName: trimName(get(row, 'parent1_first_name')) || 'Parent',
+        lastName: lastName,  // best guess: parent shares player's last name
+        phone: normalizePhone(get(row, 'parent1_phone')),
+        teamIds: new Set(),
+      }
+      parentByEmail.set(parent1Email, p1)
+    }
+    p1.teamIds.add(teamId)
+
+    // Parent 2 (optional)
+    const parent2Email = normalizeEmail(get(row, 'parent2_email'))
+    if (parent2Email && parent2Email !== parent1Email) {
+      let p2 = parentByEmail.get(parent2Email)
+      if (!p2) {
+        p2 = {
+          email: parent2Email,
+          firstName: 'Parent',
+          lastName: lastName,
+          phone: '',
+          teamIds: new Set(),
+        }
+        parentByEmail.set(parent2Email, p2)
+      }
+      p2.teamIds.add(teamId)
+    }
+  }
+
+  // 3) Create auth.users + profiles + team_members for each unique parent.
+  // Pattern matches demo-seed-actions.ts lines 208-244 exactly.
+  const parentUserIdByEmail = new Map<string, string>()
+  for (const parent of parentByEmail.values()) {
+    const { data: created, error: authErr } = await service.auth.admin.createUser({
+      email: parent.email,
+      password: cryptoRandomPassword(),
+      email_confirm: true,
+      user_metadata: {
+        full_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        imported_at: new Date().toISOString(),
+      },
+    })
+    if (authErr || !created.user) {
+      // If the email already exists in auth.users, skip (likely a parent
+      // already in another club). Surface as a partial-success warning later.
+      // For v1: hard fail. We can soften in v2 if it bites.
+      return { ok: false, error: `Failed to create parent ${parent.email}: ${authErr?.message ?? 'unknown'}` }
+    }
+    const authId = created.user.id
+    parentUserIdByEmail.set(parent.email, authId)
+
+    const { data: insertedProfile, error: profileErr } = await service
+      .from('profiles')
+      .insert({
+        user_id: authId,
+        club_id: clubId,
+        role: 'parent',
+        display_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        onboarding_complete: true,
+      })
+      .select('id')
+      .single()
+    if (profileErr || !insertedProfile) {
+      return { ok: false, error: `Failed to create profile for ${parent.email}: ${profileErr?.message}` }
+    }
+
+    if (parent.teamIds.size > 0) {
+      const memberInserts = Array.from(parent.teamIds).map(teamId => ({
+        team_id: teamId,
+        profile_id: insertedProfile.id,
+        role: 'parent',
+      }))
+      const { error: memberErr } = await service.from('team_members').insert(memberInserts)
+      if (memberErr) {
+        return { ok: false, error: `Failed to link ${parent.email} to teams: ${memberErr.message}` }
+      }
+    }
+  }
+
+  // 4) Pass 2 — insert players with parent_id pointing at the real auth.user.id
+  const playerInserts: any[] = []
+  const seenPlayerKeys2 = new Set<string>()
 
   for (const row of rows) {
     const firstName = trimName(get(row, 'player_first_name'))
@@ -671,82 +796,37 @@ export async function commitImport(
     if (!firstName || !lastName || !teamName || !parent1Email) continue
 
     const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
-    if (seenPlayerKeys.has(playerKey)) continue
-    seenPlayerKeys.add(playerKey)
+    if (seenPlayerKeys2.has(playerKey)) continue
+    seenPlayerKeys2.add(playerKey)
 
     const teamId = teamIdByKey.get(teamKey(teamName))
-    if (!teamId) continue  // shouldn't happen — preview guarantees match-or-create
+    if (!teamId) continue
+    const parentId = parentUserIdByEmail.get(parent1Email)
+    if (!parentId) continue  // shouldn't happen — we just created them
 
     const dob = normalizeDate(get(row, 'date_of_birth'))
     const jerseyRaw = get(row, 'jersey_number').replace(/\D/g, '')
-    const player = {
+    playerInserts.push({
       club_id: clubId,
       team_id: teamId,
-      parent_id: docUserId,  // placeholder; updated when parent accepts invite
+      parent_id: parentId,
       first_name: firstName,
       last_name: lastName,
       jersey_number: jerseyRaw ? parseInt(jerseyRaw, 10) : null,
       position: trimName(get(row, 'position')) || null,
       date_of_birth: dob.iso,
-    }
-    playerInserts.push(player)
+    })
   }
 
   if (playerInserts.length === 0) {
-    return { ok: false, error: 'No importable rows' }
+    return { ok: false, error: 'No importable rows after parent creation' }
   }
 
   const { data: insertedPlayers, error: playerErr } = await service
     .from('players')
     .insert(playerInserts)
-    .select('id, first_name, last_name, team_id')
+    .select('id')
   if (playerErr) return { ok: false, error: `Player insert failed: ${playerErr.message}` }
-
-  // 3) Build invites — one per (player, parent_email)
-  const playerByKey = new Map(
-    (insertedPlayers ?? []).map(p => [`${p.first_name.toLowerCase()}|${p.last_name.toLowerCase()}|${p.team_id}`, p])
-  )
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  const seenInviteKeys = new Set<string>()
-
-  for (const row of rows) {
-    const firstName = trimName(get(row, 'player_first_name'))
-    const lastName = trimName(get(row, 'player_last_name'))
-    const teamName = trimName(get(row, 'team_name'))
-    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
-    const parent2Email = normalizeEmail(get(row, 'parent2_email'))
-    if (!firstName || !lastName || !teamName || !parent1Email) continue
-
-    const teamId = teamIdByKey.get(teamKey(teamName))
-    if (!teamId) continue
-    const player = playerByKey.get(`${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamId}`)
-    if (!player) continue
-
-    for (const email of [parent1Email, parent2Email].filter(Boolean)) {
-      const inviteKey = `${player.id}|${email}`
-      if (seenInviteKeys.has(inviteKey)) continue
-      seenInviteKeys.add(inviteKey)
-      inviteInserts.push({
-        club_id: clubId,
-        team_id: teamId,
-        player_id: player.id,
-        email,
-        role: 'parent',
-        status: 'pending',
-        expires_at: expiresAt,
-      })
-    }
-  }
-
-  let invitesCreated = 0
-  if (inviteInserts.length > 0) {
-    const { data: insertedInvites, error: inviteErr } = await service
-      .from('invites')
-      .insert(inviteInserts)
-      .select('id')
-    if (inviteErr) return { ok: false, error: `Invite insert failed: ${inviteErr.message}` }
-    invitesCreated = insertedInvites?.length ?? 0
-  }
 
   // Cache busts
   await bustAttentionCache(clubId)
@@ -758,25 +838,28 @@ export async function commitImport(
     data: {
       teamsCreated,
       playersCreated: insertedPlayers?.length ?? 0,
-      invitesCreated,
+      parentsCreated: parentByEmail.size,
+      parentUserIds: Array.from(parentUserIdByEmail.values()),  // for Phase 3 sendParentRecoveryEmails
     },
   }
 }
 ```
 
-- [ ] **Step 2: Verify the `invites` table column names match what's used here**
+Update `CommitResult` in `lib/types.ts` to include `parentsCreated: number` and `parentUserIds: string[]`.
+
+- [ ] **Step 3: Verify the `profiles` schema accepts these columns**
 
 ```bash
-grep -A 30 "create table invites\|CREATE TABLE invites" supabase/migrations/*.sql | head -50
+grep -A 15 "create table profiles\|CREATE TABLE profiles" supabase/migrations/001_initial_schema.sql
 ```
 
-If columns don't match (`role`, `status`, `expires_at`, `player_id`, `team_id`, `email`), adjust the insert payload.
+Confirm: `user_id`, `club_id`, `role`, `display_name`, `onboarding_complete` all exist. If `onboarding_complete` is named differently, adjust.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add app-next/app/dashboard/roster-import/actions.ts
-git commit -m "feat(roster-import): commitImport server action — bulk insert teams/players/invites via service-role"
+git add app-next/app/dashboard/roster-import/actions.ts app-next/app/dashboard/roster-import/lib/types.ts
+git commit -m "feat(roster-import): commitImport — auth.users + profiles + team_members + players (matches demo-seed pattern)"
 ```
 
 ---
@@ -976,7 +1059,7 @@ export default function ImportWizard({
         <div className="bg-zinc-900 rounded p-4 mb-4">
           <p>{preview.counts.newTeams} new teams</p>
           <p>{preview.counts.newPlayers} new players</p>
-          <p>{preview.counts.uniqueParentEmails} unique parents ({preview.counts.newInvites} invites)</p>
+          <p>{preview.counts.uniqueParentEmails} parents (one account per unique email — siblings share)</p>
           {preview.skippedRows > 0 && (
             <p className="text-yellow-400">{preview.skippedRows} rows will be skipped</p>
           )}
@@ -1023,9 +1106,9 @@ export default function ImportWizard({
     return (
       <div className="max-w-xl mx-auto p-6 text-center">
         <h2 className="text-2xl font-semibold mb-4">Import complete ✓</h2>
-        <p className="mb-2">{success.teamsCreated} teams · {success.playersCreated} players · {success.invitesCreated} invites created</p>
+        <p className="mb-2">{success.teamsCreated} teams · {success.playersCreated} players · {success.parentsCreated} parents created</p>
         <p className="text-zinc-400 mb-6">
-          Parents are not invited yet — they'll show on your dashboard but won't get emails until you click "Send invites" (Phase 3).
+          Parent accounts are created but no emails have been sent yet. Use "Send invites" (Phase 3) to email them their password-set links.
         </p>
         {variant === 'onboarding' && onComplete && (
           <button onClick={onComplete} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded">
@@ -1307,31 +1390,31 @@ As an existing DOC (use a non-empty test account), navigate to `/dashboard/roste
 
 **Phase 3 ships when:** The success screen has a "Send invites to N parents" button that bulk-emails all pending invites via Resend, shows progress, and displays per-email failures.
 
-## Task 13: sendParentInvites server action
+## Task 13: sendParentRecoveryEmails server action
 
 **Files:**
-- Modify: `app-next/app/dashboard/roster-import/actions.ts` (append `sendParentInvites`)
+- Modify: `app-next/app/dashboard/roster-import/actions.ts` (append `sendParentRecoveryEmails`)
 
 Existing tools to reuse:
-- `lib/email.ts` — Resend wrapper (check the actual export name)
-- The current `/join/[token]` invite flow — don't reinvent the email body; copy the pattern from whatever existing action sends invites.
+- `lib/email.ts` — Resend wrapper. Identify the canonical export.
+- `service.auth.admin.generateLink({ type: 'recovery', email })` — Supabase admin API.
 
-- [ ] **Step 1: Find the existing invite-email pattern**
+- [ ] **Step 1: Find the email helper**
 
 ```bash
-grep -rln "from '@/lib/email'\|from '@/lib/resend'" app-next/app/ | head -5
-grep -A 30 "sendInvite\|invite.*email\|resend.*emails" app-next/app/dashboard/teams/*.ts 2>/dev/null | head -40
+grep -rln "from '@/lib/email'" app-next/app/ | head -5
+cat app-next/lib/email.ts | head -40
 ```
 
-Identify the canonical "send invite email to a parent" function and reuse it.
+Identify the function that sends a transactional email (likely `sendEmail` or similar). Note the signature.
 
-- [ ] **Step 2: Implement sendParentInvites**
+- [ ] **Step 2: Implement sendParentRecoveryEmails**
 
 ```typescript
 // Append to actions.ts
 
-export async function sendParentInvites(
-  inviteIds: string[]
+export async function sendParentRecoveryEmails(
+  parentUserIds: string[]
 ): Promise<{ ok: true; data: { sent: number; failed: number; failures: { email: string; reason: string }[] } } | ActionFailure> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1346,29 +1429,64 @@ export async function sendParentInvites(
     return { ok: false, error: 'DOC role required' }
   }
 
-  // Fetch invites + scope by club_id
-  const { data: invites, error } = await supabase
-    .from('invites')
-    .select('id, email, token, status, club_id, player_id, team_id')
-    .in('id', inviteIds)
+  // Verify these parent profiles all belong to the DOC's club (security)
+  const { data: parentProfiles, error: profilesErr } = await supabase
+    .from('profiles')
+    .select('user_id, display_name')
     .eq('club_id', profile.club_id)
-    .eq('status', 'pending')
-  if (error) return { ok: false, error: error.message }
+    .eq('role', 'parent')
+    .in('user_id', parentUserIds)
+  if (profilesErr) return { ok: false, error: profilesErr.message }
 
-  // Bulk send via Resend (or reuse existing helper)
+  const allowed = new Set(parentProfiles?.map(p => p.user_id) ?? [])
+  const filteredIds = parentUserIds.filter(id => allowed.has(id))
+
+  // Get the club name for the email body
+  const { data: club } = await supabase
+    .from('clubs')
+    .select('name')
+    .eq('id', profile.club_id)
+    .single()
+  const clubName = club?.name ?? 'your club'
+
+  const service = createServiceClient()
   const failures: { email: string; reason: string }[] = []
   let sent = 0
-  for (const inv of invites ?? []) {
+
+  for (const userId of filteredIds) {
     try {
-      // TODO: replace with the canonical helper found in Step 1
-      await sendInviteEmail({
-        to: inv.email,
-        token: inv.token,
-        clubName: '...',  // fetch club name from clubs table
+      // Look up the email for this user
+      const { data: authUser, error: authErr } = await service.auth.admin.getUserById(userId)
+      if (authErr || !authUser.user?.email) throw new Error('User lookup failed')
+      const email = authUser.user.email
+
+      // Generate a recovery link
+      const { data: linkData, error: linkErr } = await service.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+      })
+      if (linkErr || !linkData?.properties?.action_link) throw new Error('Link generation failed')
+      const recoveryUrl = linkData.properties.action_link
+
+      // Send via Resend
+      await sendEmail({
+        to: email,
+        subject: `${clubName} added you on OffPitchOS — set your password`,
+        html: `
+          <p>Hi,</p>
+          <p>${clubName} just added you to OffPitchOS — the team management app for your kids' soccer club.</p>
+          <p><a href="${recoveryUrl}">Click here to set your password and log in</a>.</p>
+          <p>You'll see your kid's schedule, get notifications when practice changes, and message coaches directly.</p>
+          <p>— OffPitchOS</p>
+        `,
       })
       sent++
     } catch (e: any) {
-      failures.push({ email: inv.email, reason: e.message ?? 'send failed' })
+      const { data: authUser } = await service.auth.admin.getUserById(userId)
+      failures.push({
+        email: authUser?.user?.email ?? userId,
+        reason: e.message ?? 'send failed',
+      })
     }
   }
 
@@ -1376,14 +1494,14 @@ export async function sendParentInvites(
 }
 ```
 
-If Resend can do bulk in one call (it can, with the batch API), use that and surface per-email status from the response.
+Replace `sendEmail` with the actual canonical export from `@/lib/email`.
 
 - [ ] **Step 3: Build + commit**
 
 ```bash
 cd app-next && npm run build
 git add app-next/app/dashboard/roster-import/actions.ts
-git commit -m "feat(roster-import): sendParentInvites server action — bulk Resend"
+git commit -m "feat(roster-import): sendParentRecoveryEmails — Supabase recovery links via Resend"
 ```
 
 ---
@@ -1394,24 +1512,22 @@ git commit -m "feat(roster-import): sendParentInvites server action — bulk Res
 - Modify: `app-next/app/dashboard/roster-import/import-wizard.tsx`
 
 After commit, the success screen needs:
-1. The "Send invites to N parents" button (the import returns `invitesCreated` count, but we need the invite IDs to send — adjust `commitImport` to return `inviteIds`).
+1. The "Send invites to N parents" button — uses `success.parentUserIds` (already on `CommitResult` from Task 5).
 2. In-flight progress indicator.
 3. Failure list with retry button.
 
-- [ ] **Step 1: Have commitImport return inviteIds**
-
-In `actions.ts`, modify the invite insert to `select('id, email')` and pass that through `CommitResult.data.inviteIds`. Update `types.ts`.
-
-- [ ] **Step 2: Wire the button + state in import-wizard.tsx**
+- [ ] **Step 1: Wire the button + state in import-wizard.tsx**
 
 ```tsx
+import { sendParentRecoveryEmails } from './actions'
+
 const [inviting, setInviting] = useState(false)
 const [inviteResult, setInviteResult] = useState<{ sent: number; failed: number; failures: any[] } | null>(null)
 
 async function handleSendInvites() {
-  if (!success?.inviteIds) return
+  if (!success?.parentUserIds?.length) return
   setInviting(true)
-  const res = await sendParentInvites(success.inviteIds)
+  const res = await sendParentRecoveryEmails(success.parentUserIds)
   setInviting(false)
   if (res.ok) setInviteResult(res.data)
   else setError(res.error)
@@ -1420,7 +1536,7 @@ async function handleSendInvites() {
 // in success render:
 {!inviteResult ? (
   <button onClick={handleSendInvites} disabled={inviting} className="bg-emerald-600 px-4 py-2 rounded">
-    {inviting ? 'Sending…' : `Send invites to ${success.invitesCreated} parents`}
+    {inviting ? 'Sending…' : `Send invites to ${success.parentsCreated} parents`}
   </button>
 ) : (
   <div className="bg-zinc-900 rounded p-4">
@@ -1435,19 +1551,22 @@ async function handleSendInvites() {
 )}
 ```
 
-- [ ] **Step 3: Build + manual smoke**
+- [ ] **Step 2: Build + manual smoke**
 
 ```bash
 cd app-next && npm run build && npm run dev
 ```
 
-Run the full flow with a CSV containing 1 real test email (e.g., your own). Click "Send invites." Confirm the email arrives + clicking the link routes through `/join/[token]` → claim flow works → `players.parent_id` updates from DOC placeholder to the new auth.users.id.
+Run the full flow with a CSV containing 1 real test email (e.g., your own). Click "Send invites." Confirm:
+- The email arrives (subject: "[Club] added you on OffPitchOS — set your password").
+- Clicking the link goes to a Supabase password-reset page.
+- After setting password + signing in, the parent lands on the dashboard with their kid(s) already attached.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add app-next/app/dashboard/roster-import/import-wizard.tsx app-next/app/dashboard/roster-import/actions.ts app-next/app/dashboard/roster-import/lib/types.ts
-git commit -m "feat(roster-import): success screen — bulk send invites + retry failed"
+git add app-next/app/dashboard/roster-import/import-wizard.tsx
+git commit -m "feat(roster-import): success screen — bulk send recovery emails + retry failed"
 ```
 
 ---
@@ -1483,11 +1602,11 @@ If still on a branch, squash to one PR. Otherwise main is already updated.
 - [ ] Bulk invite send completes in < 30s for 100 parents
 - [ ] Empty-state guard correctly blocks onboarding-path import on a populated club
 - [ ] Re-import dashboard path shows the yellow dialog
-- [ ] Sibling case: 2 invites to same email, parent accepts both correctly
-- [ ] DOC's user_id placeholder gets correctly replaced on parent acceptance
+- [ ] Sibling case: ONE auth.user + ONE profile per unique email; multiple players link to it; ONE recovery email
+- [ ] After parent clicks recovery link + sets password, they sign in and see all their player(s) immediately
 - [ ] Bad CSV (header row missing, garbage data) shows a clear error
 - [ ] Mapping unmapped → required-field block at preview gate
-- [ ] Re-clicking "Send invites" doesn't double-send (status='pending' filter holds)
+- [ ] Re-clicking "Send invites" generates a fresh recovery link each time (Supabase invalidates the prior one) — never double-creates parents
 
 ## What's deliberately not built (v1)
 

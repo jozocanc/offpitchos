@@ -88,12 +88,14 @@ All return the project-standard `{ ok: true, data } | { ok: false, error }` shap
 // Pure validation. NO database writes. Returns counts, warnings, errors.
 previewImport(rows, mapping): Promise<PreviewResult>
 
-// Bulk-creates teams, players, invites. Service-role client (matches
-// demo-seed-actions.ts pattern). Empty-state guard at the top.
+// Bulk-creates auth.users + profiles + team_members + teams + players.
+// Service-role client (matches demo-seed-actions.ts pattern).
+// Empty-state guard at the top for onboarding variant.
 commitImport(rows, mapping): Promise<CommitResult>
 
-// Bulk-sends /join invite emails for given invite IDs. Resend per email.
-sendParentInvites(inviteIds: string[]): Promise<InviteResult>
+// Bulk-sends Supabase password-recovery emails for the given parent
+// auth.user.ids — "Click here to set your password and log in."
+sendParentRecoveryEmails(parentUserIds: string[]): Promise<RecoveryResult>
 ```
 
 CSV parsing happens client-side (papaparse). No `parseCsv` server action — parsed rows ride over the wire to `previewImport` / `commitImport`.
@@ -118,11 +120,16 @@ CSV parsing happens client-side (papaparse). No `parseCsv` server action — par
 
 `players.parent_id` is `NOT NULL` and references `auth.users(id)` (per `009_players.sql`). There is no separate `parents` table — a "parent" in OffPitchOS is an `auth.users` row + a `profiles` row with `role='parent'`. The importer cannot create freestanding parent records.
 
-### Bootstrap pattern (matches demo-seed)
+### Bootstrap pattern (matches demo-seed exactly)
 
-The demo-seed implementation creates players without waiting for real parent sign-ups by using the DOC's own `auth.user.id` as a placeholder `parent_id`. This spec adopts the same pattern. When a real parent later accepts a player-scoped invite (via the existing `acceptInvite` action and migration 019's `invites.player_id` column), `players.parent_id` is updated to the parent's new `auth.users.id`.
+Verified against `app-next/app/dashboard/demo-seed-actions.ts:208-244`. For each unique parent email in the CSV the importer:
 
-**Note:** This spec assumes the demo-seed DOC-as-placeholder approach is the intended pattern for "DOC creates players before parent signs up." If the dashboard's add-player UX uses a different approach (e.g., creating a temp `auth.users` row), the importer should match that pattern instead. To be verified during implementation.
+1. Creates an `auth.users` row via `admin.auth.admin.createUser({ email, password: cryptoRandomPassword(), email_confirm: true, user_metadata: { full_name } })`. The `email_confirm: true` flag suppresses the Supabase confirmation email — silent creation. Random password means the parent can't sign in until they trigger a reset.
+2. Creates a `profiles` row with `role='parent'`, linked to that `auth.user.id` and the club.
+3. Creates a `team_members` row per team that parent has at least one player on (links profile → team).
+4. Creates `players` rows with `parent_id = auth.user.id`.
+
+After import, parents exist as "set up but not yet active" accounts. They become active when the DOC clicks "Send invites" in Phase 3, which dispatches a Supabase password-recovery email per parent ("Click here to set your password and log in"). No `/join`-token invite path is used by this importer — that path stays untouched and continues to serve manual invites added through the existing dashboard UI.
 
 ### Sibling case
 
@@ -133,7 +140,7 @@ A CSV with two rows for siblings sharing `parent1_email`:
 | 1 | Mateo Lopez | anna@... |
 | 2 | Sofia Lopez | anna@... |
 
-Result: 2 invites created, both with `email = anna@...` and different `player_id`. On Anna's first invite click, she signs up → her new `auth.users.id` becomes Mateo's `parent_id`. On the second click she's already signed in and Sofia's `parent_id` is set. No duplicate `auth.users` rows.
+Result: ONE `auth.users` row created for `anna@...`, ONE `profiles` row, `team_members` rows for each team Anna's kids are on (deduped), and 2 `players` rows both pointing to Anna's single `parent_id`. ONE password-recovery email when "Send invites" is clicked. When Anna clicks the link, sets her password, signs in — she sees both Mateo and Sofia under her account immediately.
 
 ### Required CSV fields
 
@@ -181,9 +188,13 @@ Mapper UI uses these for pre-population but the DOC can edit any mapping.
 
 | Table | Operation | Notes |
 |---|---|---|
+| `auth.users` | INSERT (via `admin.auth.admin.createUser`) | One per unique parent email. `email_confirm: true`, random password, `user_metadata.full_name` set. |
+| `profiles` | INSERT | One per parent (linked to the `auth.user.id` above). `role='parent'`, `club_id`, `display_name`. |
+| `team_members` | INSERT | One per (parent profile, team) pair. Deduped within import (a parent with two siblings on the same team gets one row). |
 | `teams` | INSERT | One per new team_name not already in club. age_group from CSV. |
-| `players` | INSERT | One per CSV row (post-dedup). `parent_id = DOC's user_id` placeholder. `team_id` from match-or-create. |
-| `invites` | INSERT | One per `(player, parent_email)` pair. `player_id` set per migration 019. `expires_at = now() + 30 days`. `status = 'pending'`. |
+| `players` | INSERT | One per CSV row (post-dedup). `parent_id` = the parent's `auth.user.id` from above. `team_id` from match-or-create. |
+
+No writes to the `invites` table from this importer. The existing `/join`-token flow stays in place for manual invites added through the dashboard.
 
 ### Normalization (applied silently during preview)
 
@@ -223,12 +234,13 @@ Mapper UI uses these for pre-population but the DOC can edit any mapping.
 - Single transaction (Postgres) wraps all writes per `commitImport` call. If any insert fails, the whole transaction rolls back; caller sees `{ ok: false, error }` and stays on preview.
 - Row cap (1000) enforced at preview gate to prevent timeouts. Service-role bulk insert of 1000 rows is sub-second.
 
-### Invite-send stage (`sendParentInvites`)
+### Invite-send stage (`sendParentRecoveryEmails`)
 
-- Per-invite Resend call (individual `to:` addresses, no shared thread).
+- For each parent `auth.user.id`, server calls `admin.auth.admin.generateLink({ type: 'recovery', email })` to mint a one-time recovery link, then sends a Resend email with a "Set your password" CTA pointing at that link.
+- Per-email Resend call (individual `to:` addresses, no shared thread).
 - Returns `{ sent, failed, failures: [{ email, reason }] }`.
-- UI shows progress + failure list. "Retry failed" sends only `status='pending'` invites — idempotent re-click safe.
-- Status field on `invites` (already exists) prevents double-send.
+- UI shows progress + failure list. "Retry failed" can be re-clicked safely — `generateLink` invalidates prior recovery tokens for that user, so re-sends always work but only the latest link is valid.
+- Idempotency note: re-clicking after a parent has already reset their password is harmless — they'll just get a new link they don't need.
 
 ### Concurrency / race
 
@@ -248,24 +260,26 @@ A founding-club DOC can:
 
 1. Sign up → reach onboarding step 3 → upload an SE roster CSV → see a preview with correct counts and reasonable warnings → click confirm → see all teams/players in their dashboard within 10 minutes of starting onboarding.
 2. From the dashboard, after onboarding is complete, upload an additional roster CSV (e.g., a new team) → confirm → see the new players appended.
-3. Click "Send invites" on the success screen → all parents receive invite emails → at least one parent clicks the invite, signs up, and lands on the dashboard with their child's player record correctly attributed (`player.parent_id` updated from DOC placeholder to parent's user_id).
+3. Click "Send invites" on the success screen → all parents receive a Supabase password-recovery email → at least one parent clicks the link, sets their password, signs in, and lands on the dashboard with their child's player record(s) already attached.
 4. If the CSV has bad rows (missing emails, malformed dates, dups), the preview surfaces them clearly with row numbers and the DOC can either fix the CSV or proceed with the warning rows skipped.
 
 A bug-free implementation does not:
 
-- Create orphaned auth.users rows for parents who haven't accepted yet.
-- Allow the same parent email to produce duplicate auth.users rows after both siblings' invites are accepted.
+- Create duplicate `auth.users` rows for the same email within an import.
+- Send any email automatically during the upload/preview/commit phases — Supabase confirmation is suppressed via `email_confirm: true`, and recovery emails only go out on explicit "Send invites" click.
 - Bypass RLS or club_id scoping on any read.
-- Send any email automatically without explicit DOC click on "Send invites".
 - Allow > 1000 rows to be committed in a single import.
+
+Acceptable side effect (documented for the founding-club DOC): all parents in the CSV will exist as `auth.users` rows with random passwords from the moment of import. They are inert until the DOC clicks "Send invites" and they reset their password. This is the same pattern demo-seed uses for fixture parents and is by design.
 
 ---
 
 ## Open questions for implementation
 
-1. Confirm `papaparse` not already in `package.json`. If absent, add it.
-2. Confirm demo-seed pattern for `parent_id` placeholder. If the dashboard add-player UX uses a different mechanism, match that instead and update this doc.
+1. ~~Confirm `papaparse` not already in `package.json`. If absent, add it.~~ → Verified MISSING; Task 1 adds it.
+2. ~~Confirm demo-seed pattern for `parent_id` placeholder.~~ → Verified 2026-05-04. Demo-seed creates real `auth.users` via `admin.createUser` with `email_confirm: true`. Spec updated to match.
 3. Confirm Resend's per-call latency at scale (sending 60 emails sequentially) — if > 30s, consider batching with a queue. Likely fine for v1 sizes.
+4. Confirm `admin.auth.admin.generateLink({ type: 'recovery' })` returns a usable URL we can embed in our own Resend email (vs. Supabase auto-sending). Should be fine — that's the documented use case for `generateLink`.
 
 ---
 
