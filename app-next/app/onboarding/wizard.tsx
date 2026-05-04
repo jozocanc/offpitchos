@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { AGE_GROUPS } from '@/lib/constants'
 import { completeOnboarding } from './actions'
 import Wordmark from '@/components/wordmark'
+import ImportWizard from '@/app/dashboard/roster-import/import-wizard'
 
 export default function OnboardingWizard() {
-  const [step, setStep] = useState(1)
+  const router = useRouter()
+  const [step, setStep] = useState<1 | 2 | 3>(1)
   const [clubName, setClubName] = useState('')
   const [teamName, setTeamName] = useState('')
   const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[0])
@@ -36,11 +39,25 @@ export default function OnboardingWizard() {
 
     startTransition(async () => {
       try {
-        await completeOnboarding(formData)
+        const res = await completeOnboarding(formData)
+        if (res?.ok) {
+          setStep(3)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
+  }
+
+  if (step === 3) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-dark px-4">
+        <ImportWizard
+          variant="onboarding"
+          onComplete={() => router.push('/dashboard')}
+        />
+      </main>
+    )
   }
 
   return (

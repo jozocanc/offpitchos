@@ -58,5 +58,5 @@ export async function completeOnboarding(formData: FormData) {
 
   if (profileError) throw new Error(`Failed to update profile: ${profileError.message}`)
 
-  redirect('/dashboard')
+  return { ok: true as const }
 }
