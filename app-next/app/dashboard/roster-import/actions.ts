@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { bustAttentionCache } from '../attention-actions'
 import {
   ColumnMapping,
@@ -499,6 +500,13 @@ export async function sendParentRecoveryEmails(
   const failures: { email: string; reason: string }[] = []
   let sent = 0
 
+  // Derive site origin so recovery links route through /auth/callback?next=/reset-password
+  // on the host the request came in on (works for prod, preview, and localhost).
+  const h = await headers()
+  const host = h.get('host') ?? 'offpitchos.com'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const siteOrigin = `${protocol}://${host}`
+
   for (const userId of filteredIds) {
     let email = ''
     try {
@@ -509,6 +517,9 @@ export async function sendParentRecoveryEmails(
       const { data: linkData, error: linkErr } = await service.auth.admin.generateLink({
         type: 'recovery',
         email,
+        options: {
+          redirectTo: `${siteOrigin}/auth/callback?next=/reset-password`,
+        },
       })
       if (linkErr || !linkData?.properties?.action_link) {
         throw new Error(linkErr?.message ?? 'Recovery-link generation failed')
