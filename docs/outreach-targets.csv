@@ -1,83 +1,83 @@
-# 78 clubs found across Broward, Palm Beach, and Miami-Dade — gathered from FYSA, SFUYSA directory references, GHSL, and individual club websites via WebSearch (WebFetch was denied throughout, so DOC contact details are filled only where surfaced in search snippets).
+# 78 clubs · 34 with named DOC · 58 with DOC email · 55 with DOC phone · enriched 2026-05-04 via WebSearch (WebFetch denied at runtime; values are from search-result snippets only — verify on club website before sending)
 # Empty doc_email/doc_phone fields = info not surfaced in search; verify on club website before sending. NEVER fabricate.
 club_name,county,city,website,doc_name,doc_email,doc_phone,member_count_estimate,notes
 Plantation FC Rush,Broward,Plantation,https://www.plantationfcrush.com/,Anis Jerbi,admin@plantationfcrush.com,(954) 558-3080,800-1200,USSF A licensed DOC; SFUYSA member; large Plantation/West Broward base at Pine Island Park
 West Pines United FC,Broward,Pembroke Pines,https://westpinesunited.org/,Todd Goodman,soccerskillsunlimited@gmail.com,,1500-2000,One of largest competitive travel clubs in S Florida; hosts West Pines Soccer Fest + Kickoff Classic
-Weston FC,Broward,Weston,https://www.westonfc.org/,Luis Mendoza,luis.mendoza@westonfc.org,,1000-1500,Nationally recognized; ECNL boys/girls; runs Weston Cup Presidents Day Weekend tournament
-Davie United Soccer Club,Broward,Davie,http://www.daviesharks.com/DUSC/Home.html,Matthew Parry,matt@daviesharks.com,,400-600,SFUYSA member; GHSL member; uses Davie/Vista View fields
+Weston FC,Broward,Weston,https://www.westonfc.org/,Luis Mendoza,luis.mendoza@westonfc.org,(954) 319-3069,1000-1500,Nationally recognized; ECNL boys/girls; runs Weston Cup Presidents Day Weekend tournament
+Davie United Soccer Club,Broward,Davie,http://www.daviesharks.com/DUSC/Home.html,Matthew Parry,matt@daviesharks.com,(954) 682-8147,400-600,SFUYSA member; GHSL member; uses Davie/Vista View fields
 Fort Lauderdale Rush,Broward,Fort Lauderdale,https://www.ftlrush.com/,,admin@ftlrush.com,(954) 816-7140,500-800,Rush network affiliate; competitive U9-U19 + developmental U4-U12
-Sunrise Surf,Broward,Sunrise,https://sunrisesurfsoccer.com/,,Info@sunrisesoccer.net,,400-600,Formerly Sunrise Sting; competitive travel program in West Broward
-FC Prime Broward,Broward,Davie,https://www.fc-prime.com/,,,,800-1200,Hub for ECNL Regional League; multi-site (Davie/Coral Springs/Sunrise/Plantation); merged with Sunrise SC in 2019
-Coral Springs Youth Soccer (CSYS),Broward,Coral Springs,https://www.csys.org/,,,,2500,Largest sports league in Coral Springs; ~200 teams 450 coaches 1600 games per season; recreational
+Sunrise Surf,Broward,Sunrise,https://sunrisesurfsoccer.com/,Caue Munareti,caue@sunrisesoccer.net,,400-600,Formerly Sunrise Sting; competitive travel program in West Broward; general inbox info@sunrisesoccer.net
+FC Prime Broward,Broward,Davie,https://www.fc-prime.com/,,admin@fc-prime.com,(754) 757-5762,800-1200,Hub for ECNL Regional League; multi-site (Davie/Coral Springs/Sunrise/Plantation); merged with Sunrise SC in 2019
+Coral Springs Youth Soccer (CSYS),Broward,Coral Springs,https://www.csys.org/,,milton@csys.org,(954) 818-2883,2500,Largest sports league in Coral Springs; ~200 teams 450 coaches 1600 games per season; recreational
 Coral Springs Soccer Academy (CSSA),Broward,Coral Springs,https://www.coralspringssoccer.com/,Moises Godoy,cat@coralspringssocer.com,(954) 740-7101,300-500,Travel + futsal academy; founder runs first city futsal program; FYSA + USSF licensed
-Parkland Soccer Club,Broward,Parkland,https://www.parklandtravelsoccer.com/,Luis Valente,,,400-600,Travel program; USSF A license DOC; girls director Cristian Raudales
-Plantation Athletic League (PAL),Broward,Plantation,https://palsports.org/,,,,1500-2000,Volunteer-run multi-sport rec; soccer one of biggest divisions; uses Plantation city parks
-Pembroke Pines Optimist (Piranhas),Broward,Pembroke Pines,https://www.pembrokepinesoptimist.com/,,,(954) 580-9090,300-500,Recreational only; long-running optimist program
-Miramar PAL,Broward,Miramar,https://www.miramarpal.org/,,,,500-700,Police Athletic League; rec only; ages 3-17 across 7 divisions; plays at Miramar Regional Park
-Margate United FC (Margate Youth Soccer),Broward,Margate,https://www.margateunitedfc.com/,,,,300-500,SFUYSA member; recreational + travel
-Tamarac Youth Soccer,Broward,Tamarac,https://www.tamarac.gov/1046/Soccer,,,,200-400,City rec league only; co-ed ages 4-17
+Parkland Soccer Club,Broward,Parkland,https://www.parklandtravelsoccer.com/,Luis Valente,info@parklandtravelsoccer.com,(305) 799-4807,400-600,Travel program; USSF A license DOC; girls director Cristian Raudales
+Plantation Athletic League (PAL),Broward,Plantation,https://palsports.org/,,palsportsinformation@gmail.com,(954) 818-0856,1500-2000,Volunteer-run multi-sport rec; soccer one of biggest divisions; uses Plantation city parks; soccer-specific plantationpalsoccer@gmail.com
+Pembroke Pines Optimist (Piranhas),Broward,Pembroke Pines,https://www.pembrokepinesoptimist.com/,,pposoccer@yahoo.com,(954) 580-9090,300-500,Recreational only; long-running optimist program
+Miramar PAL,Broward,Miramar,https://www.miramarpal.org/,,JMHALL@MiramarPD.org,(954) 602-4783,500-700,Police Athletic League; rec only; ages 3-17 across 7 divisions; plays at Miramar Regional Park
+Margate United FC (Margate Youth Soccer),Broward,Margate,https://www.margateunitedfc.com/,,,(954) 592-1064,300-500,SFUYSA member; recreational + travel
+Tamarac Youth Soccer,Broward,Tamarac,https://www.tamarac.gov/1046/Soccer,,Michael.Rini@tamarac.org,(954) 597-3620,200-400,City rec league only; co-ed ages 4-17
 Coconut Creek Youth Soccer,Broward,Coconut Creek,https://www.creekparksandrec.com/,,,,300-500,City rec league; girls + boys 5-16; plays at Tradewinds Park
-Lauderhill Lions Soccer,Broward,Lauderhill,https://www.lauderhill-fl.gov/parks-recreation/youth-sports,,,,200-400,City rec + travel (Lions); ages 4-12 rec / 7-18 travel
-City of Sunrise Youth Athletics,Broward,Sunrise,https://www.sunrisefl.gov/departments-services/leisure-services/youth-athletics,,,,300-500,City rec program
+Lauderhill Lions Soccer,Broward,Lauderhill,https://www.lauderhill-fl.gov/parks-recreation/youth-sports,Keith Davis,,(954) 274-5289,200-400,City rec + travel (Lions); ages 4-12 rec / 7-18 travel; rec inquiries via Marcellus Green at (954) 572-1474
+City of Sunrise Youth Athletics,Broward,Sunrise,https://www.sunrisefl.gov/departments-services/leisure-services/youth-athletics,,,(954) 747-4600,300-500,City rec program
 Davie Recreational Soccer,Broward,Davie,https://www.davie-fl.gov/356/Recreational-Soccer,,,(954) 327-3941,300-500,Town of Davie rec program
-Supreme FC,Broward,Miramar,https://www.supreme-fc.com/,,,,200-400,ECNL youth tryouts; smaller competitive program in Miramar/SW Broward
+Supreme FC,Broward,Miramar,https://www.supreme-fc.com/,,avuono@muefc.org,,200-400,ECNL youth tryouts; smaller competitive program in Miramar/SW Broward; operates as Miramar United Elite FC; registrar email
 Inter Miami CF Academy,Broward,Fort Lauderdale,https://www.intermiamicf.com/academy/,,,,150,Top of S Florida youth pyramid; U12-U17; Florida Blue Training Center; invite-only
 Brian Piccolo / Soccer 5 Broward,Broward,Cooper City,https://www.soccer5broward.com/,,brianpiccolopark@soccer5usa.com,(954) 790-7165,500-800,Soccer 5 Academy + leagues; small-sided turf; large rec + academy footprint
-PSG Academy Plantation,Broward,Plantation,https://www.psgacademymiami.com/,,,,300-500,PSG Academy Florida site; ages 6-18 competitive + rec
-Hollywood Wave Soccer (Greater Hollywood Soccer League),Broward,Hollywood,https://www.ghsl.info/,,,,1000-1500,League serves N Miami-Dade through S Broward; one of oldest in the area
-Raptors Soccer Academy,Broward,Cooper City,https://raptorssocceracademy.com/,,,,150-300,Smaller academy at Brian Piccolo Park
-Brazil Soccer Academy,Broward,Coconut Creek,https://brazilsocceracademy.com/,,,,200-400,Brazilian-style training; rec + small competitive
-Team Boca Soccer Club,Palm Beach,Boca Raton,https://www.teamboca.com/,Mario Rincon (Girls); Keith Fries (Club Director),,,1500-2000,SABR/Team Boca complex; Patch Reef + Spanish River; large boys + girls travel pyramid
-SABR Soccer (Soccer Association of Boca Raton),Palm Beach,Boca Raton,https://sabrsoccer.net/,Carrie Maier Barker,,,2500-3000,Largest soccer club in Boca; rec + travel; runs Team Boca; 25+ years coaching DOC
-South Florida Football Academy (SFFA),Palm Beach,Boca Raton,https://sffada.com/,Eric "Ike" Eichmann,,,300-500,MLS NEXT founding partner; pathway from Boca United; ex-USMNT player as DOC
-Boca United FC (Greater Boca YSA / ANUTD),Palm Beach,Boca Raton,https://gbysa.org/,Eric Eichmann,,(561) 706-1537,800-1200,Founded 1998; pre-academy linked to SFFA MLS Elite; both boys + girls programs
-Boca Raton Juniors Soccer Club,Palm Beach,Boca Raton,https://www.bocaratonsoccer.net/,,,,400-600,Elite-level; founded 1999; competitive only
-FC Boca Predators,Palm Beach,Boca Raton,https://www.fcbocapredators.org/,,,,200-400,Select program U11-U19; ex-pro coaches; small competitive niche
+PSG Academy Plantation,Broward,Plantation,https://www.psgacademymiami.com/,,contact@psgacademymiami.com,(800) 399-9665,300-500,PSG Academy Florida site; ages 6-18 competitive + rec; operates under Plantation FC Rush umbrella
+Hollywood Wave Soccer (Greater Hollywood Soccer League),Broward,Hollywood,https://www.ghsl.info/,,,,1000-1500,League serves N Miami-Dade through S Broward; one of oldest in the area; league contact Jose Rey
+Raptors Soccer Academy,Broward,Cooper City,https://raptorssocceracademy.com/,,,(954) 361-4632,150-300,Smaller academy at Brian Piccolo Park
+Brazil Soccer Academy,Broward,Coconut Creek,https://brazilsocceracademy.com/,,bsabrazilsoccerflorida@gmail.com,(954) 709-1215,200-400,Brazilian-style training; rec + small competitive
+Team Boca Soccer Club,Palm Beach,Boca Raton,https://www.teamboca.com/,Mario Rincon (Girls); Keith Fries (Club Director),Bill@teamboca.com,,1500-2000,SABR/Team Boca complex; Patch Reef + Spanish River; large boys + girls travel pyramid
+SABR Soccer (Soccer Association of Boca Raton),Palm Beach,Boca Raton,https://sabrsoccer.net/,Carrie Maier Barker,cbarker@sabrsoccer.net,,2500-3000,Largest soccer club in Boca; rec + travel; runs Team Boca; 25+ years coaching DOC; general inbox sabrinfo@sabrsoccer.net
+South Florida Football Academy (SFFA),Palm Beach,Boca Raton,https://sffada.com/,"Eric ""Ike"" Eichmann",info@sffada.com,(561) 251-7437,300-500,MLS NEXT founding partner; pathway from Boca United; ex-USMNT player as DOC; registrar phone
+Boca United FC (Greater Boca YSA / ANUTD),Palm Beach,Boca Raton,https://gbysa.org/,Eric Eichmann,eichmann88@yahoo.com,(561) 706-1537,800-1200,Founded 1998; pre-academy linked to SFFA MLS Elite; both boys + girls programs
+Boca Raton Juniors Soccer Club,Palm Beach,Boca Raton,https://www.bocaratonsoccer.net/,,bocasoccerclub@gmail.com,(561) 674-1057,400-600,Elite-level; founded 1999; competitive only
+FC Boca Predators,Palm Beach,Boca Raton,https://www.fcbocapredators.org/,,fcbocapredators2015@gmail.com,(561) 801-3808,200-400,Select program U11-U19; ex-pro coaches; small competitive niche
 Boca Raton FC,Palm Beach,Boca Raton,https://www.bocaratonfc.com/,,,,150-250,NPSL/UPSL adult side + youth pathway; partners with Palm Beach Soccer Academy
-Wellington Soccer Club (Wellington Wave),Palm Beach,Wellington,https://www.wellingtonsoccer.com/,Patrick Zoete,,(561) 252-1467,1000-1500,ECNL boys + girls; travel provider for Wellington since 1995; Friends of WSC sponsorship arm
-Palm Beach Gardens Predators (PBG Predators),Palm Beach,Palm Beach Gardens,https://www.predatorssoccer.org/,,,,800-1200,ECNL; competitive U8-U16; rec arm via PBGYAA
-Palm Beach Gardens Youth Athletic Association (PBGYAA),Palm Beach,Palm Beach Gardens,https://www.pbgyaa.com/soccer/,,,,1000-1500,Recreational arm of PBG soccer; large multi-sport association
-Palm Beach Soccer Academy,Palm Beach,Palm Beach Gardens,https://palmbeachsocceracademy.com/,Richard "Ty" Brewer,,,300-500,30+ year DOC; pathway clinics for Wellington/Jupiter/RPB; partners with Boca Raton FC
-Jupiter United Soccer Club,Palm Beach,Jupiter,https://www.jupiterunited.com/,Neil (UEFA B; United Soccer Coaches DOC Diploma),,,400-600,European-style training methodology; DOC came from PBG Predators
-Rise FC,Palm Beach,Jupiter,https://www.risefc.com/,Malcolm Boyle,,,300-500,Founded 2019; UEFA A licensed DOC; competitive Jupiter alternative
-Boynton United FC,Palm Beach,Boynton Beach,https://boyntonunitedfc.com/,,,,300-500,"More than a club" branding; competitive youth program
+Wellington Soccer Club (Wellington Wave),Palm Beach,Wellington,https://www.wellingtonsoccer.com/,Patrick Zoete,doc@wellingtonsoccer.com,(561) 252-1467,1000-1500,ECNL boys + girls; travel provider for Wellington since 1995; Friends of WSC sponsorship arm
+Palm Beach Gardens Predators (PBG Predators),Palm Beach,Palm Beach Gardens,https://www.predatorssoccer.org/,Steve Burgess,adam@predatorssoccer.org,,800-1200,ECNL; competitive U8-U16; rec arm via PBGYAA; Adam Gee is Dir of Soccer & Operations; soccer@pbgyaa.com general
+Palm Beach Gardens Youth Athletic Association (PBGYAA),Palm Beach,Palm Beach Gardens,https://www.pbgyaa.com/soccer/,,info@pbgyaa.com,(561) 594-2859,1000-1500,Recreational arm of PBG soccer; large multi-sport association
+Palm Beach Soccer Academy,Palm Beach,Palm Beach Gardens,https://palmbeachsocceracademy.com/,"Richard ""Ty"" Brewer",gary@palmbeachsocceracademy.com,(561) 252-6729,300-500,30+ year DOC; pathway clinics for Wellington/Jupiter/RPB; partners with Boca Raton FC; general inbox; alt phone (561) 951-8530
+Jupiter United Soccer Club,Palm Beach,Jupiter,https://www.jupiterunited.com/,Neil McKay,neil.mckay@jtaa.org,,400-600,European-style training methodology; DOC came from PBG Predators; UEFA B + United Soccer Coaches DOC Diploma
+Rise FC,Palm Beach,Jupiter,https://www.risefc.com/,Malcolm Boyle,,(561) 262-7087,300-500,Founded 2019; UEFA A licensed DOC; competitive Jupiter alternative
+Boynton United FC,Palm Beach,Boynton Beach,https://boyntonunitedfc.com/,,boyntonunitedfc@comcast.net,(561) 206-2754,300-500,"""More than a club"" branding; competitive youth program"
 AC Delray Rush,Palm Beach,Delray Beach,https://acdelrayrush.com/,Stephan von Lattorff,stephan@acdelrayrush.com,(561) 876-4845,400-600,Rush network affiliate; rec director Nick Hindhaugh nick@acdelrayrush.com; uses Delray Beach municipal fields
-Royal Palm Beach Soccer (RPB Strikers),Palm Beach,Royal Palm Beach,https://www.rpbstrikers.com/,Mal Hasan,,,500-800,Spring 2026 reg open; competitive + rec
-Greenacres Youth Soccer / N Zone Sports WPB,Palm Beach,Royal Palm Beach,https://nzonesports.com/wpb/,,,,300-500,Rec leagues for ages 3-14; spans Greenacres/RPB/WPB
-Florida West FC,Palm Beach,Lake Worth,https://www.floridawestfc.com/,,,,300-500,Smaller competitive club; affiliated with Florida youth pyramids
-Palm Beach Recreation,Palm Beach,Palm Beach,https://palmbeachrecreation.com/recreation/youth-sports/,,,,200-400,Town of Palm Beach municipal program
-City of Palm Beach Gardens Youth Sports,Palm Beach,Palm Beach Gardens,https://www.pbgfl.gov/547/Youth-Sports,,,,500-800,City rec arm
-AYSO Region 1370 (Wellington area),Palm Beach,Wellington,https://www.aysoregion1370.com/,,,,300-500,AYSO purely recreational; family-friendly entry tier
-Soccer 5 Palm Beach,Palm Beach,Lake Worth,https://www.soccer5palmbeach.com/,,,,200-400,John Prince Park small-sided complex; multi-club host
+Royal Palm Beach Soccer (RPB Strikers),Palm Beach,Royal Palm Beach,https://www.rpbstrikers.com/,Mal Hasan,doc@rpbstrikers.com,(561) 310-3111,500-800,Spring 2026 reg open; competitive + rec
+Greenacres Youth Soccer / N Zone Sports WPB,Palm Beach,Royal Palm Beach,https://nzonesports.com/wpb/,,nzone2wpb@gmail.com,(561) 777-5929,300-500,Rec leagues for ages 3-14; spans Greenacres/RPB/WPB
+Florida West FC,Palm Beach,Lake Worth,https://www.floridawestfc.com/,,,,300-500,Smaller competitive club; affiliated with Florida youth pyramids [website-broken — floridawestfc.com is a Fort Myers/SWFL club not Lake Worth; verify correct local club before outreach]
+Palm Beach Recreation,Palm Beach,Palm Beach,https://palmbeachrecreation.com/recreation/youth-sports/,,,(561) 838-5404,200-400,Town of Palm Beach municipal program; partners with Palm Beach RUSH (cniebling@palmbeachrush.com)
+City of Palm Beach Gardens Youth Sports,Palm Beach,Palm Beach Gardens,https://www.pbgfl.gov/547/Youth-Sports,,recinfo@pbgfl.com,(561) 630-1100,500-800,City rec arm
+AYSO Region 1370 (Wellington area),Palm Beach,Wellington,https://www.aysoregion1370.com/,,rc@aysoregion1370.com,(888) 523-7115,300-500,AYSO purely recreational; family-friendly entry tier
+Soccer 5 Palm Beach,Palm Beach,Lake Worth,https://www.soccer5palmbeach.com/,,info@soccer5usa.com,(561) 358-7455,200-400,John Prince Park small-sided complex; multi-club host
 Inter Miami CF Academy,Miami-Dade,Miami,https://www.intermiamicf.com/academy/,,,,150,(NOTE: Florida Blue Training Center physically in Broward but academy markets as Miami) — top of pyramid; U12-U17; Freedom to Play open trials
-Miami FC Academy,Miami-Dade,Miami,https://miamifcacademy.com/,,,,400-600,Relaunched 2022; USL Academy boys/girls 4-20; based at Tamiami Park
-Miami Futbol Academy Rush,Miami-Dade,Miami,https://miamifutbolacademyrush.com/,,,,800-1200,501(c)(3); MLS Next + Homegrown for boys; DPL for girls; ages U7-U19; 27+ years
-Miami Breakers FC,Miami-Dade,"Coral Gables / Coconut Grove / Kendall",https://www.miamibreakersfc.com/,,,,500-800,SFUYSA; ages U7-U19; Player Development Program + competitive travel
+Miami FC Academy,Miami-Dade,Miami,https://miamifcacademy.com/,,academy@miamifc.com,,400-600,Relaunched 2022; USL Academy boys/girls 4-20; based at Tamiami Park
+Miami Futbol Academy Rush,Miami-Dade,Miami,https://miamifutbolacademyrush.com/,,info@miamifutbolacademyrush.com,(305) 338-5427,800-1200,501(c)(3); MLS Next + Homegrown for boys; DPL for girls; ages U7-U19; 27+ years
+Miami Breakers FC,Miami-Dade,"Coral Gables / Coconut Grove / Kendall",https://www.miamibreakersfc.com/,Eric Vasquez,miamibreakers@gmail.com,(305) 989-9961,500-800,SFUYSA; ages U7-U19; Player Development Program + competitive travel; Eric Vasquez is owner/DOC
 Miami Strike Force FC,Miami-Dade,Kendall,https://www.strikeforcesoccer.com/,Javier Prenat,javier@strikeforcesoccer.com,(786) 487-1016,400-600,Ranked top-5 nationally GotSoccer 2024-25; Kendall/Three Lakes; U7-U19
-Albion SC Miami,Miami-Dade,Cutler Bay,https://www.albionscmiami.org/,,,,400-600,Formerly Cutler Ridge SC; U8-U19 boys + girls; rec Juniors program
-Pinecrest Premier Soccer Club,Miami-Dade,Pinecrest,https://www.pinecrestpremier.com/,Giuseppe Depalo (President); Ramiro Vengoechea (Girls Dir),,,1000-1500,Founded 2001 by Renato Salazar; 48 select teams; SFUYSA member
-Doral Soccer Club,Miami-Dade,Doral,https://www.doralsoccerclub.com/,,,(786) 319-1418,1500-2500,Largest single-city club in Miami-Dade; rec + competitive
-Doral Soccer Academy,Miami-Dade,Doral,https://doralsocceracademy.com/,,,,300-500,Separate from Doral SC; rec + daycare-style for younger players
-Doral West Soccer Academy,Miami-Dade,Doral,https://www.linkedin.com/company/doral-west-soccer-academy,,,,200-400,Smaller Doral-area academy
-Coral Gables Soccer,Miami-Dade,Coral Gables,https://www.sfuysa.com/clubs/cgs,,,,400-600,SFUYSA founding member club
-Miami Rush Kendall SC (formerly Kendall Soccer Coalition),Miami-Dade,Kendall,https://www.miamirushsoccer.com/,,,(305) 746-8956,1000-1500,Created 2005; only Miami DA member; MLS Next pathway U13-U19; rec + competitive
+Albion SC Miami,Miami-Dade,Cutler Bay,https://www.albionscmiami.org/,Graeme Griffith,info@albionscmiami.org,(305) 964-7204,400-600,Formerly Cutler Ridge SC; U8-U19 boys + girls; rec Juniors program; Tech Director Graeme Griffith direct (404) 431-2053
+Pinecrest Premier Soccer Club,Miami-Dade,Pinecrest,https://www.pinecrestpremier.com/,Giuseppe Depalo (President); Ramiro Vengoechea (Girls Dir),,(305) 255-3422,1000-1500,Founded 2001 by Renato Salazar; 48 select teams; SFUYSA member
+Doral Soccer Club,Miami-Dade,Doral,https://www.doralsoccerclub.com/,Beymar Piraquive,beymar@doralsoccerclub.com,(786) 319-1418,1500-2500,Largest single-city club in Miami-Dade; rec + competitive
+Doral Soccer Academy,Miami-Dade,Doral,https://doralsocceracademy.com/,Roberto Colmenares,info@doralsocceracademy.com,(786) 304-3643,300-500,Separate from Doral SC; rec + daycare-style for younger players; founder is Colmenares
+Doral West Soccer Academy,Miami-Dade,Doral,https://www.linkedin.com/company/doral-west-soccer-academy,Ricardo D. Cuenca,,,200-400,Smaller Doral-area academy; Director of Player Development is Cuenca
+Coral Gables Soccer,Miami-Dade,Coral Gables,https://www.sfuysa.com/clubs/cgs,Mark Dougherty,parks@coralgables.com,(305) 460-5600,400-600,SFUYSA founding member club; DOC named late 2023
+Miami Rush Kendall SC (formerly Kendall Soccer Coalition),Miami-Dade,Kendall,https://www.miamirushsoccer.com/,Renatto Soriano,info@miamirushsoccer.com,(305) 746-8956,1000-1500,Created 2005; only Miami DA member; MLS Next pathway U13-U19; rec + competitive; Soriano is Boys Tech Director (local franchise)
 West Kendall Soccer,Miami-Dade,Kendall,https://www.westkendallsoccer.com/,,,,300-500,W Kendall recreational + travel
-Palmetto Bay Soccer Club,Miami-Dade,Palmetto Bay,https://www.palmettobaysoccer.com/,,,,400-600,Rec + competitive; uses Coral Reef Park
-Athletic Club Miami (Miami AC),Miami-Dade,Miami,https://www.miamiac.org/,,,,300-500,Quality-over-quantity branding; pathway to MLS NEXT; rec + competitive
-Strikers Miami FC,Miami-Dade,Miami,https://strikersmiami.com/,,,,200-400,Smaller competitive program; legacy Strikers naming
-FBSFC (Florida Best Soccer FC / Soccer Club & School),Miami-Dade,Miami,https://www.fbssoccer.com/,,,,300-500,Soccer club + school; character-development branding
-Juventus Academy Miami,Miami-Dade,Miami,https://jacademymiami.com/,Marco Viviano (Technical Director),,,200-400,Official Juventus FC youth program; certified Juventus methodology
-PSG Academy Miami,Miami-Dade,Miami,https://www.psgacademymiami.com/,,,,1500-2000,2000+ players across FL; multi-site Homestead/Miami/Plantation/Pembroke Pines/WPB
-Real Madrid Foundation Soccer Camps Miami,Miami-Dade,Miami,https://rmfsoccercampsusa.com/,,,,200-400,Camp + clinic format; Real Madrid Foundation methodology; ages 6-16
-Brazilian Soccer Training Center (BSTC),Miami-Dade,Aventura,https://www.bstcsoccer.com,,,,200-400,Brazilian methodology; ages 3+ in Aventura
-Hialeah City FC,Miami-Dade,Hialeah,https://www.hialeahcityfc.com,,,,300-500,Founded 2017; technical/tactical academy; underserved Hialeah base
-Soccer 5 Academy Miami,Miami-Dade,Miami,https://www.soccer5academy.com/,,,,800-1200,Operates Tropical Park + Kendall Soccer Park + Hialeah; ages 4-14; rec + competitive
-ONE FC Miami,Miami-Dade,Miami,https://onefcmiami.com/,,,,200-400,Founded by 3 ex-pro European players; smaller boutique academy
-Schulz Academy,Miami-Dade,Miami,(via Inter Miami partners list at intermiamicf.com/academy/partners),,,,300-500,Inter Miami Academy partner club; soccer development academy
-Aventura Youth Sports,Miami-Dade,Aventura,https://www.cityofaventura.com/266/Youth-Sports,,,,300-500,City rec program
-Homestead AYSO Region 805,Miami-Dade,Homestead,(AYSO Region 805 listing on aysoregion.org),,,,300-500,Pure recreational AYSO; plays Homestead Sports Complex; reg May-July
-Goulds Park / Miami FC community,Miami-Dade,Miami,https://www.miamifc.com/community/,,,,200-400,Miami FC community soccer programs in S Miami-Dade
-City of Miami Beach Recreation,Miami-Dade,Miami Beach,https://www.miamibeachfl.gov/city-hall/parks-and-recreation/sports-centers-fields-and-courts/soccer/,,,,300-500,City rec on the beach side
-SK Sunblazer Soccer Club,Miami-Dade,Miami,https://www.sksoccer.org/,,,,300-500,SFUYSA member; competitive + rec
-Miami United FC Academy,Miami-Dade,Miami,https://www.miamiunitedsoccer.com/,,,,300-500,Founded 2012; "El equipo del pueblo"; senior team + youth academy
-FC Miami City Academy,Miami-Dade,Miami,https://www.fcmiamicity.com/,,,,200-400,USL2/USLW + USL Academy youth; founded 2014; Strive Football Group ownership
+Palmetto Bay Soccer Club,Miami-Dade,Palmetto Bay,https://www.palmettobaysoccer.com/,,,,400-600,Rec + competitive; uses Coral Reef Park; partnership with Supreme Miami / Knights FC 2025-26
+Athletic Club Miami (Miami AC),Miami-Dade,Miami,https://www.miamiac.org/,,,(305) 877-7186,300-500,Quality-over-quantity branding; pathway to MLS NEXT; rec + competitive; Registrar Gabor Pasztor at same number
+Strikers Miami FC,Miami-Dade,Miami,https://strikersmiami.com/,Diego Rios,strikersmiamifc@gmail.com,(786) 531-1663,200-400,Smaller competitive program; legacy Strikers naming; Rios is Club Director with 20+ yrs
+FBSFC (Florida Best Soccer FC / Soccer Club & School),Miami-Dade,Miami,https://www.fbssoccer.com/,,,,300-500,Soccer club + school; character-development branding; co-led by Francis Farberoff + Oscar Gil
+Juventus Academy Miami,Miami-Dade,Miami,https://jacademymiami.com/,Marco Viviano (Technical Director),Juventusacademydoral@gmail.com,(305) 901-9446,200-400,Official Juventus FC youth program; certified Juventus methodology; main academy line (305) 999-5294
+PSG Academy Miami,Miami-Dade,Miami,https://www.psgacademymiami.com/,,contact@psgacademymiami.com,(800) 399-9665,1500-2000,2000+ players across FL; multi-site Homestead/Miami/Plantation/Pembroke Pines/WPB
+Real Madrid Foundation Soccer Camps Miami,Miami-Dade,Miami,https://rmfsoccercampsusa.com/,,,,200-400,Camp + clinic format; Real Madrid Foundation methodology; ages 6-16; FL not in current RMF Camps USA territory list (verify before contacting)
+Brazilian Soccer Training Center (BSTC),Miami-Dade,Aventura,https://www.bstcsoccer.com,,info@bstcsoccer.com,(786) 522-7577,200-400,Brazilian methodology; ages 3+ in Aventura
+Hialeah City FC,Miami-Dade,Hialeah,https://www.hialeahcityfc.com,Osmani Pelaez,,(786) 651-1423,300-500,Founded 2017; technical/tactical academy; underserved Hialeah base; Pelaez is President (no separate DOC surfaced)
+Soccer 5 Academy Miami,Miami-Dade,Miami,https://www.soccer5academy.com/,,info@soccer5usa.com,(305) 873-8765,800-1200,Operates Tropical Park + Kendall Soccer Park + Hialeah; ages 4-14; rec + competitive
+ONE FC Miami,Miami-Dade,Miami,https://onefcmiami.com/,,info@onefcmiami.com,,200-400,Founded by 3 ex-pro European players (Matuidi/Gibbs/Marveux); smaller boutique academy
+Schulz Academy,Miami-Dade,Miami,(via Inter Miami partners list at intermiamicf.com/academy/partners),,jasmin@schulzacademy.com,(561) 332-6667,300-500,Inter Miami Academy partner club; soccer development academy; physically in Boca Raton (561 area code) — county/city in this row may be off
+Aventura Youth Sports,Miami-Dade,Aventura,https://www.cityofaventura.com/266/Youth-Sports,,parksrec@cityofaventura.com,(305) 466-3883,300-500,City rec program
+Homestead AYSO Region 805,Miami-Dade,Homestead,(AYSO Region 805 listing on aysoregion.org),,homesteadayso805@gmail.com,(786) 288-6553,300-500,Pure recreational AYSO; plays Homestead Sports Complex; reg May-July; RC contact Nelson Ducos
+Goulds Park / Miami FC community,Miami-Dade,Miami,https://www.miamifc.com/community/,,academy@miamifc.com,,200-400,Miami FC community soccer programs in S Miami-Dade; park line (305) 255-2399
+City of Miami Beach Recreation,Miami-Dade,Miami Beach,https://www.miamibeachfl.gov/city-hall/parks-and-recreation/sports-centers-fields-and-courts/soccer/,,bradleyperez@miamibeachfl.gov,(305) 673-7730,300-500,City rec on the beach side; alt contact ivanterselich@miamibeachfl.gov
+SK Sunblazer Soccer Club,Miami-Dade,Miami,https://www.sksoccer.org/,Thomas Krogh-Poulsen,sunblazersoccer@msn.com,(786) 333-3002,300-500,SFUYSA member; competitive + rec
+Miami United FC Academy,Miami-Dade,Miami,https://www.miamiunitedsoccer.com/,José Luis Aguinaga,,(305) 318-2026,300-500,Founded 2012; "El equipo del pueblo"; senior team + youth academy; Aguinaga appointed Academy Director Jan 2026
+FC Miami City Academy,Miami-Dade,Miami,https://www.fcmiamicity.com/,Maelwenn Gaiffas (Girls Academy Director),contact@fcmiamicity.com,,200-400,USL2/USLW + USL Academy youth; founded 2014; Strive Football Group ownership
