@@ -184,14 +184,14 @@ export default async function PricingPage() {
                 aria-hidden
               />
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-                Founding clubs · First 10 only
+                South Florida clubs · First 10 only
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-[1.1] mb-4">
               50% off for life.
             </h2>
             <p className="text-base md:text-lg max-w-xl leading-relaxed opacity-90">
-              Our first 10 clubs get half-price locked in forever — in exchange for your logo on the site, honest feedback, and a short testimonial when we ship. Design partners, not beta users.
+              Our first 10 South Florida clubs lock in 50% off forever — roughly $75–$250/mo for life — in exchange for your logo, honest feedback, and a short testimonial when we ship. Design partners, not beta users.
             </p>
           </div>
         </div>
