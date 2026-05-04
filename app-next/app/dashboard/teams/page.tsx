@@ -150,7 +150,17 @@ export default async function TeamsPage() {
           <h1 className="text-3xl font-black tracking-tight">Teams</h1>
           <p className="text-gray text-sm mt-1">{teams.length} team{teams.length !== 1 ? 's' : ''} in your club</p>
         </div>
-        {profile?.role === 'doc' && <AddTeamForm />}
+        {profile?.role === 'doc' && (
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/roster-import"
+              className="text-sm font-bold text-green hover:underline"
+            >
+              Import roster from CSV →
+            </Link>
+            <AddTeamForm />
+          </div>
+        )}
       </div>
 
       {teams.length === 0 ? (

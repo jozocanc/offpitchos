@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import VenuesSection from './venues-section'
 
 export const metadata: Metadata = { title: 'Settings' }
@@ -59,6 +60,21 @@ export default async function SettingsPage() {
             >
               Go to Coaches page →
             </a>
+          </section>
+        )}
+
+        {profile?.role === 'doc' && (
+          <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
+            <h2 className="text-lg font-bold mb-2">Roster import</h2>
+            <p className="text-gray text-sm mb-4">
+              Bulk-import teams, players, and parents from a CSV.
+            </p>
+            <Link
+              href="/dashboard/roster-import"
+              className="inline-block text-sm font-bold text-green hover:underline"
+            >
+              Upload a CSV →
+            </Link>
           </section>
         )}
 
