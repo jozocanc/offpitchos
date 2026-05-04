@@ -8,6 +8,9 @@
 // Spec: docs/superpowers/specs/2026-05-04-roster-import-design.md.
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { revalidatePath } from 'next/cache'
+import { bustAttentionCache } from '../attention-actions'
 import {
   ColumnMapping,
   ParsedRow,
@@ -15,11 +18,19 @@ import {
   RowWarning,
   RowError,
   ActionFailure,
+  CommitResult,
   REQUIRED_FIELDS,
 } from './lib/types'
-import { normalizeEmail, normalizeDate, trimName, teamKey } from './lib/normalize'
+import { normalizeEmail, normalizePhone, normalizeDate, trimName, teamKey } from './lib/normalize'
 
 const MAX_ROWS = 1000
+
+function cryptoRandomPassword(): string {
+  // 24 random bytes -> base64url. Long enough to be unguessable; parent will reset.
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Buffer.from(bytes).toString('base64url')
+}
 
 export async function previewImport(
   rows: ParsedRow[],
@@ -207,6 +218,225 @@ export async function previewImport(
       warnings,
       skippedRows,
       blockingErrors,
+    },
+  }
+}
+
+export async function commitImport(
+  rows: ParsedRow[],
+  mapping: ColumnMapping,
+  variant: 'onboarding' | 'dashboard'
+): Promise<CommitResult | ActionFailure> {
+  // Re-run preview server-side as the source of truth -- never trust client data
+  const preview = await previewImport(rows, mapping, variant)
+  if (!preview.ok) return preview
+  if (preview.data.blockingErrors.length > 0) {
+    return { ok: false, error: 'Preview has blocking errors' }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, club_id, role')
+    .eq('user_id', user.id)
+    .single()
+  if (!profile?.club_id || profile.role !== 'doc') {
+    return { ok: false, error: 'DOC role required' }
+  }
+
+  const service = createServiceClient()
+  const clubId = profile.club_id
+
+  const fieldToHeader = (field: string): string | null => {
+    for (const [header, mapped] of Object.entries(mapping)) {
+      if (mapped === field) return header
+    }
+    return null
+  }
+  const get = (row: ParsedRow, field: string): string => {
+    const header = fieldToHeader(field)
+    return header ? (row.raw[header] ?? '').toString() : ''
+  }
+
+  // 1) Insert new teams
+  const teamInserts = preview.data.teamsToCreate.map(t => ({
+    club_id: clubId,
+    name: t.name,
+    age_group: t.age_group,
+  }))
+  let teamsCreated = 0
+  let allTeams = preview.data.teamsExisting.map(t => ({ id: t.id, name: t.name }))
+
+  if (teamInserts.length > 0) {
+    const { data: insertedTeams, error: teamErr } = await service
+      .from('teams')
+      .insert(teamInserts)
+      .select('id, name')
+    if (teamErr) return { ok: false, error: `Team insert failed: ${teamErr.message}` }
+    teamsCreated = insertedTeams?.length ?? 0
+    allTeams = allTeams.concat(insertedTeams ?? [])
+  }
+  const teamIdByKey = new Map(allTeams.map(t => [teamKey(t.name), t.id]))
+
+  // 2) Pass 1 -- collect unique parents (deduped by email) + which teams each is on
+  type ParentRecord = {
+    email: string
+    firstName: string
+    lastName: string
+    phone: string
+    teamIds: Set<string>
+  }
+  const parentByEmail = new Map<string, ParentRecord>()
+  const seenPlayerKeys = new Set<string>()
+
+  for (const row of rows) {
+    const firstName = trimName(get(row, 'player_first_name'))
+    const lastName = trimName(get(row, 'player_last_name'))
+    const teamName = trimName(get(row, 'team_name'))
+    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
+    if (!firstName || !lastName || !teamName || !parent1Email) continue
+    const teamId = teamIdByKey.get(teamKey(teamName))
+    if (!teamId) continue
+
+    const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
+    if (seenPlayerKeys.has(playerKey)) continue
+    seenPlayerKeys.add(playerKey)
+
+    let p1 = parentByEmail.get(parent1Email)
+    if (!p1) {
+      p1 = {
+        email: parent1Email,
+        firstName: trimName(get(row, 'parent1_first_name')) || 'Parent',
+        lastName: lastName,  // best guess: parent shares player's last name
+        phone: normalizePhone(get(row, 'parent1_phone')),
+        teamIds: new Set(),
+      }
+      parentByEmail.set(parent1Email, p1)
+    }
+    p1.teamIds.add(teamId)
+
+    const parent2Email = normalizeEmail(get(row, 'parent2_email'))
+    if (parent2Email && parent2Email !== parent1Email) {
+      let p2 = parentByEmail.get(parent2Email)
+      if (!p2) {
+        p2 = {
+          email: parent2Email,
+          firstName: 'Parent',
+          lastName: lastName,
+          phone: '',
+          teamIds: new Set(),
+        }
+        parentByEmail.set(parent2Email, p2)
+      }
+      p2.teamIds.add(teamId)
+    }
+  }
+
+  // 3) Create auth.users + profiles + team_members for each unique parent.
+  // Pattern matches demo-seed-actions.ts lines 208-244.
+  const parentUserIdByEmail = new Map<string, string>()
+  for (const parent of parentByEmail.values()) {
+    const { data: created, error: authErr } = await service.auth.admin.createUser({
+      email: parent.email,
+      password: cryptoRandomPassword(),
+      email_confirm: true,
+      user_metadata: {
+        full_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        imported_at: new Date().toISOString(),
+      },
+    })
+    if (authErr || !created.user) {
+      return { ok: false, error: `Failed to create parent ${parent.email}: ${authErr?.message ?? 'unknown'}` }
+    }
+    const authId = created.user.id
+    parentUserIdByEmail.set(parent.email, authId)
+
+    const { data: insertedProfile, error: profileErr } = await service
+      .from('profiles')
+      .insert({
+        user_id: authId,
+        club_id: clubId,
+        role: 'parent',
+        display_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        onboarding_complete: true,
+      })
+      .select('id')
+      .single()
+    if (profileErr || !insertedProfile) {
+      return { ok: false, error: `Failed to create profile for ${parent.email}: ${profileErr?.message}` }
+    }
+
+    if (parent.teamIds.size > 0) {
+      const memberInserts = Array.from(parent.teamIds).map(tId => ({
+        team_id: tId,
+        profile_id: insertedProfile.id,
+        role: 'parent',
+      }))
+      const { error: memberErr } = await service.from('team_members').insert(memberInserts)
+      if (memberErr) {
+        return { ok: false, error: `Failed to link ${parent.email} to teams: ${memberErr.message}` }
+      }
+    }
+  }
+
+  // 4) Pass 2 -- insert players
+  const playerInserts: any[] = []
+  const seenPlayerKeys2 = new Set<string>()
+
+  for (const row of rows) {
+    const firstName = trimName(get(row, 'player_first_name'))
+    const lastName = trimName(get(row, 'player_last_name'))
+    const teamName = trimName(get(row, 'team_name'))
+    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
+    if (!firstName || !lastName || !teamName || !parent1Email) continue
+
+    const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
+    if (seenPlayerKeys2.has(playerKey)) continue
+    seenPlayerKeys2.add(playerKey)
+
+    const teamId = teamIdByKey.get(teamKey(teamName))
+    if (!teamId) continue
+    const parentId = parentUserIdByEmail.get(parent1Email)
+    if (!parentId) continue
+
+    const dob = normalizeDate(get(row, 'date_of_birth'))
+    const jerseyRaw = get(row, 'jersey_number').replace(/\D/g, '')
+    playerInserts.push({
+      club_id: clubId,
+      team_id: teamId,
+      parent_id: parentId,
+      first_name: firstName,
+      last_name: lastName,
+      jersey_number: jerseyRaw ? parseInt(jerseyRaw, 10) : null,
+      position: trimName(get(row, 'position')) || null,
+      date_of_birth: dob.iso,
+    })
+  }
+
+  if (playerInserts.length === 0) {
+    return { ok: false, error: 'No importable rows after parent creation' }
+  }
+
+  const { data: insertedPlayers, error: playerErr } = await service
+    .from('players')
+    .insert(playerInserts)
+    .select('id')
+  if (playerErr) return { ok: false, error: `Player insert failed: ${playerErr.message}` }
+
+  // Cache busts
+  await bustAttentionCache(clubId)
+  revalidatePath('/dashboard/teams')
+  revalidatePath('/dashboard')
+
+  return {
+    ok: true,
+    data: {
+      teamsCreated,
+      playersCreated: insertedPlayers?.length ?? 0,
+      parentsCreated: parentByEmail.size,
+      parentUserIds: Array.from(parentUserIdByEmail.values()),
     },
   }
 }
