@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Papa from 'papaparse'
-import { previewImport, commitImport } from './actions'
+import { previewImport, commitImport, sendParentRecoveryEmails } from './actions'
 import { suggestMapping } from './lib/se-column-aliases'
 import {
   ColumnMapping,
@@ -50,6 +50,12 @@ export default function ImportWizard({
   const [error, setError] = useState<string | null>(null)
   const [showReimportConfirm, setShowReimportConfirm] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [inviting, setInviting] = useState(false)
+  const [inviteResult, setInviteResult] = useState<{
+    sent: number
+    failed: number
+    failures: { email: string; reason: string }[]
+  } | null>(null)
 
   function handleFile(file: File) {
     setError(null)
@@ -116,6 +122,30 @@ export default function ImportWizard({
       return
     }
     handleConfirm()
+  }
+
+  async function handleSendInvites(userIdsOverride?: string[]) {
+    if (!success?.parentUserIds?.length) return
+    const ids = userIdsOverride ?? success.parentUserIds
+    setError(null)
+    setInviting(true)
+    const res = await sendParentRecoveryEmails(ids)
+    setInviting(false)
+    if (!res.ok) {
+      setError(res.error)
+      return
+    }
+    setInviteResult(res.data)
+  }
+
+  function handleRetryFailed() {
+    if (!inviteResult) return
+    // Build a list of user_ids from failed emails by mapping back through success.parentUserIds.
+    // But sendParentRecoveryEmails takes user_ids, and failures only have email — so we can't
+    // reliably re-narrow without extra data. Simplest approach: just re-call with all parentUserIds.
+    // Supabase generateLink will invalidate the prior token; sent ones get a fresh link.
+    // Acceptable v1 because re-clicks don't double-create users — they only generate fresh links.
+    handleSendInvites(success?.parentUserIds)
   }
 
   // ---- RENDER ----
@@ -288,26 +318,70 @@ export default function ImportWizard({
     return (
       <div className="w-full max-w-xl mx-auto">
         <div className="bg-dark-secondary rounded-2xl p-8 shadow-lg text-center">
-          <h2 className="text-xl font-bold mb-4">Import complete ✓</h2>
-          <p className="text-white text-sm mb-2">
+          <h2 className="text-xl font-bold mb-2">Import complete</h2>
+          <p className="text-sm text-white mb-6">
             {success.teamsCreated} teams · {success.playersCreated} players · {success.parentsCreated} parents created
           </p>
-          <p className="text-gray text-sm mb-6">
-            Parent accounts are created but no emails have been sent yet. Use &ldquo;Send invites&rdquo; (coming next phase) to email them their password-set links.
-          </p>
-          {variant === 'onboarding' && onComplete && (
-            <button
-              onClick={onComplete}
-              className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
-            >
-              Continue to dashboard
-            </button>
+
+          {!inviteResult ? (
+            <div className="mb-6">
+              <button
+                onClick={() => handleSendInvites()}
+                disabled={inviting || success.parentsCreated === 0}
+                className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {inviting ? 'Sending…' : `Send invites to ${success.parentsCreated} parents`}
+              </button>
+              {success.parentsCreated > 0 && (
+                <p className="text-xs text-gray mt-3">
+                  Each parent gets an email with a &ldquo;set your password&rdquo; link. Re-sendable from this screen.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="bg-dark border border-white/10 rounded-xl p-4 mb-6 text-left text-sm">
+              <p className="text-white">
+                Sent <span className="font-bold">{inviteResult.sent}</span>
+                {inviteResult.failed > 0 ? `, ${inviteResult.failed} failed:` : '. All parents emailed.'}
+              </p>
+              {inviteResult.failures.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {inviteResult.failures.map((f, i) => (
+                    <li key={i} className="text-red text-xs">
+                      {f.email} — {f.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {inviteResult.failed > 0 && (
+                <button
+                  onClick={handleRetryFailed}
+                  disabled={inviting}
+                  className="mt-3 text-green underline hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {inviting ? 'Retrying…' : 'Retry'}
+                </button>
+              )}
+            </div>
           )}
-          {variant === 'dashboard' && (
-            <Link href="/dashboard/teams" className="text-green underline hover:opacity-90 transition-opacity">
-              View teams &rarr;
-            </Link>
-          )}
+
+          {error && <p className="text-red text-sm mb-4">{error}</p>}
+
+          <div>
+            {variant === 'onboarding' && onComplete && (
+              <button
+                onClick={onComplete}
+                className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+              >
+                Continue to dashboard
+              </button>
+            )}
+            {variant === 'dashboard' && (
+              <Link href="/dashboard/teams" className="text-green underline hover:opacity-90 transition-opacity">
+                View teams &rarr;
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     )
