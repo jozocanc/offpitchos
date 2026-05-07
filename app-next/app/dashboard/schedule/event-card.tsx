@@ -254,16 +254,16 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         <div className="mt-2 flex items-center gap-3 text-xs">
           <span className="inline-flex items-center gap-1 text-green">
             <span className="w-2 h-2 rounded-full bg-green" />
-            {rsvpTally.going} going
+            <span>{`${rsvpTally.going} going`}</span>
           </span>
           {rsvpTally.notGoing > 0 && (
             <span className="inline-flex items-center gap-1 text-yellow-500">
               <span className="w-2 h-2 rounded-full bg-yellow-500" />
-              {rsvpTally.notGoing} can&apos;t make it
+              <span>{`${rsvpTally.notGoing} can't make it`}</span>
             </span>
           )}
           <span className="text-gray">
-            {Math.max(0, rsvpTally.totalKids - rsvpTally.going - rsvpTally.notGoing)} no response · {rsvpTally.totalKids} total
+            {`${Math.max(0, rsvpTally.totalKids - rsvpTally.going - rsvpTally.notGoing)} no response · ${rsvpTally.totalKids} total`}
           </span>
         </div>
       )}

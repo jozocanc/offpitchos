@@ -85,9 +85,10 @@ export async function emailDigest(digestId: string) {
 }
 
 function renderDigestHtml(md: string): string {
-  // Bare-bones markdown: # H1, ## H2, * list items, blank line breaks
-  // paragraphs. The model output is already clean — anything unusual
-  // just falls through as plain text.
+  // Bare-bones markdown: # H1, ## H2, * list items, **bold** spans,
+  // blank line breaks paragraphs, --- as a thin <hr>. The model output
+  // is already clean — anything unusual just falls through as plain
+  // text after escaping.
   const lines = md.split('\n')
   const out: string[] = []
   let inList = false
@@ -98,31 +99,37 @@ function renderDigestHtml(md: string): string {
       out.push('')
       continue
     }
+    if (/^-{3,}$/.test(line)) {
+      if (inList) { out.push('</ul>'); inList = false }
+      out.push('<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />')
+      continue
+    }
     if (line.startsWith('# ')) {
       if (inList) { out.push('</ul>'); inList = false }
-      out.push(`<h2 style="font-size:20px;margin:16px 0 8px;">${escape(line.slice(2))}</h2>`)
+      out.push(`<h2 style="font-size:20px;margin:16px 0 8px;">${inline(line.slice(2))}</h2>`)
       continue
     }
     if (line.startsWith('## ')) {
       if (inList) { out.push('</ul>'); inList = false }
-      out.push(`<h3 style="font-size:16px;margin:14px 0 6px;color:#00FF87;">${escape(line.slice(3))}</h3>`)
+      out.push(`<h3 style="font-size:16px;margin:14px 0 6px;color:#00FF87;">${inline(line.slice(3))}</h3>`)
       continue
     }
     if (line.startsWith('- ') || line.startsWith('* ')) {
       if (!inList) { out.push('<ul style="margin:8px 0;padding-left:20px;">'); inList = true }
-      out.push(`<li style="margin:4px 0;">${escape(line.slice(2))}</li>`)
+      out.push(`<li style="margin:4px 0;">${inline(line.slice(2))}</li>`)
       continue
     }
     if (inList) { out.push('</ul>'); inList = false }
-    out.push(`<p style="margin:8px 0;">${escape(line)}</p>`)
+    out.push(`<p style="margin:8px 0;">${inline(line)}</p>`)
   }
   if (inList) out.push('</ul>')
   return out.join('')
 }
 
-function escape(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+// Escape first, then walk the escaped string and wrap **...** in <strong>.
+// Doing it in this order means the asterisks survive escaping (they're
+// not HTML-special) and the closing-tag swap can't smuggle in a script.
+function inline(s: string): string {
+  const escaped = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 }

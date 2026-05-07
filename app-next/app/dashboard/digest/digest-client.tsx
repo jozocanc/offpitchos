@@ -24,6 +24,18 @@ interface DigestRow {
   created_at: string
 }
 
+// Splits a line on `**bold**` and renders each segment, returning an
+// array of nodes. Keeps the rest of the renderer purely line-based.
+function renderInline(text: string, keyBase: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return <strong key={`${keyBase}-${i}`} className="font-bold text-white">{part.slice(2, -2)}</strong>
+    }
+    return <span key={`${keyBase}-${i}`}>{part}</span>
+  })
+}
+
 function renderMarkdown(md: string): React.ReactNode {
   const lines = md.split('\n')
   const out: React.ReactNode[] = []
@@ -34,7 +46,9 @@ function renderMarkdown(md: string): React.ReactNode {
     if (listBuffer.length === 0) return
     out.push(
       <ul key={`ul-${key++}`} className="list-disc pl-5 my-2 space-y-1">
-        {listBuffer.map((item, i) => <li key={i} className="text-white/80">{item}</li>)}
+        {listBuffer.map((item, i) => (
+          <li key={i} className="text-white/80">{renderInline(item, `li-${key}-${i}`)}</li>
+        ))}
       </ul>
     )
     listBuffer = []
@@ -43,14 +57,21 @@ function renderMarkdown(md: string): React.ReactNode {
   for (const raw of lines) {
     const line = raw.trim()
     if (!line) { flushList(); continue }
+    // Horizontal rule — Haiku tends to emit `---` between sections.
+    // Render as a thin divider rather than a literal "---".
+    if (/^-{3,}$/.test(line)) {
+      flushList()
+      out.push(<hr key={key++} className="border-white/10 my-4" />)
+      continue
+    }
     if (line.startsWith('# ')) {
       flushList()
-      out.push(<h2 key={key++} className="text-xl font-bold mt-4 mb-2">{line.slice(2)}</h2>)
+      out.push(<h2 key={key++} className="text-xl font-bold mt-4 mb-2">{renderInline(line.slice(2), `h2-${key}`)}</h2>)
       continue
     }
     if (line.startsWith('## ')) {
       flushList()
-      out.push(<h3 key={key++} className="text-base font-bold text-green mt-4 mb-1">{line.slice(3)}</h3>)
+      out.push(<h3 key={key++} className="text-base font-bold text-green mt-4 mb-1">{renderInline(line.slice(3), `h3-${key}`)}</h3>)
       continue
     }
     if (line.startsWith('- ') || line.startsWith('* ')) {
@@ -58,7 +79,7 @@ function renderMarkdown(md: string): React.ReactNode {
       continue
     }
     flushList()
-    out.push(<p key={key++} className="text-white/80 my-2">{line}</p>)
+    out.push(<p key={key++} className="text-white/80 my-2">{renderInline(line, `p-${key}`)}</p>)
   }
   flushList()
   return out

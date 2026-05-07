@@ -122,6 +122,12 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   // so RLS is enforced end-to-end.
   const admin = createServiceClient()
 
+  // Demo emails need to be unique across every demo'd club, otherwise
+  // the second run hits "user with this email already exists". The
+  // club id's first 8 chars make a tight, deterministic suffix.
+  const emailSuffix = clubId!.slice(0, 8)
+  const namespacedEmail = (raw: string) => raw.replace('@', `+${emailSuffix}@`)
+
   const trackSeed = async (rowTable: string, rowId: string) => {
     await admin.from('demo_seeds').insert({ club_id: clubId, row_table: rowTable, row_id: rowId })
   }
@@ -141,7 +147,12 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     teamId = existingTeams[0].id
     teamName = existingTeams[0].name
   } else {
-    const { data: newTeam, error: teamError } = await supabase
+    // Service role for the team insert. We hit a runtime RLS denial
+    // here on freshly-provisioned DOC accounts where the JWT context
+    // hadn't fully propagated; service role sidesteps that entirely
+    // and the trackSeed below still gives clearDemoData() a handle
+    // to roll the row back.
+    const { data: newTeam, error: teamError } = await admin
       .from('teams')
       .insert({ club_id: clubId, name: 'U14 Boys', age_group: 'U14' })
       .select('id, name')
@@ -152,8 +163,10 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     await trackSeed('teams', teamId)
   }
 
-  // 2) Venue — via caller's client so RLS on venues applies.
-  const { data: venue, error: venueError } = await supabase
+  // 2) Venue — service role to dodge the same JWT-propagation RLS
+  // wobble we worked around for the team insert. The seed is DOC-gated
+  // upstream, so bypassing RLS for these populate-only inserts is fine.
+  const { data: venue, error: venueError } = await admin
     .from('venues')
     .insert({ club_id: clubId, name: DEMO_VENUE.name, address: DEMO_VENUE.address })
     .select('id')
@@ -167,7 +180,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   const coachUserIds: string[] = []
   for (const coach of DEMO_COACHES) {
     const { data: created, error: authError } = await admin.auth.admin.createUser({
-      email: coach.email,
+      email: namespacedEmail(coach.email),
       password: cryptoRandomPassword(),
       email_confirm: true,
       user_metadata: {
@@ -193,7 +206,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     if (profileError || !coachProfile) throw new Error(`Failed to create coach profile: ${profileError?.message}`)
     await trackSeed('profiles', coachProfile.id)
 
-    const { data: member, error: memberError } = await supabase
+    const { data: member, error: memberError } = await admin
       .from('team_members')
       .insert({ team_id: teamId, profile_id: coachProfile.id, role: 'coach' })
       .select('id')
@@ -209,7 +222,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   const parentAuthIds: string[] = []
   for (const parent of DEMO_PARENTS) {
     const { data: created, error: authError } = await admin.auth.admin.createUser({
-      email: parent.email,
+      email: namespacedEmail(parent.email),
       password: cryptoRandomPassword(),
       email_confirm: true,
       user_metadata: {
@@ -235,7 +248,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     if (profileError || !parentProfile) throw new Error(`Failed to create parent profile: ${profileError?.message}`)
     await trackSeed('profiles', parentProfile.id)
 
-    const { data: member, error: memberError } = await supabase
+    const { data: member, error: memberError } = await admin
       .from('team_members')
       .insert({ team_id: teamId, profile_id: parentProfile.id, role: 'parent' })
       .select('id')
@@ -252,7 +265,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   const playerIds: { id: string; parentAuthId: string; parentIndex: number; firstName: string }[] = []
   for (const player of DEMO_PLAYERS) {
     const parentAuthId = parentAuthIds[player.parentIndex]
-    const { data: inserted, error: playerError } = await supabase
+    const { data: inserted, error: playerError } = await admin
       .from('players')
       .insert({
         club_id: clubId,
@@ -276,10 +289,12 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   }
 
   // 6) Events — realistic schedule anchored to today so the dashboard
-  // always has "upcoming" content. We capture event ids per past/future
-  // so attendance + feedback land on the right rows.
+  // always has "upcoming" content. We capture event ids + their start
+  // times so feedback can be back-dated to the event day (otherwise
+  // every feedback row gets created_at=now and the development chart
+  // bucketByDay returns 1 day → no chart line).
   const now = new Date()
-  const pastEventIds: string[] = []
+  const pastEvents: { id: string; startIso: string }[] = []
   const upcomingEventIds: string[] = []
   for (const plan of DEMO_EVENTS) {
     const start = new Date(now)
@@ -287,7 +302,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     start.setHours(plan.startHour, plan.startMinute, 0, 0)
     const end = new Date(start.getTime() + plan.durationMinutes * 60_000)
 
-    const { data: event, error: eventError } = await supabase
+    const { data: event, error: eventError } = await admin
       .from('events')
       .insert({
         club_id: clubId,
@@ -304,9 +319,10 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
       .single()
     if (eventError || !event) throw new Error(`Failed to create event: ${eventError?.message}`)
     await trackSeed('events', event.id)
-    if (plan.daysFromNow < 0) pastEventIds.push(event.id)
+    if (plan.daysFromNow < 0) pastEvents.push({ id: event.id, startIso: start.toISOString() })
     else upcomingEventIds.push(event.id)
   }
+  const pastEventIds = pastEvents.map(e => e.id)
 
   // 7) Past attendance — most kids show up most of the time; we mark a
   // realistic ~85% present rate so the analytics + chart look alive.
@@ -323,7 +339,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
         marked_by: user.id,
       }
     })
-    const { error } = await supabase
+    const { error } = await admin
       .from('attendance')
       .upsert(records, { onConflict: 'event_id,player_id' })
     if (error) {
@@ -334,10 +350,12 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   }
 
   // 8) Past feedback — populates the new development chart. Two notes
-  // per player across two different past events so the chart has at
-  // least 2 points to draw a line. Templates are deterministic by index
-  // so the output is stable across re-runs.
-  if (pastEventIds.length >= 2) {
+  // per player on two different past events so the chart has at least
+  // two distinct days to draw a line. created_at is overridden to the
+  // event's start time so bucketByDay() in the chart sees real spread.
+  if (pastEvents.length >= 2) {
+    const firstEvt = pastEvents[0]
+    const secondEvt = pastEvents[Math.min(2, pastEvents.length - 1)]
     const feedbackRows: {
       player_id: string
       club_id: string
@@ -346,6 +364,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
       category: string
       rating: number
       notes: string
+      created_at: string
     }[] = []
     for (let i = 0; i < playerIds.length; i++) {
       const p = playerIds[i]
@@ -355,22 +374,24 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
         player_id: p.id,
         club_id: clubId,
         coach_id: profile.id,
-        event_id: pastEventIds[0],
+        event_id: firstEvt.id,
         category: t1.category,
         rating: t1.rating,
         notes: t1.notes,
+        created_at: firstEvt.startIso,
       })
       feedbackRows.push({
         player_id: p.id,
         club_id: clubId,
         coach_id: profile.id,
-        event_id: pastEventIds[Math.min(2, pastEventIds.length - 1)],
+        event_id: secondEvt.id,
         category: t2.category,
         rating: t2.rating,
         notes: t2.notes,
+        created_at: secondEvt.startIso,
       })
     }
-    const { error } = await supabase.from('player_feedback').insert(feedbackRows)
+    const { error } = await admin.from('player_feedback').insert(feedbackRows)
     if (error) console.error('[demo-seed] feedback insert failed:', error.message)
   }
 
@@ -396,7 +417,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
 
   // 10) Club-wide announcement with a poll attached. Adds a populated
   // Messages tab to the demo so prospects don't see an empty list.
-  const { data: announcement, error: annErr } = await supabase
+  const { data: announcement, error: annErr } = await admin
     .from('announcements')
     .insert({
       club_id: clubId,
