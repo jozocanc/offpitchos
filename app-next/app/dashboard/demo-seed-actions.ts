@@ -10,6 +10,8 @@ import {
   DEMO_PARENTS,
   DEMO_PLAYERS,
   DEMO_VENUE,
+  DEMO_FEEDBACK_TEMPLATES,
+  DEMO_ANNOUNCEMENT,
 } from '@/lib/demo/seed-data'
 
 const DEMO_FLAG_ENABLED = () => process.env.NEXT_PUBLIC_ALLOW_DEMO_SEED === 'true'
@@ -244,8 +246,10 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
     parentAuthIds.push(authId)
   }
 
-  // 5) Players — 12 kids split 4-4-4 across the 3 parents. `parent_id`
-  // on players points at auth.users, not profiles (per schema).
+  // 5) Players — split across the parents and capture inserted ids so
+  // the post-event seeding (feedback, RSVPs, attendance) can reference
+  // them. `parent_id` on players points at auth.users, not profiles.
+  const playerIds: { id: string; parentAuthId: string; parentIndex: number; firstName: string }[] = []
   for (const player of DEMO_PLAYERS) {
     const parentAuthId = parentAuthIds[player.parentIndex]
     const { data: inserted, error: playerError } = await supabase
@@ -263,11 +267,20 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
       .single()
     if (playerError || !inserted) throw new Error(`Failed to create player: ${playerError?.message}`)
     await trackSeed('players', inserted.id)
+    playerIds.push({
+      id: inserted.id,
+      parentAuthId,
+      parentIndex: player.parentIndex,
+      firstName: player.firstName,
+    })
   }
 
   // 6) Events — realistic schedule anchored to today so the dashboard
-  // always has "upcoming" content.
+  // always has "upcoming" content. We capture event ids per past/future
+  // so attendance + feedback land on the right rows.
   const now = new Date()
+  const pastEventIds: string[] = []
+  const upcomingEventIds: string[] = []
   for (const plan of DEMO_EVENTS) {
     const start = new Date(now)
     start.setDate(start.getDate() + plan.daysFromNow)
@@ -280,7 +293,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
         club_id: clubId,
         team_id: teamId,
         type: plan.type,
-        title: plan.title.replace('U14', teamName),
+        title: plan.title,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         venue_id: venue.id,
@@ -291,6 +304,133 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
       .single()
     if (eventError || !event) throw new Error(`Failed to create event: ${eventError?.message}`)
     await trackSeed('events', event.id)
+    if (plan.daysFromNow < 0) pastEventIds.push(event.id)
+    else upcomingEventIds.push(event.id)
+  }
+
+  // 7) Past attendance — most kids show up most of the time; we mark a
+  // realistic ~85% present rate so the analytics + chart look alive.
+  for (const eventId of pastEventIds) {
+    const records = playerIds.map((p, i) => {
+      // Deterministic-ish skip pattern so the demo always renders the
+      // same way: every 7th player marked absent, every 11th late.
+      const status: 'present' | 'absent' | 'late' =
+        i % 11 === 0 ? 'late' : i % 7 === 0 ? 'absent' : 'present'
+      return {
+        event_id: eventId,
+        player_id: p.id,
+        status,
+        marked_by: user.id,
+      }
+    })
+    const { error } = await supabase
+      .from('attendance')
+      .upsert(records, { onConflict: 'event_id,player_id' })
+    if (error) {
+      // Don't kill the whole seed if attendance fails — the demo can
+      // still function without it. Log + continue.
+      console.error('[demo-seed] attendance insert failed:', error.message)
+    }
+  }
+
+  // 8) Past feedback — populates the new development chart. Two notes
+  // per player across two different past events so the chart has at
+  // least 2 points to draw a line. Templates are deterministic by index
+  // so the output is stable across re-runs.
+  if (pastEventIds.length >= 2) {
+    const feedbackRows: {
+      player_id: string
+      club_id: string
+      coach_id: string
+      event_id: string
+      category: string
+      rating: number
+      notes: string
+    }[] = []
+    for (let i = 0; i < playerIds.length; i++) {
+      const p = playerIds[i]
+      const t1 = DEMO_FEEDBACK_TEMPLATES[i % DEMO_FEEDBACK_TEMPLATES.length]
+      const t2 = DEMO_FEEDBACK_TEMPLATES[(i + 4) % DEMO_FEEDBACK_TEMPLATES.length]
+      feedbackRows.push({
+        player_id: p.id,
+        club_id: clubId,
+        coach_id: profile.id,
+        event_id: pastEventIds[0],
+        category: t1.category,
+        rating: t1.rating,
+        notes: t1.notes,
+      })
+      feedbackRows.push({
+        player_id: p.id,
+        club_id: clubId,
+        coach_id: profile.id,
+        event_id: pastEventIds[Math.min(2, pastEventIds.length - 1)],
+        category: t2.category,
+        rating: t2.rating,
+        notes: t2.notes,
+      })
+    }
+    const { error } = await supabase.from('player_feedback').insert(feedbackRows)
+    if (error) console.error('[demo-seed] feedback insert failed:', error.message)
+  }
+
+  // 9) Upcoming RSVPs — most parents say "going", a few say "not_going"
+  // so the forecast badges on the schedule have texture. Service client
+  // because event_rsvps RLS is parent-only.
+  for (const eventId of upcomingEventIds) {
+    const rsvpRows = playerIds.map((p, i) => ({
+      event_id: eventId,
+      player_id: p.id,
+      // Most kids are coming. Every 9th + every 13th pre-flag as not
+      // going so the staff forecast shows real numbers.
+      response: (i % 9 === 0 || i % 13 === 0) ? 'not_going' : 'going',
+      responded_by: p.parentAuthId,
+    }))
+    // Skip a few RSVPs entirely so the "no response" count > 0.
+    const partial = rsvpRows.filter((_, i) => i % 5 !== 0)
+    const { error } = await admin
+      .from('event_rsvps')
+      .upsert(partial, { onConflict: 'event_id,player_id' })
+    if (error) console.error('[demo-seed] rsvp insert failed:', error.message)
+  }
+
+  // 10) Club-wide announcement with a poll attached. Adds a populated
+  // Messages tab to the demo so prospects don't see an empty list.
+  const { data: announcement, error: annErr } = await supabase
+    .from('announcements')
+    .insert({
+      club_id: clubId,
+      team_id: teamId,
+      author_id: profile.id,
+      title: DEMO_ANNOUNCEMENT.title,
+      body: DEMO_ANNOUNCEMENT.body,
+      pinned: true,
+      poll_enabled: DEMO_ANNOUNCEMENT.pollEnabled,
+    })
+    .select('id')
+    .single()
+  if (!annErr && announcement) {
+    await trackSeed('announcements', announcement.id)
+
+    if (DEMO_ANNOUNCEMENT.pollEnabled) {
+      // Mock a few poll responses so the tally on the announcement card
+      // looks alive ("12 yes · 2 no · 4 maybe"). Service client because
+      // announcement_responses RLS is parent-only.
+      const pollRows = playerIds.map((p, i) => {
+        const r = i % 6
+        const response = r === 0 ? 'maybe' : r === 1 ? 'no' : 'yes'
+        return {
+          announcement_id: announcement.id,
+          player_id: p.id,
+          response,
+          responded_by: p.parentAuthId,
+        }
+      })
+      const { error: pollErr } = await admin
+        .from('announcement_responses')
+        .upsert(pollRows, { onConflict: 'announcement_id,player_id' })
+      if (pollErr) console.error('[demo-seed] poll insert failed:', pollErr.message)
+    }
   }
 
   await bustAttentionCache(clubId)
@@ -298,6 +438,8 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/teams')
   revalidatePath('/dashboard/coaches')
+  revalidatePath('/dashboard/messages')
+  revalidatePath('/dashboard/players')
 
   return {
     playersAdded: DEMO_PLAYERS.length,
@@ -348,8 +490,16 @@ export async function clearDemoData(): Promise<DemoClearResult> {
 
   let cleared = 0
 
-  // Events first — they reference venues, and deleting teams cascades
+  // Announcements first — cascades announcement_responses + replies +
+  // notifications, none of which we tracked individually.
+  for (const id of byTable['announcements'] ?? []) {
+    const { error } = await admin.from('announcements').delete().eq('id', id)
+    if (!error) cleared++
+  }
+
+  // Events — they reference venues, and deleting teams cascades
   // events so we want events gone before teams if a team was seeded.
+  // Cascades: attendance, event_rsvps, event_drills.
   for (const id of byTable['events'] ?? []) {
     const { error } = await admin.from('events').delete().eq('id', id)
     if (!error) cleared++

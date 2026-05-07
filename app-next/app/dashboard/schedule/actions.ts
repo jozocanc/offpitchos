@@ -9,6 +9,7 @@ import { checkAndEscalateTimeouts } from '../coverage/actions'
 import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
+import { getRsvpTalliesForEvents } from './rsvp-actions'
 
 // ---------- Types ----------
 
@@ -622,12 +623,18 @@ export async function getScheduleData() {
     coachesByTeam[cm.team_id].push(name)
   }
 
+  // RSVP forecast counts per upcoming event so the agenda can paint
+  // "8 going · 2 not coming · 5 no response" without extra round-trips.
+  const upcomingEventIds = (events ?? []).map(e => e.id)
+  const rsvpTallies = await getRsvpTalliesForEvents(upcomingEventIds)
+
   return {
     events: events ?? [],
     teams: teams ?? [],
     venues: venues ?? [],
     coverageRequests: coverageRequests ?? [],
     coachesByTeam,
+    rsvpTallies,
     userRole: await getEffectiveRole(user.email ?? '', profile.role),
     userProfileId: profile.id,
   }

@@ -27,6 +27,7 @@ interface EventCardProps {
   isDoc?: boolean
   onCantAttend?: (eventId: string) => void
   onParentCantAttend?: (eventId: string, teamId: string) => void
+  onParentGoing?: (eventId: string, teamId: string) => void
   onAttendance?: (eventId: string, teamId: string) => void
   teamId?: string
   coverageRequest?: {
@@ -41,9 +42,13 @@ interface EventCardProps {
    * the venue for DOC so they know who's running each session. */
   coaches?: string[]
   showCoaches?: boolean
+  /** Forecast headcount from parent RSVPs. Shown to staff so they can
+   * plan stations / lineups before walking onto the field. */
+  rsvpTally?: { going: number; notGoing: number; totalKids: number } | null
+  showRsvpTally?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
@@ -176,6 +181,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
 
         {canEdit && !isCancelled && (
           <div className="flex gap-2 shrink-0">
+            {onAttendance && teamId && isGameDay(event.start_time) && event.type === 'game' && (
+              <a
+                href={`/dashboard/schedule/${event.id}/game-day`}
+                className="bg-green text-dark text-xs font-bold px-3 py-1 rounded-full hover:opacity-90 transition-opacity"
+              >
+                Game Day Mode
+              </a>
+            )}
             {onAttendance && teamId && (
               <button
                 onClick={() => onAttendance(event.id, teamId)}
@@ -216,15 +229,44 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             Can&apos;t Attend
           </button>
         )}
-        {onParentCantAttend && !isCancelled && teamId && (
-          <button
-            onClick={() => onParentCantAttend(event.id, teamId)}
-            className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0"
-          >
-            Can&apos;t Attend
-          </button>
+        {(onParentGoing || onParentCantAttend) && !isCancelled && teamId && (
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {onParentGoing && (
+              <button
+                onClick={() => onParentGoing(event.id, teamId)}
+                className="text-green hover:opacity-80 text-sm font-semibold transition-opacity"
+              >
+                We&apos;ll Be There
+              </button>
+            )}
+            {onParentCantAttend && (
+              <button
+                onClick={() => onParentCantAttend(event.id, teamId)}
+                className="text-yellow-500 hover:text-yellow-400 text-xs transition-colors"
+              >
+                Can&apos;t Attend
+              </button>
+            )}
+          </div>
         )}
       </div>
+      {showRsvpTally && rsvpTally && rsvpTally.totalKids > 0 && (
+        <div className="mt-2 flex items-center gap-3 text-xs">
+          <span className="inline-flex items-center gap-1 text-green">
+            <span className="w-2 h-2 rounded-full bg-green" />
+            {rsvpTally.going} going
+          </span>
+          {rsvpTally.notGoing > 0 && (
+            <span className="inline-flex items-center gap-1 text-yellow-500">
+              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+              {rsvpTally.notGoing} can&apos;t make it
+            </span>
+          )}
+          <span className="text-gray">
+            {Math.max(0, rsvpTally.totalKids - rsvpTally.going - rsvpTally.notGoing)} no response · {rsvpTally.totalKids} total
+          </span>
+        </div>
+      )}
       {showCoverageActions && coverageRequest?.status === 'pending' && (
         <CoverageActionsInline requestId={coverageRequest.id} />
       )}
@@ -268,4 +310,13 @@ function getTypeBadgeColors(type: string): string {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+// Show "Game Day" CTA only inside the ±12-hour window so the button
+// doesn't clutter every game card on the schedule.
+function isGameDay(startTimeIso: string): boolean {
+  const now = Date.now()
+  const start = new Date(startTimeIso).getTime()
+  const diff = Math.abs(now - start)
+  return diff <= 12 * 60 * 60 * 1000
 }

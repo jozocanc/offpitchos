@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import FeedbackForm from './feedback-form'
+import DevelopmentChart from './development-chart'
 import { submitPlayerSize } from './actions'
 import { useToast } from '@/components/toast'
 
@@ -185,6 +186,18 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
           </div>
         )}
       </div>
+
+      {/* Development trend chart — only renders when there's enough rated
+          feedback to actually draw a line. Otherwise it stays out of the
+          way so an empty player profile doesn't look broken. */}
+      <DevelopmentChart
+        feedback={feedback.map(f => ({
+          id: f.id,
+          category: f.category,
+          rating: f.rating,
+          created_at: f.created_at,
+        }))}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Feedback form (coaches/DOC) */}

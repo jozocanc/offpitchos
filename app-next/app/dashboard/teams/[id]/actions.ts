@@ -161,6 +161,80 @@ export async function removeMember(teamId: string, userId: string) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
+// ============================================================
+// Public team share — DOC opts a single team into a no-auth share URL.
+// Toggle and rotate token live here so the team detail page can render
+// state without owning the mutation logic.
+// ============================================================
+
+export async function setTeamPublicShare(teamId: string, enabled: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can change sharing')
+
+  const updates: { public_enabled: boolean; public_share_token?: string } = {
+    public_enabled: enabled,
+  }
+
+  if (enabled) {
+    // Mint a token only if the team doesn't have one yet — turning sharing
+    // off-then-on shouldn't break previously-shared links so long as the
+    // DOC didn't explicitly rotate.
+    const { data: team } = await supabase
+      .from('teams')
+      .select('public_share_token')
+      .eq('id', teamId)
+      .eq('club_id', profile.club_id)
+      .single()
+
+    if (!team?.public_share_token) {
+      updates.public_share_token = crypto.randomUUID()
+    }
+  }
+
+  const { error } = await supabase
+    .from('teams')
+    .update(updates)
+    .eq('id', teamId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to update sharing: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+}
+
+export async function rotateTeamPublicShareToken(teamId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') throw new Error('Only DOC can rotate the share link')
+
+  const { error } = await supabase
+    .from('teams')
+    .update({ public_share_token: crypto.randomUUID() })
+    .eq('id', teamId)
+    .eq('club_id', profile.club_id)
+
+  if (error) throw new Error(`Failed to rotate share link: ${error.message}`)
+
+  revalidatePath(`/dashboard/teams/${teamId}`)
+}
+
 export async function revokeParentInvite(inviteId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

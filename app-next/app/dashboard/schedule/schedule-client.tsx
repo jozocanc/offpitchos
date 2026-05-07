@@ -10,6 +10,7 @@ import CalendarView from './calendar-view'
 import EventModal from './event-modal'
 import CantAttendModal from './cant-attend-modal'
 import ParentCantAttendModal from './parent-cant-attend-modal'
+import ParentGoingModal from './parent-going-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, restoreEvent, getPastEvents } from './actions'
 import { useToast } from '@/components/toast'
@@ -61,9 +62,10 @@ interface ScheduleClientProps {
   userProfileId: string
   initialTeamFilter?: string | null
   initialHighlight?: string | null
+  rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
 }
 
-export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, coachesByTeam, userProfileId, initialTeamFilter = null, initialHighlight = null }: ScheduleClientProps) {
+export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, coachesByTeam, userProfileId, initialTeamFilter = null, initialHighlight = null, rsvpTallies }: ScheduleClientProps) {
   const { toast } = useToast()
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
   const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
@@ -72,6 +74,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [cantAttendEventId, setCantAttendEventId] = useState<string | null>(null)
   const [parentCantAttendEvent, setParentCantAttendEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
+  const [parentGoingEvent, setParentGoingEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
   const [attendanceEvent, setAttendanceEvent] = useState<{ eventId: string; teamId: string; title: string } | null>(null)
   const [showPast, setShowPast] = useState(false)
   const [pastEvents, setPastEvents] = useState<Event[]>([])
@@ -264,6 +267,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             const ev = [...events, ...pastEvents].find(e => e.id === eventId)
             setParentCantAttendEvent({ eventId, teamId, title: ev?.title ?? '' })
           }) : undefined}
+          onParentGoing={isParent ? ((eventId: string, teamId: string) => {
+            const ev = [...events, ...pastEvents].find(e => e.id === eventId)
+            setParentGoingEvent({ eventId, teamId, title: ev?.title ?? '' })
+          }) : undefined}
           onAttendance={canEdit ? handleAttendance : undefined}
           canEdit={canEdit}
           coverageRequests={coverageRequests}
@@ -271,6 +278,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           userProfileId={userProfileId}
           unmarkedEventIds={unmarkedPastEventIds}
           coachesByTeam={coachesByTeam}
+          rsvpTallies={rsvpTallies}
+          showRsvpTally={canEdit}
         />
       ) : (
         <CalendarView
@@ -297,6 +306,16 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           teamId={parentCantAttendEvent.teamId}
           eventTitle={parentCantAttendEvent.title}
           onClose={() => setParentCantAttendEvent(null)}
+        />
+      )}
+
+      {/* Parent: We'll Be There → record positive RSVP */}
+      {parentGoingEvent && (
+        <ParentGoingModal
+          eventId={parentGoingEvent.eventId}
+          teamId={parentGoingEvent.teamId}
+          eventTitle={parentGoingEvent.title}
+          onClose={() => setParentGoingEvent(null)}
         />
       )}
 

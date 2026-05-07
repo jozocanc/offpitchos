@@ -11,6 +11,7 @@ import RemovePlayerButton from './remove-player-button'
 import LinkParentMenu from './link-parent-menu'
 import GroupChatLink from './group-chat-link'
 import InviteCodeCard from './invite-code-card'
+import PublicShareCard from './public-share-card'
 
 interface Member {
   profile_id: string
@@ -69,7 +70,7 @@ export default async function TeamDetailPage({
 
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, age_group, group_chat_link, invite_code')
+    .select('id, name, age_group, group_chat_link, invite_code, public_enabled, public_share_token')
     .eq('id', id)
     .eq('club_id', clubId)
     .single()
@@ -378,8 +379,9 @@ export default async function TeamDetailPage({
           </section>
         </div>
 
-        {/* Right column: Invite links — DOC only since coaches and parents
-            shouldn't be generating/revoking join links. */}
+        {/* Right column: Invite links + public share — DOC only since
+            coaches and parents shouldn't be generating/revoking join
+            links or publishing the team. */}
         {isDOC && <div>
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-4">
@@ -412,6 +414,12 @@ export default async function TeamDetailPage({
               </div>
             )}
           </section>
+          <PublicShareCard
+            teamId={team.id}
+            initialEnabled={(team as any).public_enabled ?? false}
+            initialToken={(team as any).public_share_token ?? null}
+            baseUrl={baseUrl}
+          />
         </div>}
       </div>
     </div>

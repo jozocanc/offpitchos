@@ -22,6 +22,7 @@ export default async function SchedulePage({
         coverageRequests={data.coverageRequests}
         coachesByTeam={data.coachesByTeam}
         userProfileId={data.userProfileId}
+        rsvpTallies={data.rsvpTallies}
         initialTeamFilter={initialTeam ?? null}
         initialHighlight={initialHighlight ?? null}
       />

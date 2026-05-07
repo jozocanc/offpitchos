@@ -149,6 +149,17 @@ function AskIcon() {
   )
 }
 
+function DigestIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="14" y2="17" />
+    </svg>
+  )
+}
+
 function CloseIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,6 +182,7 @@ const navItems: NavItem[] = [
   { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
   { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
   { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'parent'] },
+  { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
 

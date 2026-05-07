@@ -35,14 +35,17 @@ interface AgendaViewProps {
     profiles: any  // eslint-disable-line @typescript-eslint/no-explicit-any
   }>
   onParentCantAttend?: (eventId: string, teamId: string) => void
+  onParentGoing?: (eventId: string, teamId: string) => void
   onAttendance?: (eventId: string, teamId: string) => void
   userRole: string
   userProfileId: string
   unmarkedEventIds?: Set<string>
   coachesByTeam?: Record<string, string[]>
+  rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
+  showRsvpTally?: boolean
 }
 
-export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally }: AgendaViewProps) {
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -76,6 +79,7 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 isDoc={isDoc}
                 onCantAttend={onCantAttend}
                 onParentCantAttend={onParentCantAttend}
+                onParentGoing={onParentGoing}
                 onAttendance={onAttendance}
                 teamId={event.team_id}
                 coverageRequest={coverageRequests.find(cr => cr.event_id === event.id) ?? null}
@@ -87,6 +91,8 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 isUnmarked={unmarkedEventIds?.has(event.id) ?? false}
                 coaches={coachesByTeam?.[event.team_id] ?? undefined}
                 showCoaches={userRole === 'doc'}
+                rsvpTally={rsvpTallies?.[event.id] ?? null}
+                showRsvpTally={showRsvpTally}
               />
             ))}
           </div>
