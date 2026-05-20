@@ -6,6 +6,7 @@ import { DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES } from '@/lib/tac
 import { createBlankDrillFormAction, deleteDrill, duplicateDrill, updateVisibility } from './actions'
 import type { DrillSummary } from './actions'
 import GenerateModal from './generate-modal'
+import ImportPdfModal from './import-pdf-modal'
 
 interface Props {
   drills: DrillSummary[]
@@ -22,6 +23,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
   const [visibility, setVisibility] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [generateOpen, setGenerateOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   // Select mode
   const [selectMode, setSelectMode] = useState(false)
@@ -98,6 +100,13 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
               </button>
               <button
                 type="button"
+                onClick={() => setImportOpen(true)}
+                className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
+              >
+                Import PDF
+              </button>
+              <button
+                type="button"
                 onClick={toggleSelectMode}
                 className={`border px-4 py-2 rounded-lg font-medium transition ${
                   selectMode
@@ -124,13 +133,22 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
       </header>
 
       {(role === 'doc' || role === 'coach') && (
-        <GenerateModal
-          open={generateOpen}
-          onClose={() => setGenerateOpen(false)}
-          teams={teams}
-          role={role as 'doc' | 'coach'}
-          defaultTeamId={defaultTeamId}
-        />
+        <>
+          <GenerateModal
+            open={generateOpen}
+            onClose={() => setGenerateOpen(false)}
+            teams={teams}
+            role={role as 'doc' | 'coach'}
+            defaultTeamId={defaultTeamId}
+          />
+          <ImportPdfModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            teams={teams}
+            role={role as 'doc' | 'coach'}
+            defaultTeamId={defaultTeamId}
+          />
+        </>
       )}
 
       <div className="flex flex-wrap gap-2">

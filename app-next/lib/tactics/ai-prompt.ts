@@ -415,3 +415,73 @@ export const SYSTEM_PROMPT_CACHED_MESSAGES: Array<{
     cache_control: { type: 'ephemeral' },
   },
 ]
+
+// ─── PDF import ───────────────────────────────────────────────────────────────
+// Extra instructions layered on top of the shared system prompt + few-shot
+// examples for the "Import PDF" flow, where the model reads a coach's drill
+// PDF (page images + extracted text) and reproduces it on the board.
+
+export const PDF_IMPORT_INSTRUCTIONS = `## Task: Import a drill from a PDF
+
+You are given one or more page IMAGES of a soccer training-drill PDF, plus the
+extracted selectable TEXT of those pages. Reproduce the drill faithfully on the
+tactical board by calling the import_drill_doc tool.
+
+### Reading rules
+- Read EVERY visible element — players, cones, balls, goals, arrows, zones. Do
+  not omit anything. Coaches need a faithful reproduction of their diagram.
+- Read jersey numbers exactly as drawn. Never invent a number — if none is
+  shown, omit the "number" field.
+- Use the extracted text to verify titles, numbers, durations and restrictions,
+  and to disambiguate anything unclear in the image.
+- If the PDF has multiple pages, page 1 is almost always the main diagram.
+  Represent ONE board state (the primary setup). Use later-page progressions
+  only to enrich the description text — do not add elements for them.
+
+### Field
+- Estimate field dimensions from the diagram: full pitch ≈ 68×105 m, half pitch
+  ≈ 68×52.5 m (set half_field true), a plain rondo/possession square — estimate
+  a sensible size (e.g. 20×20 m). units "m", orientation "horizontal",
+  style "schematic".
+
+### Coordinate mapping
+- Map the diagram proportionally into metres within the field bounds, using the
+  coordinate system defined above. Orient the drill so the attacking direction
+  points toward increasing x (opponent goal at x = length_m).
+- Anchor positions spatially against the diagram — estimate to within ~2 m.
+
+### Element mapping
+- Distinguish teams by colour consistently: attacking team → role "red",
+  defending team → role "blue", neutrals/floaters → role "neutral",
+  perimeter bounce players → role "outside", goalkeepers → role "gk".
+- Mannequins / poles / passive defenders: represent each as a cone, color "white".
+- Arrows: a solid arrow (pass / ball movement) → style "pass"; a dashed arrow
+  (player run) → style "run"; a generic direction arrow → style "free".
+  "points" is [startX, startY, endX, endY].
+- Goals belong on an endline. Cones mark corners, gates and channels.
+
+### Output
+Call the import_drill_doc tool. "title" comes from the PDF heading (fall back to
+"[Drill type]: [N v M]"). "description" combines the setup, objective and key
+coaching points into flowing prose, preserving specifics (grid size, durations,
+touch restrictions). "category" is the best-fit drill category. Respond with the
+tool call ONLY — no prose.`
+
+/**
+ * System messages for the PDF import flow. Reuses the shared system prompt and
+ * few-shot examples verbatim (so they share Anthropic's prompt cache with the
+ * Ask Pep flow), then layers the PDF-specific instructions as a third cached
+ * block.
+ */
+export const PDF_IMPORT_SYSTEM_CACHED_MESSAGES: Array<{
+  type: 'text'
+  text: string
+  cache_control: { type: 'ephemeral' }
+}> = [
+  ...SYSTEM_PROMPT_CACHED_MESSAGES,
+  {
+    type: 'text',
+    text: PDF_IMPORT_INSTRUCTIONS,
+    cache_control: { type: 'ephemeral' },
+  },
+]

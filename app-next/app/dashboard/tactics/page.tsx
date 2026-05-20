@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { listDrills } from './actions'
 import LibraryClient from './library-client'
 
+// PDF import calls Opus with page images — vision parsing can take 30–60s.
+export const maxDuration = 60
+
 export default async function TacticsLibraryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
