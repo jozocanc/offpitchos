@@ -24,7 +24,7 @@ interface CalendarViewProps {
 // Hour-row height in px. Kept compact so the full 6am-8pm week grid fits
 // on screen without scrolling. Event block heights are derived from this
 // same value so they stay proportional if it changes.
-const HOUR_ROW_PX = 36
+const HOUR_ROW_PX = 30
 
 export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarViewProps) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
