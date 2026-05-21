@@ -119,10 +119,6 @@ at `docs/build-prompts.md`. Do not start that build proactively.
 
 ## Known landmines
 
-- **Scroll-hero rendering issue** (open per `project_offpitchos_scroll_hero`): user
-  saw white card + missing title. The hero was reverted to ScrollHero tilt-card via
-  commit `9a12bd5`. If touching the hero, verify renders correctly across viewport
-  sizes before declaring done.
 - **`messages` Server Action shape** has been refactored; check current return type
   before assuming.
 
