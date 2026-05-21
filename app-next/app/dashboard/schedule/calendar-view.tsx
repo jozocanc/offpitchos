@@ -21,6 +21,11 @@ interface CalendarViewProps {
   onAddAtDate: (date: string) => void
 }
 
+// Hour-row height in px. Kept compact so the full 6am-8pm week grid fits
+// on screen without scrolling. Event block heights are derived from this
+// same value so they stay proportional if it changes.
+const HOUR_ROW_PX = 36
+
 export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarViewProps) {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
 
@@ -93,7 +98,7 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
           {/* Hour rows */}
           <div className="relative">
             {hours.map(hour => (
-              <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] h-16 border-b border-white/5">
+              <div key={hour} style={{ height: HOUR_ROW_PX }} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-white/5">
                 <div className="text-xs text-gray pr-2 text-right pt-1">
                   {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
                 </div>
@@ -112,7 +117,7 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                           className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 text-xs font-medium truncate text-left ${colors} transition-colors`}
                           style={{
                             top: `${(new Date(event.start_time).getMinutes() / 60) * 100}%`,
-                            height: `${Math.max(25, getEventDurationPercent(event) * 64)}px`,
+                            height: `${Math.max(22, getEventDurationPercent(event) * HOUR_ROW_PX)}px`,
                           }}
                           title={`${event.title} — ${event.teams?.[0]?.age_group}`}
                         >
