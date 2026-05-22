@@ -30,15 +30,19 @@ check `node_modules/next/dist/docs/` before writing Next.js code.
 | Local dev | `cd app-next && npm run dev` | repo subdir |
 | Build | `cd app-next && npm run build` | repo subdir |
 | Lint | `cd app-next && npm run lint` | repo subdir |
-| **Deploy to prod** | `vercel --prod --yes` | **repo root** (NOT `app-next/`) |
-| Push to GitHub | `git push origin main` | **always before deploy** |
+| **Deploy to prod** | `git push origin main` | **repo root** — Vercel auto-deploys the pushed SHA |
+| Verify a build (optional) | `vercel --prod --yes` | **repo root** (NOT `app-next/`) — spot-check only |
 
 ## Deploy rules — non-negotiable
 
-1. `git push origin main` BEFORE every `vercel --prod`. Vercel uses the GitHub source;
-   skipping the push silently deploys a stale tree. (Reason: prior incident.)
-2. Run `vercel --prod --yes` from the **repo root**, not `app-next/`. The Vercel
-   project is configured at the root.
+1. **`git push origin main` IS the deploy.** Vercel auto-deploys the pushed SHA from
+   its GitHub webhook. After committing on `main`, push immediately — that ships it.
+2. **`vercel --prod` is verification only**, never the shipping mechanism. It uploads
+   the local filesystem state directly and leaves `origin/main` behind; a later
+   Git-triggered rebuild (env var save, webhook, rollback) then rebuilds the stale SHA
+   and silently reverts production. (This happened 2026-04-24 — 4 commits drifted.) If
+   you run `vercel --prod --yes` to spot-check a build, run it from the **repo root**,
+   not `app-next/`, and still push to GitHub.
 3. Auto-deploy after code changes — don't ask the user first. They prefer it shipped.
 
 ## Project naming — brand-critical
