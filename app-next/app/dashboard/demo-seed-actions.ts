@@ -39,13 +39,16 @@ export interface DemoClearResult {
 // club's tracking rows directly.
 export async function getDemoSeedState(): Promise<DemoSeedState> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { enabled: false, loaded: false, emptyEnough: false }
+  // getClaims verifies the JWT locally — no auth-server round-trip on the
+  // dashboard render path. This runs inside the page's parallel query batch.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
+  if (!claims) return { enabled: false, loaded: false, emptyEnough: false }
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, club_id, role')
-    .eq('user_id', user.id)
+    .eq('user_id', claims.sub)
     .single()
 
   if (!profile?.club_id || profile.role !== 'doc') {

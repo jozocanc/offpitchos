@@ -14,15 +14,18 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims verifies the JWT locally (asymmetric signing keys) — no network
+  // round-trip. Middleware already validated + refreshed the session.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
-  if (!user) redirect('/login')
+  if (!claims) redirect('/login')
 
   // Check onboarding status
   const { data: profile } = await supabase
     .from('profiles')
     .select('onboarding_complete, role')
-    .eq('user_id', user.id)
+    .eq('user_id', claims.sub)
     .single()
 
   if (!profile || !profile.onboarding_complete) {
@@ -31,7 +34,7 @@ export default async function DashboardLayout({
 
   // Admin role switcher — read cookie
   let effectiveRole = profile.role ?? 'parent'
-  if (user.email === ADMIN_EMAIL) {
+  if (claims.email === ADMIN_EMAIL) {
     const cookieStore = await cookies()
     const viewAs = cookieStore.get('viewAsRole')?.value
     if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
@@ -41,7 +44,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-dark">
-      <Sidebar userEmail={user.email ?? ''} userRole={effectiveRole} />
+      <Sidebar userEmail={claims.email ?? ''} userRole={effectiveRole} />
       <ToastProvider>
         <VoiceFocusProvider>
           {/* pt-14 on mobile clears the fixed hamburger button (top-4 + ~38px

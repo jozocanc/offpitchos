@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
@@ -17,19 +18,22 @@ export const metadata: Metadata = { title: 'Dashboard' }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims verifies the JWT locally (asymmetric signing keys) — no network
+  // round-trip to the auth server. Middleware already refreshed the session.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
-  if (!user) redirect('/login')
+  if (!claims) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, display_name, club_id, role')
-    .eq('user_id', user.id)
+    .eq('user_id', claims.sub)
     .single()
 
   // Respect the admin role switcher (same logic as layout)
   let userRole = profile?.role ?? 'parent'
-  if (user.email === ADMIN_EMAIL) {
+  if (claims.email === ADMIN_EMAIL) {
     const cookieStore = await cookies()
     const viewAs = cookieStore.get('viewAsRole')?.value
     if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
@@ -37,85 +41,13 @@ export default async function DashboardPage() {
     }
   }
 
-  // Count teams in the club
-  const { count: teamCount } = profile?.club_id
-    ? await supabase
-        .from('teams')
-        .select('id', { count: 'exact', head: true })
-        .eq('club_id', profile.club_id)
-    : { count: 0 }
-
-  // Count today's sessions
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayEnd = new Date()
-  todayEnd.setHours(23, 59, 59, 999)
-
-  const { count: todaySessions } = profile?.club_id
-    ? await supabase
-        .from('events')
-        .select('id', { count: 'exact', head: true })
-        .eq('club_id', profile.club_id)
-        .eq('status', 'scheduled')
-        .gte('start_time', todayStart.toISOString())
-        .lte('start_time', todayEnd.toISOString())
-    : { count: 0 }
-
-  // Count active coverage requests (pending + escalated)
-  const { count: coverageAlerts } = profile?.club_id
-    ? await supabase
-        .from('coverage_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('club_id', profile.club_id)
-        .in('status', ['pending', 'escalated'])
-    : { count: 0 }
-
-  // Fetch user's teams (for coaches and parents) — team_members uses
-  // profile_id, not user_id, so we need the profile's PK.
-  const { data: myTeamsRaw } = profile?.id
-    ? await supabase
-        .from('team_members')
-        .select('team_id, role, teams(name, age_group)')
-        .eq('profile_id', profile.id)
-    : { data: null }
-
-  const myTeams = (myTeamsRaw ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
-
-  // Fetch today's upcoming events — for DOC show all, for coach/parent
-  // scope to their teams only so parents don't see events for teams
-  // their kids aren't on.
-  const myTeamIds = myTeams.map(tm => tm.team_id)
-
-  let todayEventsQuery = supabase
-    .from('events')
-    .select('id, title, start_time, end_time, type, status, team_id, teams(name, age_group)')
-    .eq('club_id', profile?.club_id ?? '')
-    .gte('start_time', todayStart.toISOString())
-    .lte('start_time', todayEnd.toISOString())
-    .order('start_time', { ascending: true })
-    .limit(10)
-
-  if (userRole !== 'doc' && myTeamIds.length > 0) {
-    todayEventsQuery = todayEventsQuery.in('team_id', myTeamIds)
-  }
-
-  const { data: todayEvents, error: todayEventsError } = profile?.club_id
-    ? await todayEventsQuery
-    : { data: null, error: null }
-
-  if (todayEventsError) console.error('todayEvents error:', todayEventsError)
-
   const displayName = profile?.display_name
-    ?? user.user_metadata?.full_name
-    ?? user.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
+    ?? claims.user_metadata?.full_name
+    ?? claims.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
     ?? 'there'
 
-  // Compute once: the demo button reads it for state, and AttentionPanel
-  // uses `demoState.loaded` as part of its `key` so a seed/clear remounts
-  // the panel and re-fires its load() effect. Non-DOC viewers skip the
-  // query entirely.
-  const demoState = userRole === 'doc' ? await getDemoSeedState() : null
-
+  // Only the header below blocks first paint (one profile query). Everything
+  // data-heavy streams in via <DashboardBody> so the shell renders instantly.
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       {/* Welcome header */}
@@ -127,45 +59,119 @@ export default async function DashboardPage() {
       </div>
 
       {/* PWA install CTA — self-contained, hides itself if already installed,
-          dismissed, or running on a browser that can't install. Sits above
-          the attention panels so it's visible but not blocking critical info. */}
+          dismissed, or running on a browser that can't install. */}
       <InstallPrompt />
 
-      {/* Demo seed button (DOC only, gated by NEXT_PUBLIC_ALLOW_DEMO_SEED).
-          Component decides whether to render the load CTA, the loaded
-          banner, or nothing at all based on live state. */}
-      {userRole === 'doc' && <DemoSeedButton state={demoState!} />}
+      <Suspense fallback={<DashboardBodySkeleton userRole={userRole} />}>
+        <DashboardBody
+          userRole={userRole}
+          clubId={profile?.club_id ?? null}
+          profileId={profile?.id ?? null}
+        />
+      </Suspense>
+    </div>
+  )
+}
 
-      {/* Post-wizard setup checklist — self-hides when the DOC dismisses
-          it (only allowed after all four steps are done) or when the
-          viewer isn't a DOC. Sits above the attention panel so a fresh
-          club sees "invite parents" before the (empty) attention list. */}
-      {userRole === 'doc' && <OnboardingChecklist />}
+async function DashboardBody({
+  userRole,
+  clubId,
+  profileId,
+}: {
+  userRole: string
+  clubId: string | null
+  profileId: string | null
+}) {
+  const supabase = await createClient()
+  const isDoc = userRole === 'doc'
 
-      {/* AI-prioritized attention list (DOC only).
-          Key flips on seed/clear so React remounts the client component
-          and it re-runs its load(false) effect. router.refresh() alone
-          doesn't remount client components — that was the a913885 bug. */}
-      {userRole === 'doc' && <AttentionPanel key={`demo-${demoState?.loaded ? 'on' : 'off'}`} />}
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayEnd = new Date()
+  todayEnd.setHours(23, 59, 59, 999)
 
-      {/* Coach-scoped attention panel — surfaces coverage requests waiting
-          for them, recently-ended events with no attendance marked, and
-          events where they still owe player feedback. Hidden entirely when
-          there are no pending signals to avoid empty-state noise. */}
+  // Wave 1: every query that only needs club_id / profile_id, fired
+  // concurrently instead of one-after-another.
+  const [teamCountRes, todaySessionsRes, coverageRes, myTeamsRes, demoState] =
+    await Promise.all([
+      isDoc && clubId
+        ? supabase.from('teams').select('id', { count: 'exact', head: true }).eq('club_id', clubId)
+        : Promise.resolve({ count: 0 }),
+      clubId
+        ? supabase
+            .from('events')
+            .select('id', { count: 'exact', head: true })
+            .eq('club_id', clubId)
+            .eq('status', 'scheduled')
+            .gte('start_time', todayStart.toISOString())
+            .lte('start_time', todayEnd.toISOString())
+        : Promise.resolve({ count: 0 }),
+      isDoc && clubId
+        ? supabase
+            .from('coverage_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('club_id', clubId)
+            .in('status', ['pending', 'escalated'])
+        : Promise.resolve({ count: 0 }),
+      profileId
+        ? supabase
+            .from('team_members')
+            .select('team_id, role, teams(name, age_group)')
+            .eq('profile_id', profileId)
+        : Promise.resolve({ data: null }),
+      isDoc ? getDemoSeedState() : Promise.resolve(null),
+    ])
+
+  const teamCount = teamCountRes.count
+  const todaySessions = todaySessionsRes.count
+  const coverageAlerts = coverageRes.count
+  const myTeams = (myTeamsRes.data ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
+  const myTeamIds = myTeams.map(tm => tm.team_id)
+
+  // Wave 2: today's events — scoped to the viewer's teams for coach/parent so
+  // they don't see other teams' events. Depends on myTeamIds, so it follows.
+  let todayEventsQuery = supabase
+    .from('events')
+    .select('id, title, start_time, end_time, type, status, team_id, teams(name, age_group)')
+    .eq('club_id', clubId ?? '')
+    .gte('start_time', todayStart.toISOString())
+    .lte('start_time', todayEnd.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(10)
+
+  if (!isDoc && myTeamIds.length > 0) {
+    todayEventsQuery = todayEventsQuery.in('team_id', myTeamIds)
+  }
+
+  const { data: todayEvents, error: todayEventsError } = clubId
+    ? await todayEventsQuery
+    : { data: null, error: null }
+
+  if (todayEventsError) console.error('todayEvents error:', todayEventsError)
+
+  return (
+    <>
+      {/* Demo seed button (DOC only, gated by NEXT_PUBLIC_ALLOW_DEMO_SEED). */}
+      {isDoc && demoState && <DemoSeedButton state={demoState} />}
+
+      {/* Post-wizard setup checklist (DOC only, self-hides when dismissed). */}
+      {isDoc && <OnboardingChecklist />}
+
+      {/* AI-prioritized attention list (DOC only). Key flips on seed/clear so
+          React remounts the client component and re-runs its load effect. */}
+      {isDoc && <AttentionPanel key={`demo-${demoState?.loaded ? 'on' : 'off'}`} />}
+
+      {/* Coach-scoped attention panel. */}
       {userRole === 'coach' && <CoachAttentionPanel />}
 
-      {/* Parent-scoped panel — handles the "claim your kids" flow, gear
-          size nudges, unpaid camp fees, and new coach feedback. Renders the
-          "My Kids" navigation card once the parent has linked their
-          children. Hidden entirely when there are no signals AND no kids. */}
+      {/* Parent-scoped attention panel. */}
       {userRole === 'parent' && <ParentAttentionPanel />}
 
-      {/* Stat cards — 1 col mobile, 2 col sm, 3 col lg for DOC so cards never
-          get squeezed below ~180 px at the 3-col breakpoint. */}
-      <div className={`grid grid-cols-1 ${userRole === 'doc' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
+      {/* Stat cards. */}
+      <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
         <StatCard
-          label={userRole === 'doc' ? 'Total Teams' : 'My Teams'}
-          value={String(userRole === 'doc' ? (teamCount ?? 0) : myTeams.length)}
+          label={isDoc ? 'Total Teams' : 'My Teams'}
+          value={String(isDoc ? (teamCount ?? 0) : myTeams.length)}
           accent="green"
         />
         <StatCard
@@ -173,7 +179,7 @@ export default async function DashboardPage() {
           value={String(todaySessions ?? 0)}
           accent="green"
         />
-        {userRole === 'doc' && (
+        {isDoc && (
           <StatCard
             label="Coverage Alerts"
             value={String(coverageAlerts ?? 0)}
@@ -183,7 +189,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* My Teams (for coaches and parents) */}
-      {userRole !== 'doc' && myTeams.length > 0 && (
+      {!isDoc && myTeams.length > 0 && (
         <div className="mb-10">
           <h2 className="text-lg font-bold mb-4">My Teams</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -255,7 +261,28 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+    </>
+  )
+}
 
+function DashboardBodySkeleton({ userRole }: { userRole: string }) {
+  const isDoc = userRole === 'doc'
+  return (
+    <div className="animate-pulse">
+      {/* attention panel placeholder */}
+      <div className="bg-dark-secondary rounded-2xl border border-white/5 h-40 mb-10" />
+      {/* stat cards */}
+      <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
+        {(isDoc ? [1, 2, 3] : [1, 2]).map(i => (
+          <div key={i} className="bg-dark-secondary rounded-2xl p-6 border border-white/5 h-32" />
+        ))}
+      </div>
+      {/* schedule */}
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-dark-secondary rounded-xl border border-white/5 h-16" />
+        ))}
+      </div>
     </div>
   )
 }
@@ -285,4 +312,3 @@ function StatCard({
     </div>
   )
 }
-
