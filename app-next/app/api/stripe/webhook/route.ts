@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -6,21 +7,27 @@ export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
 
-  // In test mode without webhook secret, parse directly
-  // In production, verify with STRIPE_WEBHOOK_SECRET
-  let event
+  // Signature verification is mandatory. This route writes paid registrations
+  // with the service-role client, so an unverified body would let anyone forge
+  // a checkout.session.completed event and register players for free.
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set: rejecting webhook')
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+  }
+  if (!sig) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
+  }
+
+  let event: Stripe.Event
   try {
-    if (process.env.STRIPE_WEBHOOK_SECRET) {
-      event = stripe.webhooks.constructEvent(body, sig!, process.env.STRIPE_WEBHOOK_SECRET)
-    } else {
-      event = JSON.parse(body)
-    }
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
   } catch {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object
+    const session = event.data.object as Stripe.Checkout.Session
     const { camp_detail_id, player_id, profile_id } = session.metadata || {}
 
     if (camp_detail_id && player_id && profile_id) {
