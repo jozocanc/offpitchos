@@ -68,9 +68,13 @@ function SignupForm() {
           <p className="text-gray">Create your account</p>
         </div>
 
+        {/* Explicit hex, not bg-white/text-dark: globals.css @theme remaps
+            --color-white to ink and --color-dark to cream, which inverted this
+            button, and hover:bg-gray-100 (a Tailwind built-in the remap never
+            touches) put cream text on #f3f4f6, making the label invisible. */}
         <button
           onClick={handleGoogleSignup}
-          className="w-full flex items-center justify-center gap-3 bg-white text-dark font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 transition mb-6"
+          className="w-full flex items-center justify-center gap-3 bg-[#FFFFFF] text-[#0F1510] border border-[#E8E3DC] font-semibold py-3 px-4 rounded-lg hover:bg-[#F2EEE7] transition mb-6"
         >
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
