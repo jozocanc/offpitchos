@@ -38,7 +38,13 @@ export async function acceptInvite(formData: FormData) {
   }
 
   // Upsert the profile for this user
+  // display_name is set by email signup (signup/page.tsx:30) and is the
+  // canonical name field — it must win the fallback, otherwise the name the
+  // user typed gets overwritten with their email local-part. Same rule as
+  // onboarding/actions.ts and join/code/[code]/actions.ts; this path was the
+  // one that still had the 2026-04-24 bug.
   const displayName =
+    (user.user_metadata?.display_name as string) ||
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
     user.email?.split('@')[0] ||
