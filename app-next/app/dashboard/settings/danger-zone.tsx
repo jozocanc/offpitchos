@@ -21,8 +21,17 @@ export default function DangerZone({ userRole }: { userRole: string }) {
   }
 
   function handleDelete() {
-    if (!confirm('Delete your account? All your data will be permanently removed. This cannot be undone.')) return
-    if (!confirm('Are you really sure? This is permanent.')) return
+    // Wording matches what actually happens (migration 037). The account is
+    // soft-deleted: personal details are scrubbed and sign-in is disabled, but
+    // things you authored stay with the club so its records don't develop
+    // holes. Promising "all your data is permanently removed" would not be
+    // true, and a deletion promise is the wrong place to be loose.
+    if (!confirm(
+      'Delete your account?\n\n' +
+      'Your name and personal details will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
+      'Anything you posted or recorded stays with the club, but is no longer linked to your name. This cannot be undone.'
+    )) return
+    if (!confirm('Are you really sure? This cannot be undone.')) return
     startTransition(async () => {
       const result = await deleteAccount()
       if (result.error) {

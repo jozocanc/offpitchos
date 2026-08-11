@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 
 export async function updateDisplayName(name: string) {
@@ -50,31 +51,25 @@ export async function updateClubName(name: string) {
   return { success: true }
 }
 
+// Both of the actions below used to delete from team_members and profiles
+// inline, unchecked, and then return success. Neither delete ever landed:
+// profiles has no DELETE policy at all and team_members only has
+// team_members_doc_all, so as the user themselves both matched zero rows.
+// Zero-row DELETEs raise no error, so the app reported success while nothing
+// happened. Migration 037 replaces them with SECURITY DEFINER RPCs.
+
 export async function leaveClub() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
+  // The DOC guard now lives in the RPC too, so it holds even if something
+  // else ever calls this.
+  const { error } = await supabase.rpc('leave_own_club')
+  if (error) return { error: error.message }
 
-  if (profile?.role === 'doc') return { error: 'DOC cannot leave their own club. Transfer ownership first.' }
-
-  // Look up the profile PK to delete team_members by profile_id
-  const { data: fullProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (fullProfile) {
-    await supabase.from('team_members').delete().eq('profile_id', fullProfile.id)
-  }
-  await supabase.from('profiles').delete().eq('user_id', user.id)
-
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/settings')
   return { success: true }
 }
 
@@ -83,18 +78,30 @@ export async function deleteAccount() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  // Look up the profile PK to delete team_members by profile_id
-  const { data: delProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
+  // Soft delete: scrubs display_name, sets deleted_at, drops team memberships
+  // and nulls club_id. Nulling club_id is what removes them from the DOC's
+  // roster, since profiles_doc_read matches on club_id.
+  const { error } = await supabase.rpc('soft_delete_own_profile')
+  if (error) return { error: error.message }
 
-  if (delProfile) {
-    await supabase.from('team_members').delete().eq('profile_id', delProfile.id)
+  // Ban rather than delete the auth row. profiles.user_id -> auth.users is
+  // ON DELETE CASCADE, so deleting the auth user would try to hard-delete the
+  // profile and fail against the NO ACTION foreign keys from
+  // camp_registrations, drill_versions and player_feedback. Banning stops
+  // sign-in without touching any history.
+  const service = createServiceClient()
+  const { error: banError } = await service.auth.admin.updateUserById(user.id, {
+    ban_duration: '876000h', // ~100 years
+  })
+
+  if (banError) {
+    // The profile is already scrubbed and detached, so their data is gone
+    // either way. Say so plainly rather than claiming a clean success.
+    return {
+      error: `Your data was removed, but sign-in could not be disabled: ${banError.message}. Contact support.`,
+    }
   }
-  await supabase.from('profiles').delete().eq('user_id', user.id)
-  await supabase.auth.signOut()
 
+  await supabase.auth.signOut()
   return { success: true }
 }
