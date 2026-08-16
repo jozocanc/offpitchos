@@ -27,16 +27,14 @@ export default function DangerZone({ userRole }: { userRole: string }) {
     // survives so the club's history keeps its foreign keys. Sign-in is
     // stopped by banning the auth user rather than deleting it.
     //
-    // Says "your name" rather than "your personal details" on purpose: the
-    // ONLY field scrubbed is display_name. The auth email is deliberately left
-    // in place, because profiles.user_id -> auth.users is ON DELETE CASCADE
-    // and removing it would hit the NO ACTION foreign keys on player_feedback,
-    // drill_versions and camp_registrations. A deletion prompt is the wrong
-    // place to claim more than is true.
+    // deleteAccount also anonymises the auth row: the email is replaced with
+    // an unroutable placeholder and the name is cleared from user_metadata.
+    // Keep this wording in step with that — it previously said the email was
+    // kept, which stopped being true.
     if (!confirm(
       'Delete your account?\n\n' +
-      'Your name will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
-      'Your email address stays on record, and anything you posted stays with the club but is no longer linked to your name. This cannot be undone.'
+      'Your name and email address will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
+      'Anything you posted stays with the club, but is no longer linked to you. This cannot be undone.'
     )) return
     if (!confirm('Are you really sure? This cannot be undone.')) return
     startTransition(async () => {
@@ -76,8 +74,8 @@ export default function DangerZone({ userRole }: { userRole: string }) {
                 its foreign keys, and sign-in is disabled by banning the auth
                 user rather than deleting it. */}
             <p className="text-gray text-xs">
-              Removes your name, takes you off every team, and stops you signing in.
-              Anything you posted stays with the club.
+              Removes your name and email, takes you off every team, and stops you
+              signing in. Anything you posted stays with the club.
             </p>
           </div>
           <button
