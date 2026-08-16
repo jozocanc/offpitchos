@@ -534,7 +534,7 @@ async function _getAvailableCoaches(): Promise<Array<{ id: string; display_name:
 export async function getCoverageData() {
   const { user, profile, supabase } = await getUserProfile()
 
-  await checkAndEscalateTimeouts()
+  await _checkAndEscalateTimeouts()
 
   const { data: requests } = await supabase
     .from('coverage_requests')

@@ -59,7 +59,7 @@ async function _acceptInviteCode(code: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const team = await getTeamByCode(code)
+  const team = await _getTeamByCode(code)
   if (!team) throw new Error('Invalid invite code')
 
   // Upsert profile — if user already has a profile (from another club or

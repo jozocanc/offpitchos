@@ -88,7 +88,7 @@ export async function listDrills(filters?: {
 export async function createBlankDrillFormAction(formData: FormData): Promise<void> {
   const raw = formData.get('teamId')
   const teamId = typeof raw === 'string' && raw.length > 0 ? raw : null
-  const id = await createBlankDrill(teamId)
+  const id = await _createBlankDrill(teamId)
   redirect(`/dashboard/tactics/${id}`)
 }
 
