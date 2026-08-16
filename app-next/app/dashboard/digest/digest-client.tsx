@@ -1,5 +1,5 @@
 'use client'
-import { formatMonthDay } from '@/lib/format-datetime'
+import { formatDayKeyShort, formatMonthDay } from '@/lib/format-datetime'
 import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useTransition } from 'react'
