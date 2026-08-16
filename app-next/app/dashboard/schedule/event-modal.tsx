@@ -161,7 +161,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
       try {
         let counts
         if (isEditing) {
-          counts = await updateEvent({
+          const updRes = await updateEvent({
             eventId: editEvent.id,
             title: finalTitle,
             startTime: startISO,
@@ -172,12 +172,14 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             notes: notes.trim() || null,
             updateFuture,
           })
+          if (!updRes.ok) { setError(updRes.error); return }
+          counts = updRes.data
           toast(
             formatRecipientToast({ action: 'event_updated', ...counts }),
             counts.emailFailed > 0 ? 'error' : 'success',
           )
         } else {
-          counts = await createEvent({
+          const crtRes = await createEvent({
             teamId,
             type,
             title: finalTitle,
@@ -193,6 +195,8 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
               endDate: recurringEndDate,
             },
           })
+          if (!crtRes.ok) { setError(crtRes.error); return }
+          counts = crtRes.data
           toast(
             formatRecipientToast({ action: 'event_created', ...counts }),
             counts.emailFailed > 0 ? 'error' : 'success',

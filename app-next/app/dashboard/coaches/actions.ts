@@ -4,10 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendCoachInviteEmail } from '@/lib/email'
+import { type ActionResult, toActionError } from '@/lib/action-result'
+
+type InviteEmailState = { emailSent: boolean; emailError?: string }
 
 export async function inviteCoach(
   formData: FormData,
-): Promise<{ emailSent: boolean; emailError?: string }> {
+): Promise<ActionResult<InviteEmailState>> {
+ try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -63,18 +67,28 @@ export async function inviteCoach(
       clubName: club?.name ?? 'your club',
       joinUrl: `${baseUrl}/join/${invite.token}`,
     })
-    return { emailSent: true }
+    return { ok: true, data: { emailSent: true } }
   } catch (err) {
+    // An email failure is NOT an action failure: the invite row already
+    // exists and the DOC can copy the join link from Pending Invites.
+    // Reported as a successful action carrying emailSent: false.
     return {
-      emailSent: false,
-      emailError: err instanceof Error ? err.message : 'Unknown email error',
+      ok: true,
+      data: {
+        emailSent: false,
+        emailError: err instanceof Error ? err.message : 'Unknown email error',
+      },
     }
   }
+ } catch (e) {
+  return toActionError(e)
+ }
 }
 
 export async function resendInvite(
   inviteId: string,
-): Promise<{ emailSent: boolean; emailError?: string }> {
+): Promise<ActionResult<InviteEmailState>> {
+ try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -129,18 +143,25 @@ export async function resendInvite(
       revalidatePath('/dashboard/coaches')
       revalidatePath('/dashboard')
       return {
-        emailSent: false,
-        emailError: err instanceof Error ? err.message : 'Unknown email error',
+        ok: true,
+        data: {
+          emailSent: false,
+          emailError: err instanceof Error ? err.message : 'Unknown email error',
+        },
       }
     }
   }
 
   revalidatePath('/dashboard/coaches')
   revalidatePath('/dashboard')
-  return { emailSent }
+  return { ok: true, data: { emailSent } }
+ } catch (e) {
+  return toActionError(e)
+ }
 }
 
-export async function revokeInvite(inviteId: string) {
+export async function revokeInvite(inviteId: string): Promise<ActionResult> {
+ try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -164,4 +185,8 @@ export async function revokeInvite(inviteId: string) {
   if (error) throw new Error(`Failed to revoke invite: ${error.message}`)
 
   revalidatePath('/dashboard/coaches')
+  return { ok: true, data: undefined }
+ } catch (e) {
+  return toActionError(e)
+ }
 }

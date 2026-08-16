@@ -44,6 +44,22 @@ export function toActionError(e: unknown): { ok: false; error: string } {
   }
 }
 
+/**
+ * Unwrap a result server-side, re-throwing the message on failure.
+ *
+ * For SERVER callers only — one action calling another. The point of
+ * ActionResult is that a message survives the trip to the client; between two
+ * server functions a throw is still the natural control flow, and the caller
+ * usually already has a try/catch that turns it into its own result shape.
+ *
+ * Never use this in a client component: it re-throws, which puts you straight
+ * back to reading a redacted digest.
+ */
+export function unwrap<T>(r: ActionResult<T>): T {
+  if (!r.ok) throw new Error(r.error)
+  return r.data
+}
+
 /** Narrowing helper so callers can write `if (isErr(res)) return res.error`. */
 export function isErr<T>(r: ActionResult<T>): r is { ok: false; error: string } {
   return !r.ok

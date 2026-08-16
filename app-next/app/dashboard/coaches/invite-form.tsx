@@ -33,10 +33,14 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
     startTransition(async () => {
       try {
         const result = await inviteCoach(formData)
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
         setEmail('')
         setTeamId('')
         setOpen(false)
-        if (result.emailSent) {
+        if (result.data.emailSent) {
           toast(`Invite sent to ${invitedEmail}`, 'success')
         } else {
           toast(

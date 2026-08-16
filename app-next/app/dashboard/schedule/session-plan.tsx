@@ -10,6 +10,7 @@ import {
   updateAttachment,
   type AttachedDrill,
 } from './actions'
+import { useToast } from '@/components/toast'
 
 interface PickerDrill {
   id: string
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function SessionPlan({ eventId, eventDurationMin }: Props) {
+  const { toast } = useToast()
   const [drills, setDrills] = useState<AttachedDrill[] | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerDrills, setPickerDrills] = useState<PickerDrill[] | null>(null)
@@ -32,33 +34,39 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    listAttachedDrills(eventId).then(setDrills)
+    listAttachedDrills(eventId).then(r => { if (r.ok) setDrills(r.data) })
   }, [eventId])
 
   async function openPicker() {
     setPickerOpen(true)
-    if (!pickerDrills) setPickerDrills(await listDrillsForPicker(eventId))
+    if (!pickerDrills) {
+      const r = await listDrillsForPicker(eventId)
+      if (r.ok) setPickerDrills(r.data)
+    }
   }
 
   function refresh() {
-    listAttachedDrills(eventId).then(setDrills)
+    listAttachedDrills(eventId).then(r => { if (r.ok) setDrills(r.data) })
   }
 
   async function onAttach(drillId: string) {
-    await attachDrill(eventId, drillId)
+    const r = await attachDrill(eventId, drillId)
+    if (!r.ok) { toast(r.error, 'error'); return }
     setPickerOpen(false)
     refresh()
   }
 
   async function onDetach(attachmentId: string) {
     if (!confirm('Remove this drill from the session plan?')) return
-    await detachDrill(attachmentId)
+    const r = await detachDrill(attachmentId)
+    if (!r.ok) { toast(r.error, 'error'); return }
     refresh()
   }
 
   async function onUpdate(attachmentId: string, patch: { duration_minutes?: number; coach_notes?: string | null }) {
     startTransition(async () => {
-      await updateAttachment(attachmentId, patch)
+      const r = await updateAttachment(attachmentId, patch)
+      if (!r.ok) { toast(r.error, 'error'); return }
       refresh()
     })
   }
@@ -70,7 +78,8 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
     const [item] = next.splice(fromIdx, 1)
     next.splice(toIdx, 0, item)
     setDrills(next.map((d, i) => ({ ...d, orderIndex: i })))
-    await reorderDrills(eventId, next.map(d => d.id))
+    const r = await reorderDrills(eventId, next.map(d => d.id))
+    if (!r.ok) toast(r.error, 'error')
   }
 
   if (drills === null) {

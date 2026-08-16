@@ -89,7 +89,11 @@ export default function AttentionPanel() {
     setPendingSignal(signalId)
     try {
       const result = await resendInvite(inviteId)
-      if (result.emailSent) {
+      if (!result.ok) {
+        toast(result.error, 'error')
+        return
+      }
+      if (result.data.emailSent) {
         toast('Invite email resent', 'success')
       } else {
         toast(

@@ -117,7 +117,9 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   async function togglePast() {
     if (!showPast && pastEvents.length === 0) {
       setLoadingPast(true)
-      const past = await getPastEvents()
+      const pastRes = await getPastEvents()
+      if (!pastRes.ok) { toast(pastRes.error, 'error'); return }
+      const past = pastRes.data
       setPastEvents(past.events as Event[])
       setUnmarkedPastEventIds(new Set(past.unmarkedEventIds))
       setLoadingPast(false)
@@ -146,7 +148,9 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     if (!confirm('Cancel this event? Coaches and parents on this team will be notified.')) return
     startTransition(async () => {
       try {
-        const counts = await cancelEvent(eventId)
+        const cRes = await cancelEvent(eventId)
+        if (!cRes.ok) { toast(cRes.error, 'error'); return }
+        const counts = cRes.data
         toast(
           formatRecipientToast({ action: 'event_cancelled', ...counts }),
           counts.emailFailed > 0 ? 'error' : 'success',
@@ -161,7 +165,9 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     if (!confirm('Bring this event back? Coaches and parents on this team will be notified.')) return
     startTransition(async () => {
       try {
-        const counts = await restoreEvent(eventId)
+        const rRes = await restoreEvent(eventId)
+        if (!rRes.ok) { toast(rRes.error, 'error'); return }
+        const counts = rRes.data
         toast(
           formatRecipientToast({ action: 'event_restored', ...counts }),
           counts.emailFailed > 0 ? 'error' : 'success',

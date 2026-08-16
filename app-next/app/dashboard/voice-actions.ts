@@ -8,6 +8,7 @@ import { createCoverageRequest } from './coverage/actions'
 import { createAnnouncement } from './messages/actions'
 import { ROLES } from '@/lib/constants'
 import { formatShortDate, formatTime } from '@/lib/format-datetime'
+import { unwrap } from '@/lib/action-result'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -221,7 +222,7 @@ export interface PageContext {
 
 export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResult> {
   try {
-    const counts = await restoreEvent(eventId)
+    const counts = unwrap(await restoreEvent(eventId))
     const total = counts.parents + counts.coaches
     if (total === 0) {
       return { success: true, message: 'Restored. No one on this team yet, so no notifications went out.' }
@@ -444,7 +445,7 @@ export async function executeVoicePlan(
   try {
     switch (tool) {
       case 'cancel_event': {
-        const counts = await cancelEvent(input.eventId)
+        const counts = unwrap(await cancelEvent(input.eventId))
         const event = events.find(e => e.id === input.eventId)
         const name = event?.title ?? 'Event'
         return {
@@ -458,7 +459,7 @@ export async function executeVoicePlan(
         const event = events.find(e => e.id === input.eventId)
         if (!event) return { success: false, message: 'Could not find that event.' }
 
-        const counts = await updateEvent({
+        const counts = unwrap(await updateEvent({
           eventId: input.eventId,
           title: event.title,
           startTime: input.newStartTime,
@@ -466,7 +467,7 @@ export async function executeVoicePlan(
           venueId: (event as any).venue_id ?? null,
           notes: null,
           updateFuture: false,
-        })
+        }))
         const newStart = new Date(input.newStartTime)
         const timeStr = formatTime(newStart, timeZone)
         const dateStr = formatShortDate(newStart, timeZone)
@@ -477,7 +478,7 @@ export async function executeVoicePlan(
         const event = events.find(e => e.id === input.eventId)
         if (!event) return { success: false, message: 'Could not find that event.' }
 
-        const counts = await updateEvent({
+        const counts = unwrap(await updateEvent({
           eventId: input.eventId,
           title: event.title,
           startTime: event.start_time,
@@ -485,7 +486,7 @@ export async function executeVoicePlan(
           venueId: input.venueId,
           notes: null,
           updateFuture: false,
-        })
+        }))
         const venue = venues.find(v => v.id === input.venueId)
         return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
@@ -529,7 +530,7 @@ export async function executeVoicePlan(
         const team = teams.find(t => t.id === input.teamId)
         if (!team) return { success: false, message: 'Could not find that team.' }
 
-        const counts = await createEvent({
+        const counts = unwrap(await createEvent({
           teamId: input.teamId,
           type: input.type,
           title: String(input.title ?? `${team.name} ${input.type}`).slice(0, 120),
@@ -538,7 +539,7 @@ export async function executeVoicePlan(
           venueId: input.venueId ?? null,
           notes: input.notes ?? null,
           recurring: { enabled: false, days: [], endDate: '' },
-        })
+        }))
 
         const start = new Date(input.startTime)
         const timeStr = start.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })

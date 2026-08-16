@@ -10,6 +10,7 @@ import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getRsvpTalliesForEvents } from './rsvp-actions'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // ---------- Types ----------
 
@@ -116,7 +117,17 @@ async function notifyTeamMembers(
 
 // ---------- Actions ----------
 
-export async function createEvent(input: CreateEventInput): Promise<NotifyCounts> {
+export async function createEvent(
+  ...args: Parameters<typeof _createEvent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createEvent>>>> {
+  try {
+    return { ok: true, data: await _createEvent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createEvent(input: CreateEventInput): Promise<NotifyCounts> {
   const { user, profile, supabase } = await getUserProfile()
 
   if (!input.recurring?.enabled) {
@@ -271,7 +282,17 @@ async function resolveLocationLabel(
   return null
 }
 
-export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
+export async function updateEvent(
+  ...args: Parameters<typeof _updateEvent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateEvent>>>> {
+  try {
+    return { ok: true, data: await _updateEvent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
   const updates = {
@@ -356,7 +377,17 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
   }
 }
 
-export async function restoreEvent(eventId: string): Promise<NotifyCounts> {
+export async function restoreEvent(
+  ...args: Parameters<typeof _restoreEvent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _restoreEvent>>>> {
+  try {
+    return { ok: true, data: await _restoreEvent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _restoreEvent(eventId: string): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
   const { data: event, error } = await supabase
@@ -381,7 +412,17 @@ export async function restoreEvent(eventId: string): Promise<NotifyCounts> {
   return counts
 }
 
-export async function cancelEvent(eventId: string): Promise<NotifyCounts> {
+export async function cancelEvent(
+  ...args: Parameters<typeof _cancelEvent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _cancelEvent>>>> {
+  try {
+    return { ok: true, data: await _cancelEvent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _cancelEvent(eventId: string): Promise<NotifyCounts> {
   const { supabase } = await getUserProfile()
 
   const { data: event, error } = await supabase
@@ -401,7 +442,17 @@ export async function cancelEvent(eventId: string): Promise<NotifyCounts> {
   return counts
 }
 
-export async function deleteEvent(eventId: string) {
+export async function deleteEvent(
+  ...args: Parameters<typeof _deleteEvent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteEvent>>>> {
+  try {
+    return { ok: true, data: await _deleteEvent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteEvent(eventId: string) {
   const { supabase } = await getUserProfile()
 
   const { error } = await supabase
@@ -431,7 +482,17 @@ export interface AttachedDrill {
   teamId: string | null
 }
 
-export async function listAttachedDrills(eventId: string): Promise<AttachedDrill[]> {
+export async function listAttachedDrills(
+  ...args: Parameters<typeof _listAttachedDrills>
+): Promise<ActionResult<Awaited<ReturnType<typeof _listAttachedDrills>>>> {
+  try {
+    return { ok: true, data: await _listAttachedDrills(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _listAttachedDrills(eventId: string): Promise<AttachedDrill[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('event_drills')
@@ -454,7 +515,17 @@ export async function listAttachedDrills(eventId: string): Promise<AttachedDrill
   }))
 }
 
-export async function listDrillsForPicker(eventId: string) {
+export async function listDrillsForPicker(
+  ...args: Parameters<typeof _listDrillsForPicker>
+): Promise<ActionResult<Awaited<ReturnType<typeof _listDrillsForPicker>>>> {
+  try {
+    return { ok: true, data: await _listDrillsForPicker(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _listDrillsForPicker(eventId: string) {
   const supabase = await createClient()
   const { data: ev } = await supabase.from('events').select('team_id, club_id').eq('id', eventId).single()
   if (!ev) return []
@@ -477,7 +548,17 @@ export async function listDrillsForPicker(eventId: string) {
   }))
 }
 
-export async function attachDrill(eventId: string, drillId: string) {
+export async function attachDrill(
+  ...args: Parameters<typeof _attachDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _attachDrill>>>> {
+  try {
+    return { ok: true, data: await _attachDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _attachDrill(eventId: string, drillId: string) {
   const supabase = await createClient()
   const { data: maxRow } = await supabase
     .from('event_drills')
@@ -494,14 +575,34 @@ export async function attachDrill(eventId: string, drillId: string) {
   revalidatePath('/dashboard/schedule')
 }
 
-export async function detachDrill(attachmentId: string) {
+export async function detachDrill(
+  ...args: Parameters<typeof _detachDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _detachDrill>>>> {
+  try {
+    return { ok: true, data: await _detachDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _detachDrill(attachmentId: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('event_drills').delete().eq('id', attachmentId)
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/schedule')
 }
 
-export async function reorderDrills(eventId: string, ids: string[]) {
+export async function reorderDrills(
+  ...args: Parameters<typeof _reorderDrills>
+): Promise<ActionResult<Awaited<ReturnType<typeof _reorderDrills>>>> {
+  try {
+    return { ok: true, data: await _reorderDrills(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _reorderDrills(eventId: string, ids: string[]) {
   const supabase = await createClient()
   await Promise.all(ids.map((id, i) =>
     supabase.from('event_drills').update({ order_index: i }).eq('id', id).eq('event_id', eventId)
@@ -510,6 +611,16 @@ export async function reorderDrills(eventId: string, ids: string[]) {
 }
 
 export async function updateAttachment(
+  ...args: Parameters<typeof _updateAttachment>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateAttachment>>>> {
+  try {
+    return { ok: true, data: await _updateAttachment(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateAttachment(
   attachmentId: string,
   patch: { duration_minutes?: number; coach_notes?: string | null }
 ) {
@@ -519,7 +630,17 @@ export async function updateAttachment(
   revalidatePath('/dashboard/schedule')
 }
 
-export async function getPastEvents() {
+export async function getPastEvents(
+  ...args: Parameters<typeof _getPastEvents>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getPastEvents>>>> {
+  try {
+    return { ok: true, data: await _getPastEvents(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getPastEvents() {
   const { profile, supabase } = await getUserProfile()
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
