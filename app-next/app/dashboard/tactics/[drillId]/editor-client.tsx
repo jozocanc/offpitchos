@@ -1,7 +1,7 @@
 'use client'
 
 import React, {
-  useReducer, useEffect, useRef, useCallback, useState,
+  useReducer, useEffect, useRef, useCallback, useState, useMemo,
 } from 'react'
 import Link from 'next/link'
 import Konva from 'konva'
@@ -399,14 +399,22 @@ export default function EditorClient({
   }, [])
 
   // ── Auto-save (debounced 2000ms) ─────────────────────────────────────────────
-  const savePayload = {
+  // This MUST be memoised. A fresh object literal here is a new reference on
+  // every render, so the debounce effect re-ran every render, saved, re-rendered on
+  // the save-status update, and saved again — an idle editor rewrote the drill
+  // roughly every five seconds forever. Worse than the write load, a stale tab
+  // left open would silently revert edits made anywhere else. The reducer keeps
+  // these slices referentially stable unless they actually change, so the
+  // payload identity now moves only on a real edit (selection is not saved, and
+  // correctly no longer triggers a save).
+  const savePayload = useMemo(() => ({
     field: state.field,
     objects: state.objects,
     title: state.title,
     description: state.description,
     category: state.category,
     visibility: state.visibility,
-  }
+  }), [state.field, state.objects, state.title, state.description, state.category, state.visibility])
   const debouncedPayload = useDebounce(savePayload, 2000)
 
   useEffect(() => {
@@ -428,7 +436,12 @@ export default function EditorClient({
   }, [debouncedPayload])
 
   // ── Thumbnail regen (debounced 10000ms, field/objects changes only) ──────────
-  const thumbPayload = { field: state.field, objects: state.objects }
+  // Memoised for the same reason as savePayload above — this one was firing a
+  // thumbnail regeneration every ten seconds on an untouched board.
+  const thumbPayload = useMemo(
+    () => ({ field: state.field, objects: state.objects }),
+    [state.field, state.objects],
+  )
   const debouncedThumbPayload = useDebounce(thumbPayload, 10000)
   const isThumbnailMounted = useRef(false)
 
