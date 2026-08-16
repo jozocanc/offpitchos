@@ -546,8 +546,16 @@ export function GoalNode({
           e.evt.preventDefault()
           onContextMenu?.(obj.id, e.evt.clientX, e.evt.clientY)
         },
-        onDragStart: dragScale.onDragStart,
+        // Konva drag events bubble, and the rotate handle is a draggable child.
+        // Without this guard, releasing the handle would run the move handler
+        // with the handle as e.target and convert its group-local coordinates
+        // into metres, teleporting the goal across the pitch.
+        onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => {
+          if (e.target !== groupRef.current) return
+          dragScale.onDragStart()
+        },
         onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
+          if (e.target !== groupRef.current) return
           dragScale.onDragEnd()
           const node = e.target
           const { xM, yM } = pxToM(node.x(), node.y(), field, layout)
