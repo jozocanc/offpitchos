@@ -23,7 +23,7 @@ export default function AiLogClient() {
     if (!showLog) return
     setLoading(true)
     getAiLog()
-      .then(data => setEntries(data as unknown as LogEntry[]))
+      .then(res => { if (res.ok) setEntries(res.data as unknown as LogEntry[]) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [showLog])

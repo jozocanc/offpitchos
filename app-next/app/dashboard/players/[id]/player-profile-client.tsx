@@ -69,7 +69,8 @@ function GearSizesEditor({
     if (!hasChanges || saving) return
     setSaving(true)
     try {
-      await submitPlayerSize(playerId, jersey || null, shorts || null)
+      const r = await submitPlayerSize(playerId, jersey || null, shorts || null)
+      if (!r.ok) throw new Error(r.error)
       toast(isParent ? 'Sizes submitted · thank you!' : 'Sizes updated', 'success')
     } catch (err: any) {
       toast(err?.message ?? 'Failed to save sizes', 'error')

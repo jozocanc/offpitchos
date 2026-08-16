@@ -342,13 +342,14 @@ function FeedbackRow({
     }
     startTransition(async () => {
       try {
-        await addFeedback({
+        const fbRes = await addFeedback({
           playerId: player.id,
           eventId,
           category: defaultCategory,
           rating,
           notes: notes.trim(),
         })
+        if (!fbRes.ok) throw new Error(fbRes.error)
         setSaved(true)
         toast(`Saved feedback for ${player.first_name}`, 'success')
       } catch (err: unknown) {

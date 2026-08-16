@@ -14,7 +14,9 @@ export default function AcceptCodeButton({ code }: { code: string }) {
   function handleClick() {
     startTransition(async () => {
       try {
-        const result = await acceptInviteCode(code)
+        const accRes = await acceptInviteCode(code)
+        if (!accRes.ok) { setError(accRes.error); return }
+        const result = accRes.data
         setJoinResult(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')

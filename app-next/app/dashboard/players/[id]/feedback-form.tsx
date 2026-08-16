@@ -67,13 +67,14 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
     setSubmitting(true)
     setError(null)
     try {
-      await addFeedback({
+      const fbRes = await addFeedback({
         playerId,
         eventId: eventId || null,
         category,
         rating,
         notes,
       })
+      if (!fbRes.ok) { setError(fbRes.error); return }
       setSuccess(true)
       setNotes('')
       setRating(3)

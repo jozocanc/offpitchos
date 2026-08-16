@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { generateAndStoreDigest } from '@/lib/ai-digest'
 import { sendEmailToProfiles } from '@/lib/email'
 import { formatDayKeyShort } from '@/lib/format-datetime'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getDocProfile() {
   const supabase = await createClient()
@@ -25,7 +26,17 @@ async function getDocProfile() {
   return { user, profile, supabase }
 }
 
-export async function generateDigestNow() {
+export async function generateDigestNow(
+  ...args: Parameters<typeof _generateDigestNow>
+): Promise<ActionResult<Awaited<ReturnType<typeof _generateDigestNow>>>> {
+  try {
+    return { ok: true, data: await _generateDigestNow(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _generateDigestNow() {
   const { profile, user } = await getDocProfile()
   const result = await generateAndStoreDigest(profile.club_id!, user.id)
   revalidatePath('/dashboard/digest')
@@ -33,7 +44,17 @@ export async function generateDigestNow() {
   return { ok: true as const, weekStart: result.weekStart, id: result.id }
 }
 
-export async function emailDigest(digestId: string) {
+export async function emailDigest(
+  ...args: Parameters<typeof _emailDigest>
+): Promise<ActionResult<Awaited<ReturnType<typeof _emailDigest>>>> {
+  try {
+    return { ok: true, data: await _emailDigest(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _emailDigest(digestId: string) {
   const { profile } = await getDocProfile()
   const service = createServiceClient()
 

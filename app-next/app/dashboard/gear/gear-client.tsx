@@ -82,7 +82,9 @@ export default function GearClient({
     if (requesting) return
     setRequesting(true)
     try {
-      const result = await requestMissingSizes()
+      const reqRes = await requestMissingSizes()
+      if (!reqRes.ok) { toast(reqRes.error, 'error'); return }
+      const result = reqRes.data
       if (result.alreadyComplete) {
         toast('All sizes already submitted · nothing to request', 'success')
       } else if (result.parentsNotified === 0) {
@@ -367,7 +369,8 @@ function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
   async function handleSave() {
     setSaving(true)
     try {
-      await updatePlayerSize(player.id, jerseySize || null, shortsSize || null)
+      const r = await updatePlayerSize(player.id, jerseySize || null, shortsSize || null)
+      if (!r.ok) { toast(r.error, 'error'); return }
     } catch {}
     setSaving(false)
   }

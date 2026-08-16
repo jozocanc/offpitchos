@@ -13,6 +13,7 @@ import {
   DEMO_FEEDBACK_TEMPLATES,
   DEMO_ANNOUNCEMENT,
 } from '@/lib/demo/seed-data'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 const DEMO_FLAG_ENABLED = () => process.env.NEXT_PUBLIC_ALLOW_DEMO_SEED === 'true'
 
@@ -90,7 +91,17 @@ export async function getDemoSeedState(): Promise<DemoSeedState> {
   }
 }
 
-export async function seedDemoData(): Promise<DemoSeedResult> {
+export async function seedDemoData(
+  ...args: Parameters<typeof _seedDemoData>
+): Promise<ActionResult<Awaited<ReturnType<typeof _seedDemoData>>>> {
+  try {
+    return { ok: true, data: await _seedDemoData(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _seedDemoData(): Promise<DemoSeedResult> {
   if (!DEMO_FLAG_ENABLED()) {
     throw new Error('Demo seeding is disabled in this environment')
   }
@@ -474,7 +485,17 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   }
 }
 
-export async function clearDemoData(): Promise<DemoClearResult> {
+export async function clearDemoData(
+  ...args: Parameters<typeof _clearDemoData>
+): Promise<ActionResult<Awaited<ReturnType<typeof _clearDemoData>>>> {
+  try {
+    return { ok: true, data: await _clearDemoData(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _clearDemoData(): Promise<DemoClearResult> {
   if (!DEMO_FLAG_ENABLED()) {
     throw new Error('Demo seeding is disabled in this environment')
   }

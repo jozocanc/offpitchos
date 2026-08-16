@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -77,6 +78,16 @@ export async function getPlayerProfile(playerId: string) {
 }
 
 export async function submitPlayerSize(
+  ...args: Parameters<typeof _submitPlayerSize>
+): Promise<ActionResult<Awaited<ReturnType<typeof _submitPlayerSize>>>> {
+  try {
+    return { ok: true, data: await _submitPlayerSize(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _submitPlayerSize(
   playerId: string,
   jerseySize: string | null,
   shortsSize: string | null,
@@ -113,7 +124,17 @@ export async function submitPlayerSize(
   revalidatePath('/dashboard/gear')
 }
 
-export async function addFeedback(input: {
+export async function addFeedback(
+  ...args: Parameters<typeof _addFeedback>
+): Promise<ActionResult<Awaited<ReturnType<typeof _addFeedback>>>> {
+  try {
+    return { ok: true, data: await _addFeedback(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _addFeedback(input: {
   playerId: string
   eventId: string | null
   category: string

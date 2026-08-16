@@ -106,7 +106,9 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
   function handleGenerate() {
     startTransition(async () => {
       try {
-        const result = await generateDigestNow()
+        const genRes = await generateDigestNow()
+        if (!genRes.ok) { toast(genRes.error, 'error'); return }
+        const result = genRes.data
         toast(`Digest generated for week of ${fmtWeek(result.weekStart)}`, 'success')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to generate'
@@ -120,7 +122,9 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
     setEmailing(id)
     startTransition(async () => {
       try {
-        const result = await emailDigest(id)
+        const mailRes = await emailDigest(id)
+        if (!mailRes.ok) { toast(mailRes.error, 'error'); return }
+        const result = mailRes.data
         toast(`Sent to ${result.sent} ${result.sent === 1 ? 'person' : 'people'}${result.failed > 0 ? ` · ${result.failed} failed` : ''}`, result.failed > 0 ? 'error' : 'success')
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to send'

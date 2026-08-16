@@ -1,6 +1,7 @@
 'use server'
 
 import { createServiceClient } from '@/lib/supabase/service'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // Public camp lookup — no auth required. Uses service client to bypass
 // RLS so anyone with the link can see camp details.
@@ -57,7 +58,17 @@ export async function getCampByCode(code: string) {
 
 // Guest registration — no auth, no account needed. Creates a
 // camp_registration row with guest fields instead of player_id.
-export async function registerGuest(input: {
+export async function registerGuest(
+  ...args: Parameters<typeof _registerGuest>
+): Promise<ActionResult<Awaited<ReturnType<typeof _registerGuest>>>> {
+  try {
+    return { ok: true, data: await _registerGuest(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _registerGuest(input: {
   campDetailId: string
   parentName: string
   parentEmail: string

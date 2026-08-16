@@ -4,11 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // Look up a team by its invite code. Uses the service client to bypass
 // RLS since this runs before the user is authenticated — they're on
 // the join page and haven't signed in yet.
-export async function getTeamByCode(code: string) {
+export async function getTeamByCode(
+  ...args: Parameters<typeof _getTeamByCode>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getTeamByCode>>>> {
+  try {
+    return { ok: true, data: await _getTeamByCode(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getTeamByCode(code: string) {
   const service = createServiceClient()
 
   const { data: team } = await service
@@ -33,7 +44,17 @@ export async function getTeamByCode(code: string) {
 // Accept an invite code: creates/updates the user's profile for this club,
 // adds them as a parent team_member, then redirects to the dashboard where
 // the claim-your-kids modal will handle linking their specific child.
-export async function acceptInviteCode(code: string) {
+export async function acceptInviteCode(
+  ...args: Parameters<typeof _acceptInviteCode>
+): Promise<ActionResult<Awaited<ReturnType<typeof _acceptInviteCode>>>> {
+  try {
+    return { ok: true, data: await _acceptInviteCode(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _acceptInviteCode(code: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

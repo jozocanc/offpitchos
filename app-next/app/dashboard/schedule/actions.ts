@@ -132,12 +132,12 @@ async function _createEvent(input: CreateEventInput): Promise<NotifyCounts> {
 
   if (!input.recurring?.enabled) {
     // Check for team conflicts on single events (recurring relies on UI-side warnings)
-    const conflicts = await checkConflicts({
+    const conflicts = unwrap(await checkConflicts({
       teamId: input.teamId,
       startTime: input.startTime,
       endTime: input.endTime,
       venueId: input.venueId,
-    })
+    }))
 
     if (conflicts.some(c => c.type === 'team')) {
       throw new Error('This team already has an event at this time. Please choose a different time.')

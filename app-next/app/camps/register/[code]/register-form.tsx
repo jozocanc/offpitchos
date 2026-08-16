@@ -53,7 +53,7 @@ export default function RegisterForm({
 
       for (const kid of validKids) {
         try {
-          const result = await registerGuest({
+          const regRes = await registerGuest({
             campDetailId,
             parentName,
             parentEmail,
@@ -61,6 +61,8 @@ export default function RegisterForm({
             kidName: kid.name,
             kidAge: kid.age,
           })
+          if (!regRes.ok) { lastError = regRes.error; continue }
+          const result = regRes.data
           if (result.success) {
             succeeded++
           } else {

@@ -40,7 +40,9 @@ export default function DemoSeedButton({ state }: Props) {
             setLoading('clear')
             startTransition(async () => {
               try {
-                const result = await clearDemoData()
+                const clrRes = await clearDemoData()
+                if (!clrRes.ok) { setError(clrRes.error); return }
+                const result = clrRes.data
                 toast(`Demo data cleared · ${result.rowsCleared} rows`, 'success')
                 router.refresh()
               } catch (err) {
@@ -75,7 +77,9 @@ export default function DemoSeedButton({ state }: Props) {
           setLoading('seed')
           startTransition(async () => {
             try {
-              const result = await seedDemoData()
+              const seedRes = await seedDemoData()
+              if (!seedRes.ok) { setError(seedRes.error); return }
+              const result = seedRes.data
               toast(
                 `Loaded ${result.playersAdded} players, ${result.parentsAdded} parents, ${result.coachesAdded} coaches, ${result.eventsAdded} events`,
                 'success',

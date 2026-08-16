@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime, formatTimeRange } from '@/lib/format-datetime'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -33,7 +34,17 @@ export interface Suggestion {
   label: string
 }
 
-export async function checkConflicts(input: {
+export async function checkConflicts(
+  ...args: Parameters<typeof _checkConflicts>
+): Promise<ActionResult<Awaited<ReturnType<typeof _checkConflicts>>>> {
+  try {
+    return { ok: true, data: await _checkConflicts(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _checkConflicts(input: {
   teamId: string
   startTime: string
   endTime: string
@@ -159,7 +170,17 @@ export async function checkConflicts(input: {
   return conflicts
 }
 
-export async function suggestAlternatives(input: {
+export async function suggestAlternatives(
+  ...args: Parameters<typeof _suggestAlternatives>
+): Promise<ActionResult<Awaited<ReturnType<typeof _suggestAlternatives>>>> {
+  try {
+    return { ok: true, data: await _suggestAlternatives(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _suggestAlternatives(input: {
   teamId: string
   venueId: string | null
   date: string

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // Parent-scoped prioritization. Mirrors the DOC and coach attention panels
 // but keyed off "the kids this parent has claimed" rather than club-wide
@@ -280,7 +281,17 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
  * flipping `players.parent_id` to the caller's auth user id. Refuses to
  * overwrite a link that already points at a different real parent.
  */
-export async function claimPlayers(playerIds: string[]): Promise<{
+export async function claimPlayers(
+  ...args: Parameters<typeof _claimPlayers>
+): Promise<ActionResult<Awaited<ReturnType<typeof _claimPlayers>>>> {
+  try {
+    return { ok: true, data: await _claimPlayers(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _claimPlayers(playerIds: string[]): Promise<{
   claimed: number
   skipped: number
 }> {

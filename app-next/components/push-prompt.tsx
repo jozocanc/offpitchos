@@ -73,13 +73,14 @@ export default function PushPrompt() {
       })
 
       const json = sub.toJSON()
-      await subscribePush({
+      const subRes = await subscribePush({
         endpoint: json.endpoint!,
         keys: {
           p256dh: json.keys!.p256dh!,
           auth: json.keys!.auth!,
         },
       })
+      if (!subRes.ok) { setError(subRes.error); return }
 
       setSubscribed(true)
     } catch (err) {

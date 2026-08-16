@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { askClubQuestion } from '@/lib/ai'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -32,7 +33,17 @@ export async function getAskPageData() {
   }
 }
 
-export async function askQuestion(question: string) {
+export async function askQuestion(
+  ...args: Parameters<typeof _askQuestion>
+): Promise<ActionResult<Awaited<ReturnType<typeof _askQuestion>>>> {
+  try {
+    return { ok: true, data: await _askQuestion(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _askQuestion(question: string) {
   if (!question.trim()) throw new Error('Question cannot be empty')
   if (question.length > 500) throw new Error('Question too long (max 500 characters)')
 
@@ -218,7 +229,17 @@ export async function askQuestion(question: string) {
 }
 
 // DOC-only: get all AI chats across the club
-export async function getAiLog() {
+export async function getAiLog(
+  ...args: Parameters<typeof _getAiLog>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getAiLog>>>> {
+  try {
+    return { ok: true, data: await _getAiLog(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getAiLog() {
   const { profile, supabase } = await getUserProfile()
   if (profile.role !== 'doc') throw new Error('Unauthorized')
 

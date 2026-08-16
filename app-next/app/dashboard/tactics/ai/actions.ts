@@ -6,10 +6,10 @@ import { revalidatePath } from 'next/cache'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
 import { DRILL_CATEGORIES, type DrillCategory } from '@/lib/tactics/drill-categories'
 import {
-import { type ActionResult, toActionError } from '@/lib/action-result'
   SYSTEM_PROMPT_CACHED_MESSAGES,
   PDF_IMPORT_SYSTEM_CACHED_MESSAGES,
 } from '@/lib/tactics/ai-prompt'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 const MODEL = 'claude-sonnet-4-6'
 const PDF_MODEL = 'claude-opus-4-7'

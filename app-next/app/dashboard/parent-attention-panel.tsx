@@ -246,7 +246,9 @@ function ClaimKidsModal({
     }
     startTransition(async () => {
       try {
-        const result = await claimPlayers(Array.from(selected))
+        const claimRes = await claimPlayers(Array.from(selected))
+        if (!claimRes.ok) { toast(claimRes.error, 'error'); return }
+        const result = claimRes.data
         if (result.claimed > 0) {
           toast(
             `Linked ${result.claimed} child${result.claimed === 1 ? '' : 'ren'}`,

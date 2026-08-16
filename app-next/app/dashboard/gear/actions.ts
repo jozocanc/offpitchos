@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -128,7 +129,17 @@ export async function getGearData(): Promise<GearData> {
   }
 }
 
-export async function updatePlayerSize(playerId: string, jerseySize: string | null, shortsSize: string | null) {
+export async function updatePlayerSize(
+  ...args: Parameters<typeof _updatePlayerSize>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updatePlayerSize>>>> {
+  try {
+    return { ok: true, data: await _updatePlayerSize(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updatePlayerSize(playerId: string, jerseySize: string | null, shortsSize: string | null) {
   const { supabase } = await getUserProfile()
 
   const { error } = await supabase
@@ -149,7 +160,17 @@ export interface RequestSizesResult {
   emailFailed: number
 }
 
-export async function requestMissingSizes(): Promise<RequestSizesResult> {
+export async function requestMissingSizes(
+  ...args: Parameters<typeof _requestMissingSizes>
+): Promise<ActionResult<Awaited<ReturnType<typeof _requestMissingSizes>>>> {
+  try {
+    return { ok: true, data: await _requestMissingSizes(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _requestMissingSizes(): Promise<RequestSizesResult> {
   const { profile } = await getUserProfile()
 
   if (profile.role !== 'doc') {

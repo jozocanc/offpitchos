@@ -61,7 +61,9 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
     setMessages(prev => [...prev, { id: tempId, question, answer: '', created_at: new Date().toISOString() }])
 
     try {
-      const { answer } = await askQuestion(question)
+      const askRes = await askQuestion(question)
+      if (!askRes.ok) throw new Error(askRes.error)
+      const { answer } = askRes.data
       setMessages(prev =>
         prev.map(m => m.id === tempId ? { ...m, answer } : m)
       )

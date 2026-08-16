@@ -91,13 +91,15 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
         const startISO = new Date(`${date}T${startTime}`).toISOString()
         const endISO = new Date(`${date}T${endTime}`).toISOString()
 
-        const found = await checkConflicts({
+        const conflictRes = await checkConflicts({
           teamId,
           startTime: startISO,
           endTime: endISO,
           venueId: venueId || null,
           excludeEventId: editEvent?.id,
         })
+        if (!conflictRes.ok) return
+        const found = conflictRes.data
         setConflicts(found)
 
         if (found.length > 0) {
@@ -105,13 +107,13 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
           const endDate = new Date(`${date}T${endTime}`)
           const durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000
 
-          const alts = await suggestAlternatives({
+          const altRes = await suggestAlternatives({
             teamId,
             venueId: venueId || null,
             date,
             durationMinutes,
           })
-          setSuggestions(alts)
+          if (altRes.ok) setSuggestions(altRes.data)
         } else {
           setSuggestions([])
         }

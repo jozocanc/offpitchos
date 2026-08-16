@@ -68,7 +68,9 @@ export default function AttentionPanel() {
     if (pendingSignal) return
     setPendingSignal(signalId)
     try {
-      const result = await requestMissingSizes()
+      const sizesRes = await requestMissingSizes()
+      if (!sizesRes.ok) { toast(sizesRes.error, 'error'); return }
+      const result = sizesRes.data
       if (result.alreadyComplete) {
         toast('All sizes already submitted', 'success')
       } else if (result.parentsNotified === 0) {

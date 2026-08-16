@@ -114,13 +114,14 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
     }
     setNotes(prev => ({ ...prev, [playerId]: { kind: 'saving' } }))
     try {
-      await addFeedback({
+      const fbRes = await addFeedback({
         playerId,
         eventId,
         category: 'general',
         rating: current.rating,
         notes: current.notes.trim(),
       })
+      if (!fbRes.ok) throw new Error(fbRes.error)
       setNotes(prev => ({ ...prev, [playerId]: { kind: 'saved' } }))
       // Collapse the "Saved" confirmation after a moment so the coach can
       // add another note for the same player if they want.

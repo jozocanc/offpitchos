@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -18,7 +19,17 @@ async function getUserProfile() {
   return { profile, supabase }
 }
 
-export async function subscribePush(subscription: {
+export async function subscribePush(
+  ...args: Parameters<typeof _subscribePush>
+): Promise<ActionResult<Awaited<ReturnType<typeof _subscribePush>>>> {
+  try {
+    return { ok: true, data: await _subscribePush(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _subscribePush(subscription: {
   endpoint: string
   keys: { p256dh: string; auth: string }
 }) {
@@ -37,7 +48,17 @@ export async function subscribePush(subscription: {
   if (error) throw new Error(`Failed to save subscription: ${error.message}`)
 }
 
-export async function unsubscribePush(endpoint: string) {
+export async function unsubscribePush(
+  ...args: Parameters<typeof _unsubscribePush>
+): Promise<ActionResult<Awaited<ReturnType<typeof _unsubscribePush>>>> {
+  try {
+    return { ok: true, data: await _unsubscribePush(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _unsubscribePush(endpoint: string) {
   const { profile, supabase } = await getUserProfile()
 
   await supabase
