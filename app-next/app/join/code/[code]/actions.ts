@@ -77,12 +77,30 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
     user.email?.split('@')[0] ||
     (joinAs === 'player' ? 'Player' : 'Parent')
 
+  // NEVER demote existing staff. This upsert overwrites role, so a DOC or
+  // coach who opens their own team's join link — entirely likely, since they
+  // are the one sharing it — would have downgraded themselves and, for a DOC,
+  // lost the club: DOC authority comes from clubs.created_by, but every
+  // *_doc_* policy is reached through profiles.role.
+  //
+  // Pre-existing hazard, not new: before the player role it would have set
+  // them to 'parent'. It matters more now that the link is being handed to a
+  // whole squad.
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const keepStaffRole = existing?.role === 'doc' || existing?.role === 'coach'
+  const roleToSet = keepStaffRole ? existing!.role : joinAs
+
   const { error: profileError } = await supabase
     .from('profiles')
     .upsert({
       user_id: user.id,
       club_id: team.clubId,
-      role: joinAs,
+      role: roleToSet,
       display_name: displayName,
       onboarding_complete: true,
     }, { onConflict: 'user_id' })
@@ -102,7 +120,8 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
       .upsert({
         team_id: team.teamId,
         profile_id: profile.id,
-        role: joinAs,
+        // Staff joining their own team stay staff on it.
+        role: keepStaffRole ? 'coach' : joinAs,
       }, { onConflict: 'team_id,profile_id' })
 
     if (memberError) throw new Error(`Failed to join team: ${memberError.message}`)
@@ -110,5 +129,5 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
 
   revalidatePath('/dashboard')
 
-  return { clubId: team.clubId, teamId: team.teamId, role: joinAs }
+  return { clubId: team.clubId, teamId: team.teamId, role: roleToSet }
 }
