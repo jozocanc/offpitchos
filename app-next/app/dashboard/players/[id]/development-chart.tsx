@@ -1,4 +1,5 @@
 'use client'
+import { formatDayKeyShort } from '@/lib/format-datetime'
 
 import { useMemo, useState } from 'react'
 import {
@@ -54,8 +55,9 @@ function bucketByDay(rows: FeedbackPoint[]) {
 }
 
 function formatDay(day: string) {
-  const d = new Date(day + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  // `day` is already a calendar date, so it is formatted UTC-anchored rather
+  // than parsed at local midnight (which differs on server vs client).
+  return formatDayKeyShort(day)
 }
 
 export default function DevelopmentChart({ feedback }: { feedback: FeedbackPoint[] }) {

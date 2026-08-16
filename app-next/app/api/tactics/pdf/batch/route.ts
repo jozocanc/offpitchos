@@ -5,6 +5,7 @@ import { BatchDrillPDF } from '@/lib/tactics/pdf-document'
 import type { BatchDrill } from '@/lib/tactics/pdf-document'
 import { renderThumbnailPng } from '@/lib/tactics/thumbnail'
 import React, { type ReactElement } from 'react'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 
 const MAX_DRILLS = 20
 
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
     thumbnail: thumbnails[i],
   }))
 
-  const element = React.createElement(BatchDrillPDF, { drills }) as unknown as ReactElement<DocumentProps>
+  const element = React.createElement(BatchDrillPDF, { drills, timeZone: await getClubTimezone() }) as unknown as ReactElement<DocumentProps>
   const stream = await renderToStream(element)
 
   return new Response(stream as unknown as ReadableStream, {

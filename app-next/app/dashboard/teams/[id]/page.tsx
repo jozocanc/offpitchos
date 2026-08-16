@@ -12,6 +12,8 @@ import LinkParentMenu from './link-parent-menu'
 import GroupChatLink from './group-chat-link'
 import InviteCodeCard from './invite-code-card'
 import PublicShareCard from './public-share-card'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatMonthDayYear } from '@/lib/format-datetime'
 
 interface Member {
   profile_id: string
@@ -57,6 +59,7 @@ export default async function TeamDetailPage({
   const { id } = await params
 
   const supabase = await createClient()
+  const timezone = await getClubTimezone()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -404,7 +407,7 @@ export default async function TeamDetailPage({
                     <div className="flex items-center justify-between pl-1">
                       {invite.expires_at && (
                         <p className="text-gray text-xs">
-                          Expires {new Date(invite.expires_at).toLocaleDateString()}
+                          Expires {formatMonthDayYear(invite.expires_at, timezone)}
                         </p>
                       )}
                       <RevokeInviteButton inviteId={invite.id} teamId={team.id} />

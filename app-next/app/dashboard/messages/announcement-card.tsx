@@ -1,4 +1,5 @@
 'use client'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -36,6 +37,7 @@ interface AnnouncementCardProps {
 }
 
 export default function AnnouncementCard({ announcement, userProfileId, userRole }: AnnouncementCardProps) {
+  const timezone = useClubTimezone()
   const [expanded, setExpanded] = useState(false)
   const [locallyRead, setLocallyRead] = useState(announcement.own_read ?? true)
   const [isPending, startTransition] = useTransition()
@@ -117,7 +119,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
 
   const fullDate = new Date(announcement.created_at).toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
+    hour: 'numeric', minute: '2-digit', timeZone: timezone,
   })
 
   return (

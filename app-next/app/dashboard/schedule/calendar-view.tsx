@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
+import { useClubTimezone } from '@/components/club-timezone'
+import {
+  addDaysToKey, dayKey, formatDayKeyWeekday, formatMonthDay,
+  formatMonthDayYear, mondayOfKey, zonedParts,
+} from '@/lib/format-datetime'
 
 interface Event {
   id: string
@@ -27,33 +32,24 @@ interface CalendarViewProps {
 const HOUR_ROW_PX = 30
 
 export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarViewProps) {
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
+  const timezone = useClubTimezone()
+  // The whole grid works in "YYYY-MM-DD" key space rather than Date objects.
+  // getDay()/getDate()/getHours() all resolve against the RUNTIME's zone, which
+  // is UTC on the server, so a 22:00Z session was placed in hour row 22 (not
+  // even rendered — the grid is 6am-8pm) on the server and hour row 18 in the
+  // browser. Keys plus zonedParts() give the same answer on both sides.
+  const todayKey = dayKey(new Date(), timezone)
+  const [weekStart, setWeekStart] = useState(() => mondayOfKey(todayKey))
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + i)
-    return d
-  })
+  const days = Array.from({ length: 7 }, (_, i) => addDaysToKey(weekStart, i))
 
   const hours = Array.from({ length: 15 }, (_, i) => i + 6) // 6am to 8pm
 
-  function prevWeek() {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() - 7)
-    setWeekStart(d)
-  }
+  function prevWeek() { setWeekStart(addDaysToKey(weekStart, -7)) }
+  function nextWeek() { setWeekStart(addDaysToKey(weekStart, 7)) }
+  function goToday() { setWeekStart(mondayOfKey(todayKey)) }
 
-  function nextWeek() {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + 7)
-    setWeekStart(d)
-  }
-
-  function goToday() {
-    setWeekStart(getMonday(new Date()))
-  }
-
-  const weekLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  const weekLabel = `${formatMonthDay(`${days[0]}T00:00:00Z`, 'UTC')} – ${formatMonthDayYear(`${days[6]}T00:00:00Z`, 'UTC')}`
 
   return (
     <div>
@@ -80,15 +76,15 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
           <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-white/5 pb-2 mb-2">
             <div />
             {days.map(day => {
-              const isToday = isSameDay(day, new Date())
+              const isToday = day === todayKey
               return (
                 <div
-                  key={day.toISOString()}
+                  key={day}
                   className={`text-center text-sm ${isToday ? 'text-green font-bold' : 'text-gray font-medium'}`}
                 >
-                  <div>{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                  <div>{formatDayKeyWeekday(day)}</div>
                   <div className={`text-lg ${isToday ? 'text-green' : 'text-white'}`}>
-                    {day.getDate()}
+                    {Number(day.slice(8, 10))}
                   </div>
                 </div>
               )
@@ -104,11 +100,11 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                 </div>
                 {days.map(day => (
                   <div
-                    key={`${day.toISOString()}-${hour}`}
+                    key={`${day}-${hour}`}
                     className="border-l border-white/5 relative cursor-pointer hover:bg-white/[0.02] transition-colors"
-                    onClick={() => onAddAtDate(day.toISOString().split('T')[0])}
+                    onClick={() => onAddAtDate(day)}
                   >
-                    {getEventsForSlot(events, day, hour).map(event => {
+                    {getEventsForSlot(events, day, hour, timezone).map(event => {
                       const colors = getEventColors(event.type, event.status)
                       return (
                         <button
@@ -116,7 +112,7 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                           onClick={e => { e.stopPropagation(); onEdit(event.id) }}
                           className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 text-xs font-medium truncate text-left ${colors} transition-colors`}
                           style={{
-                            top: `${(new Date(event.start_time).getMinutes() / 60) * 100}%`,
+                            top: `${(zonedParts(event.start_time, timezone).minute / 60) * 100}%`,
                             height: `${Math.max(22, getEventDurationPercent(event) * HOUR_ROW_PX)}px`,
                           }}
                           title={`${event.title} — ${event.teams?.[0]?.age_group}`}
@@ -136,23 +132,10 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
   )
 }
 
-function getMonday(date: Date): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  d.setDate(diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
-
-function getEventsForSlot(events: Event[], day: Date, hour: number): Event[] {
+function getEventsForSlot(events: Event[], day: string, hour: number, timeZone: string): Event[] {
   return events.filter(event => {
-    const start = new Date(event.start_time)
-    return isSameDay(start, day) && start.getHours() === hour
+    const p = zonedParts(event.start_time, timeZone)
+    return p.key === day && p.hour === hour
   })
 }
 

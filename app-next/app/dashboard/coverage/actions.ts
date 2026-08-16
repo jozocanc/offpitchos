@@ -8,6 +8,8 @@ import { getEffectiveRole } from '@/lib/admin-role'
 import { autoAssignCoverage, rankCoverageCandidates, type RankedCandidate } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
 
 // ---------- Helpers ----------
 
@@ -143,12 +145,11 @@ export async function createCoverageRequest(
 
   if (error) throw new Error(`Failed to create coverage request: ${error.message}`)
 
-  const dateStr = new Date(event.start_time).toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric'
-  })
-  const timeStr = new Date(event.start_time).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', hour12: true
-  })
+  // Explicit zone: this string goes into a push notification and an email, so
+  // a UTC-derived time is persisted and read by a parent, not just flashed.
+  const timezone = await getClubTimezone()
+  const dateStr = formatShortDate(event.start_time, timezone)
+  const timeStr = formatTime(event.start_time, timezone)
 
   // Try to auto-assign the best available coach
   const result = await autoAssignCoverage(

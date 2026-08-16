@@ -5,6 +5,7 @@ import { renderToStream, type DocumentProps } from '@react-pdf/renderer'
 import { DrillPDF } from '@/lib/tactics/pdf-document'
 import { renderThumbnailPng } from '@/lib/tactics/thumbnail'
 import React, { type ReactElement } from 'react'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'drill'
@@ -82,6 +83,7 @@ export async function GET(
     creatorName,
     teamName,
     thumbnail,
+    timeZone: await getClubTimezone(),
   }) as unknown as ReactElement<DocumentProps>
 
   const stream = await renderToStream(element)

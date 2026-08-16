@@ -6,6 +6,8 @@ import InviteCoachForm from './invite-form'
 export const metadata: Metadata = { title: 'Coaches' }
 import CopyLink from '../teams/[id]/copy-link'
 import RevokeButton from './revoke-button'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatMonthDayYear } from '@/lib/format-datetime'
 
 interface Coach {
   user_id: string
@@ -26,6 +28,7 @@ interface Invite {
 
 export default async function CoachesPage() {
   const supabase = await createClient()
+  const timezone = await getClubTimezone()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -205,7 +208,7 @@ export default async function CoachesPage() {
                     )}
                     {invite.expires_at && (
                       <p className="text-gray text-xs mt-0.5">
-                        Expires: {new Date(invite.expires_at).toLocaleDateString()}
+                        Expires: {formatMonthDayYear(invite.expires_at, timezone)}
                       </p>
                     )}
                   </div>

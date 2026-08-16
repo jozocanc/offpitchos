@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AddTeamForm from './add-team-form'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatShortDate } from '@/lib/format-datetime'
 
 export const metadata: Metadata = { title: 'Teams' }
 
@@ -24,6 +26,7 @@ interface Team {
 
 export default async function TeamsPage() {
   const supabase = await createClient()
+  const timezone = await getClubTimezone()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -244,7 +247,7 @@ function TeamCard({ team }: { team: Team }) {
             <p className="text-xs text-gray">
               Next: <span className="text-white">{team.next_event.title}</span>
               {' '}&middot;{' '}
-              {new Date(team.next_event.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+              {formatShortDate(team.next_event.start_time, timezone)}
             </p>
           ) : (
             <p className="text-xs text-gray/50">No upcoming events</p>

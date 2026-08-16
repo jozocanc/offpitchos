@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import AcceptButton from './accept-button'
 import Wordmark from '@/components/wordmark'
+import { formatMonthDayYear } from '@/lib/format-datetime'
+import { getClubTimezoneById } from '@/lib/club-timezone-server'
 
 interface InviteData {
   id: string
@@ -29,6 +31,8 @@ export default async function JoinPage({
     .single()
 
   const invite = inviteRaw as InviteData | null
+  // Public page: no session, so the club is resolved from the invite itself.
+  const timezone = await getClubTimezoneById(invite?.club_id)
 
   // Check for invalid / expired / revoked states
   const isExpired = invite?.expires_at
@@ -106,7 +110,7 @@ export default async function JoinPage({
               <div className="flex items-center justify-between">
                 <span className="text-gray text-sm">Expires</span>
                 <span className="text-gray text-sm">
-                  {new Date(invite.expires_at).toLocaleDateString()}
+                  {formatMonthDayYear(invite.expires_at, timezone)}
                 </span>
               </div>
             )}

@@ -11,6 +11,8 @@ import DemoSeedButton from './demo-seed-button'
 import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatTime } from '@/lib/format-datetime'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -74,6 +76,7 @@ async function DashboardBody({
   profileId: string | null
 }) {
   const supabase = await createClient()
+  const timezone = await getClubTimezone()
   const isDoc = userRole === 'doc'
 
   const todayStart = new Date()
@@ -220,7 +223,7 @@ async function DashboardBody({
             {todayEvents.map(event => {
               const start = new Date(event.start_time)
               const end = new Date(event.end_time)
-              const timeStr = `${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+              const timeStr = `${formatTime(start, timezone)} - ${formatTime(end, timezone)}`
               const team = event.teams as unknown as { name: string; age_group: string } | null
               const isCancelled = event.status === 'cancelled'
 
@@ -231,7 +234,7 @@ async function DashboardBody({
                   className={`bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-center gap-4 hover:border-green/20 transition-colors block ${isCancelled ? 'opacity-50' : ''}`}
                 >
                   <div className="text-center shrink-0 w-14">
-                    <p className="text-green font-bold text-sm">{start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+                    <p className="text-green font-bold text-sm">{formatTime(start, timezone)}</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

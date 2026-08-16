@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getClubTimezoneById } from '@/lib/club-timezone-server'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
 
 // AI Weekly Digest — once-per-week recap that pulls real data, hands the
 // numbers to Haiku for narrative polish, and stores both the prose and
@@ -63,6 +65,10 @@ function fmtDate(d: Date) {
 }
 
 export async function collectClubStats(clubId: string, anchor: Date = new Date()): Promise<DigestStats> {
+  // Resolved from clubId rather than a session: this also runs from the digest
+  // cron, where there is no signed-in user. Without it the "when" strings below
+  // would be built in the server's zone (UTC) and emailed to parents.
+  const timezone = await getClubTimezoneById(clubId)
   const service = createServiceClient()
 
   const weekStart = startOfWeek(new Date(anchor.getTime() - 7 * 24 * 60 * 60 * 1000))
@@ -209,8 +215,7 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
     perTeam,
     upcomingEvents: (upcoming ?? []).map(e => ({
       title: e.title,
-      when: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
-            ' at ' + new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      when: `${formatShortDate(e.start_time, timezone)} at ${formatTime(e.start_time, timezone)}`,
       teamName: (Array.isArray(e.teams) ? e.teams[0] : e.teams)?.name ?? '',
     })),
     feedbackHighlights,

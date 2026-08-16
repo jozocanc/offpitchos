@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useClubTimezone } from '@/components/club-timezone'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
 import RequestCard from './request-card'
 import AssignModal from './assign-modal'
 import CoverageActionsInline from '../schedule/coverage-actions-inline'
@@ -199,17 +201,14 @@ function CoachRequestCard({
   isSelfRequest?: boolean
   isResolved?: boolean
 }) {
+  const timezone = useClubTimezone()
   const event = Array.isArray(request.events) ? request.events[0] : request.events
   const unavailableCoach = Array.isArray(request.profiles) ? request.profiles[0] : request.profiles
   const coveringCoach = Array.isArray(request.covering) ? request.covering[0] : request.covering
   const team = event?.teams ? (Array.isArray(event.teams) ? event.teams[0] : event.teams) : null
 
-  const dateStr = event?.start_time
-    ? new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    : ''
-  const timeStr = event?.start_time
-    ? new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-    : ''
+  const dateStr = event?.start_time ? formatShortDate(event.start_time, timezone) : ''
+  const timeStr = event?.start_time ? formatTime(event.start_time, timezone) : ''
 
   const isEscalated = request.status === 'escalated'
   const border = isResolved

@@ -1,4 +1,6 @@
 'use client'
+import { formatMonthDayYear } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState } from 'react'
 import { updatePlayerSize, requestMissingSizes } from './actions'
@@ -52,6 +54,7 @@ export default function GearClient({
   lastRequestedParentCount: number
   respondedSinceRequest: number
 }) {
+  const timezone = useClubTimezone()
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [requesting, setRequesting] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -108,7 +111,7 @@ export default function GearClient({
 
   function handleCopyOrder() {
     const lines: string[] = []
-    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    const today = formatMonthDayYear(new Date(), timezone)
     lines.push(`OffPitchOS club gear order — ${today}`)
     lines.push('')
 

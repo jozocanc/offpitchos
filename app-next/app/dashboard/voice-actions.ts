@@ -7,6 +7,7 @@ import { cancelEvent, updateEvent, createEvent, restoreEvent } from './schedule/
 import { createCoverageRequest } from './coverage/actions'
 import { createAnnouncement } from './messages/actions'
 import { ROLES } from '@/lib/constants'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -467,8 +468,8 @@ export async function executeVoicePlan(
           updateFuture: false,
         })
         const newStart = new Date(input.newStartTime)
-        const timeStr = newStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-        const dateStr = newStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+        const timeStr = formatTime(newStart, timeZone)
+        const dateStr = formatShortDate(newStart, timeZone)
         return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
 

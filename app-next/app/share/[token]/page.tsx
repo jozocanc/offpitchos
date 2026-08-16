@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
+import { formatShortDate, formatTime as fmtTime } from '@/lib/format-datetime'
+import { getClubTimezoneById } from '@/lib/club-timezone-server'
 
 export const dynamic = 'force-dynamic'
 // Public pages should never get cached at the framework level — schedule
@@ -76,13 +78,14 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   }
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+// Both take the club's timezone explicitly: this page is public and
+// server-rendered, so relying on the runtime's zone would print UTC.
+function formatDate(iso: string, timeZone: string) {
+  return formatShortDate(iso, timeZone)
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+function formatTime(iso: string, timeZone: string) {
+  return fmtTime(iso, timeZone)
 }
 
 export default async function PublicTeamPage({ params }: { params: Promise<{ token: string }> }) {
@@ -91,6 +94,7 @@ export default async function PublicTeamPage({ params }: { params: Promise<{ tok
   if (!data) notFound()
 
   const { team, clubName, roster, schedule } = data
+  const timezone = await getClubTimezoneById(team.club_id)
   // Server component runs once per request — `nowMs` snapshots the
   // boundary between past and upcoming. Eslint's purity rule pushes
   // back on Date.now in render, but a server component IS the render,
@@ -147,7 +151,7 @@ export default async function PublicTeamPage({ params }: { params: Promise<{ tok
                       {e.title}
                     </p>
                     <p className="text-gray text-sm">
-                      {formatDate(e.start_time)} · {formatTime(e.start_time)} – {formatTime(e.end_time)}
+                      {formatDate(e.start_time, timezone)} · {formatTime(e.start_time, timezone)} – {formatTime(e.end_time, timezone)}
                     </p>
                     {(e.venue_name || address) && (
                       <p className="text-gray text-sm mt-1">
@@ -180,7 +184,7 @@ export default async function PublicTeamPage({ params }: { params: Promise<{ tok
                   key={e.event_id}
                   className="bg-dark-secondary border border-white/5 rounded-xl p-3 opacity-70"
                 >
-                  <p className="text-gray text-xs">{formatDate(e.start_time)}</p>
+                  <p className="text-gray text-xs">{formatDate(e.start_time, timezone)}</p>
                   <p className="text-sm font-medium">{e.title}</p>
                 </article>
               ))}

@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatTime, formatTimeRange } from '@/lib/format-datetime'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -39,6 +41,7 @@ export async function checkConflicts(input: {
   excludeEventId?: string
 }): Promise<Conflict[]> {
   const { profile, supabase } = await getUserProfile()
+  const timezone = await getClubTimezone()
   const conflicts: Conflict[] = []
 
   const { teamId, startTime, endTime, venueId, excludeEventId } = input
@@ -65,7 +68,7 @@ export async function checkConflicts(input: {
       type: 'team',
       message: 'This team already has an event at this time',
       eventTitle: e.title,
-      eventTime: start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      eventTime: formatTime(start, timezone),
     })
   }
 
@@ -95,7 +98,7 @@ export async function checkConflicts(input: {
         type: 'venue',
         message: `This venue is booked by ${teamName}`,
         eventTitle: e.title,
-        eventTime: start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        eventTime: formatTime(start, timezone),
       })
     }
   }
@@ -147,7 +150,7 @@ export async function checkConflicts(input: {
           type: 'coach',
           message: `${overlappingCoaches.join(', ')} also coaches ${teamName} at this time`,
           eventTitle: e.title,
-          eventTime: start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          eventTime: formatTime(start, timezone),
         })
       }
     }
@@ -163,6 +166,7 @@ export async function suggestAlternatives(input: {
   durationMinutes: number
 }): Promise<Suggestion[]> {
   const { profile, supabase } = await getUserProfile()
+  const timezone = await getClubTimezone()
 
   const { teamId, venueId, date, durationMinutes } = input
   const suggestions: Suggestion[] = []
@@ -209,8 +213,7 @@ export async function suggestAlternatives(input: {
         if (venueConflict) continue
       }
 
-      const label = slotStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) +
-        ' – ' + slotEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const label = formatTimeRange(slotStart, slotEnd, timezone)
 
       suggestions.push({
         startTime: slotStart.toISOString(),

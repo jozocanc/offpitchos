@@ -1,4 +1,6 @@
 'use client'
+import { formatMonthDay, formatMonthDayYear } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState } from 'react'
 import FeedbackForm from './feedback-form'
@@ -137,6 +139,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
   playerId: string
   isParent: boolean
 }) {
+  const timezone = useClubTimezone()
   const canAddFeedback = userRole === 'doc' || userRole === 'coach'
   const canEditSize = isParent || userRole === 'doc' || userRole === 'coach'
   const team = player.teams as any
@@ -218,7 +221,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
               {feedback.map(f => {
                 const coachName = (f.profiles as any)?.display_name ?? 'Coach'
                 const event = f.events as any
-                const date = new Date(f.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                const date = formatMonthDayYear(f.created_at, timezone)
 
                 return (
                   <div key={f.id} className="bg-dark-secondary border border-white/5 rounded-xl p-4">
@@ -236,7 +239,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
                     <div className="flex items-center gap-2 text-xs text-gray">
                       <span>— {coachName}</span>
                       {event && (
-                        <span>· {event.title} ({new Date(event.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
+                        <span>· {event.title} ({formatMonthDay(event.start_time, timezone)})</span>
                       )}
                     </div>
                   </div>

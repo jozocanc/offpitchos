@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatMonthDay, formatShortDate, formatTime } from '@/lib/format-datetime'
 
 // A lightweight, coach-scoped version of the DOC attention panel. We keep
 // this separate from the DOC list because the coach's priorities are a
@@ -44,6 +46,7 @@ async function getCoachContext() {
 }
 
 export async function getCoachAttention(): Promise<CoachAttentionResult> {
+  const timezone = await getClubTimezone()
   const { user, profile, supabase } = await getCoachContext()
 
   const signals: CoachSignal[] = []
@@ -77,12 +80,8 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
       const team = ev?.teams
         ? Array.isArray(ev.teams) ? ev.teams[0] : ev.teams
         : null
-      const dateStr = ev?.start_time
-        ? new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-        : ''
-      const timeStr = ev?.start_time
-        ? new Date(ev.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-        : ''
+      const dateStr = ev?.start_time ? formatShortDate(ev.start_time, timezone) : ''
+      const timeStr = ev?.start_time ? formatTime(ev.start_time, timezone) : ''
 
       signals.push({
         id: `coverage:${req.id}`,
@@ -131,7 +130,7 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
       for (const ev of recentEvents) {
         if (eventsWithAttendance.has(ev.id)) continue
         const team = Array.isArray(ev.teams) ? ev.teams[0] : ev.teams
-        const dateStr = new Date(ev.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+        const dateStr = formatShortDate(ev.start_time, timezone)
         signals.push({
           id: `attendance:${ev.id}`,
           type: 'attendance_unmarked',
@@ -173,7 +172,7 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
     for (const ev of finishedEvents ?? []) {
       if (eventsWithMyFeedback.has(ev.id)) continue
       const team = Array.isArray(ev.teams) ? ev.teams[0] : ev.teams
-      const dateStr = new Date(ev.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const dateStr = formatMonthDay(ev.start_time, timezone)
       signals.push({
         id: `feedback:${ev.id}`,
         type: 'feedback_owed',

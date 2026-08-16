@@ -1,4 +1,6 @@
 'use client'
+import { useClubTimezone } from '@/components/club-timezone'
+import { formatMonthDayYear } from '@/lib/format-datetime'
 
 import { useState, useRef, useEffect } from 'react'
 import { askQuestion } from './actions'
@@ -10,7 +12,7 @@ interface ChatMessage {
   created_at: string
 }
 
-function formatTimestamp(iso: string): string {
+function formatTimestamp(iso: string, timeZone: string): string {
   const date = new Date(iso)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -21,10 +23,11 @@ function formatTimestamp(iso: string): string {
   if (diffMin < 60) return `${diffMin}m ago`
   if (diffHr < 24) return `${diffHr}h ago`
   if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString()
+  return formatMonthDayYear(date, timeZone)
 }
 
 export default function AskClient({ chatHistory, userRole }: { chatHistory: ChatMessage[]; userRole: string }) {
+  const timezone = useClubTimezone()
   const [messages, setMessages] = useState<ChatMessage[]>(chatHistory)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -105,7 +108,7 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
               <div className="bg-green/10 border border-green/20 rounded-2xl rounded-br-md px-4 py-2.5 max-w-[80%]">
                 <p className="text-white text-sm">{msg.question}</p>
               </div>
-              <span className="text-[10px] text-gray mt-1 mr-1">{formatTimestamp(msg.created_at)}</span>
+              <span className="text-[10px] text-gray mt-1 mr-1">{formatTimestamp(msg.created_at, timezone)}</span>
             </div>
 
             {/* AI answer */}

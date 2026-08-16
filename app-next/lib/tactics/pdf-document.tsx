@@ -13,6 +13,7 @@ import {
 import type { DrillRow } from './object-schema'
 import { DRILL_CATEGORY_LABELS } from './drill-categories'
 import type { DrillCategory } from './drill-categories'
+import { DEFAULT_TIMEZONE, formatTime } from '@/lib/format-datetime'
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 
@@ -331,9 +332,17 @@ const S = StyleSheet.create({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', timeZone,
+  })
+}
+
+// A printed session plan is carried onto the pitch, so a UTC-derived time here
+// is worse than a screen glitch — nothing corrects it later.
+function formatGeneratedAt(timeZone: string): string {
+  return new Date().toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', timeZone,
   })
 }
 
@@ -388,13 +397,13 @@ export interface DrillPDFProps {
   creatorName: string
   teamName: string
   thumbnail: Buffer
+  /** IANA zone. Defaults to DEFAULT_TIMEZONE when the caller omits it. */
+  timeZone?: string
 }
 
-export function DrillPDF({ drill, creatorName, teamName, thumbnail }: DrillPDFProps) {
-  const generatedAt = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
-  const drillDate = formatDate(drill.updated_at)
+export function DrillPDF({ drill, creatorName, teamName, thumbnail, timeZone = DEFAULT_TIMEZONE }: DrillPDFProps) {
+  const generatedAt = formatGeneratedAt(timeZone)
+  const drillDate = formatDate(drill.updated_at, timeZone)
   const descTruncated = drill.description ? truncateWords(drill.description, 120) : ''
 
   return (
@@ -471,19 +480,15 @@ export interface SessionEvent {
 export interface SessionPlanPDFProps {
   event: SessionEvent
   drills: SessionDrill[]
+  /** IANA zone. Defaults to DEFAULT_TIMEZONE when the caller omits it. */
+  timeZone?: string
 }
 
-export function SessionPlanPDF({ event, drills }: SessionPlanPDFProps) {
-  const generatedAt = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
+export function SessionPlanPDF({ event, drills, timeZone = DEFAULT_TIMEZONE }: SessionPlanPDFProps) {
+  const generatedAt = formatGeneratedAt(timeZone)
 
-  const sessionDate = new Date(event.start_time).toLocaleDateString('en-US', {
-    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-  })
-  const sessionTime = new Date(event.start_time).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit',
-  })
+  const sessionDate = formatDate(event.start_time, timeZone)
+  const sessionTime = formatTime(event.start_time, timeZone)
 
   const totalMin = drills.reduce((sum, d) => sum + d.durationMinutes, 0)
   const totalPages = drills.length > 0 ? drills.length + 1 : 1
@@ -610,12 +615,12 @@ export interface BatchDrill {
 
 export interface BatchDrillPDFProps {
   drills: BatchDrill[]
+  /** IANA zone. Defaults to DEFAULT_TIMEZONE when the caller omits it. */
+  timeZone?: string
 }
 
-export function BatchDrillPDF({ drills }: BatchDrillPDFProps) {
-  const generatedAt = new Date().toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
+export function BatchDrillPDF({ drills, timeZone = DEFAULT_TIMEZONE }: BatchDrillPDFProps) {
+  const generatedAt = formatGeneratedAt(timeZone)
 
   const totalPages = drills.length + 1
 

@@ -1,4 +1,6 @@
 'use client'
+import { dayKey, formatMonthDay, formatTime } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useEffect, useState, useTransition, useRef } from 'react'
 import {
@@ -14,6 +16,7 @@ import {
 } from './dm-actions'
 
 export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: string }) {
+  const timezone = useClubTimezone()
   const [threads, setThreads] = useState<DMThread[] | null>(null)
   const [openUserId, setOpenUserId] = useState<string | null>(initialOpenUserId ?? null)
   const [openUserName, setOpenUserName] = useState<string>('')
@@ -92,7 +95,7 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-white truncate">{t.otherName}</span>
-                  <span className="text-xs text-gray shrink-0">{formatTimeShort(t.lastMessageAt)}</span>
+                  <span className="text-xs text-gray shrink-0">{formatTimeShort(t.lastMessageAt, timezone)}</span>
                 </div>
                 <p className={`text-sm truncate mt-0.5 ${t.unreadCount > 0 && !t.lastFromMe ? 'text-white font-semibold' : 'text-gray'}`}>
                   {t.lastFromMe && <span className="text-gray">You: </span>}
@@ -213,7 +216,7 @@ function ThreadView({
               >
                 <p className="whitespace-pre-wrap break-words">{m.content}</p>
                 <div className={`flex items-center gap-2 mt-1 text-[10px] ${m.isMine ? 'text-dark/60' : 'text-gray'}`}>
-                  <span>{formatTimeShort(m.createdAt)}</span>
+                  <span>{formatTimeShort(m.createdAt, timezone)}</span>
                   {m.isMine && (
                     <button
                       onClick={() => handleUnsend(m.id)}
@@ -330,12 +333,14 @@ function NewMessagePicker({
   )
 }
 
-function formatTimeShort(iso: string): string {
+function formatTimeShort(iso: string, timeZone: string): string {
   const d = new Date(iso)
-  const now = new Date()
-  const sameDay = d.toDateString() === now.toDateString()
-  if (sameDay) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' })
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  // "Same day" is judged in the club's zone too — toDateString() would compare
+  // against the runtime's day boundary, which is a different instant on the
+  // server than in the browser.
+  const sameDay = dayKey(d, timeZone) === dayKey(new Date(), timeZone)
+  if (sameDay) return formatTime(d, timeZone)
+  const diffDays = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short', timeZone })
+  return formatMonthDay(d, timeZone)
 }

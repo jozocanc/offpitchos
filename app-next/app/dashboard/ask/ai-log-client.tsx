@@ -1,4 +1,6 @@
 'use client'
+import { formatDateTime } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useEffect } from 'react'
 import { getAiLog } from './actions'
@@ -12,6 +14,7 @@ interface LogEntry {
 }
 
 export default function AiLogClient() {
+  const timezone = useClubTimezone()
   const [entries, setEntries] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showLog, setShowLog] = useState(false)
@@ -53,7 +56,7 @@ export default function AiLogClient() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-green">{entry.profiles?.display_name ?? 'Unknown'}</span>
                     <span className="text-xs text-gray">
-                      {new Date(entry.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {formatDateTime(entry.created_at, timezone)}
                     </span>
                   </div>
                   <p className="text-sm text-white/80 mb-1">Q: {entry.question}</p>

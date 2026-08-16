@@ -6,6 +6,7 @@ import { SessionPlanPDF } from '@/lib/tactics/pdf-document'
 import type { SessionDrill, SessionEvent } from '@/lib/tactics/pdf-document'
 import { renderThumbnailPng } from '@/lib/tactics/thumbnail'
 import React, { type ReactElement } from 'react'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'session'
@@ -127,7 +128,7 @@ export async function GET(
     coachName,
   }
 
-  const element = React.createElement(SessionPlanPDF, { event, drills }) as unknown as ReactElement<DocumentProps>
+  const element = React.createElement(SessionPlanPDF, { event, drills, timeZone: await getClubTimezone() }) as unknown as ReactElement<DocumentProps>
   const stream = await renderToStream(element)
 
   const filename = `session-plan-${slugify(eventRow.title)}.pdf`

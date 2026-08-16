@@ -1,4 +1,6 @@
 'use client'
+import { useClubTimezone } from '@/components/club-timezone'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
 
 interface CoverageRequestCardProps {
   request: {
@@ -14,6 +16,7 @@ interface CoverageRequestCardProps {
 }
 
 export default function RequestCard({ request, responses, onAssign }: CoverageRequestCardProps) {
+  const timezone = useClubTimezone()
   const event = Array.isArray(request.events) ? request.events[0] : request.events
   const unavailableCoach = Array.isArray(request.profiles) ? request.profiles[0] : request.profiles
   const coveringCoach = Array.isArray(request.covering) ? request.covering[0] : request.covering
@@ -33,12 +36,8 @@ export default function RequestCard({ request, responses, onAssign }: CoverageRe
 
   const borderColor = isEscalated ? 'border-red/30' : isPending ? 'border-yellow-500/30' : 'border-green/30'
 
-  const dateStr = event?.start_time
-    ? new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    : ''
-  const timeStr = event?.start_time
-    ? new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-    : ''
+  const dateStr = event?.start_time ? formatShortDate(event.start_time, timezone) : ''
+  const timeStr = event?.start_time ? formatTime(event.start_time, timezone) : ''
 
   return (
     <div className={`bg-dark-secondary rounded-xl p-4 border ${borderColor} transition-colors`}>

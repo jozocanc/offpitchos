@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { generateAndStoreDigest } from '@/lib/ai-digest'
 import { sendEmailToProfiles } from '@/lib/email'
+import { formatDayKeyShort } from '@/lib/format-datetime'
 
 async function getDocProfile() {
   const supabase = await createClient()
@@ -60,7 +61,9 @@ export async function emailDigest(digestId: string) {
   // stay flat (per CLAUDE.md).
   const html = renderDigestHtml(digest.summary_md)
 
-  const subject = `Weekly Recap · week of ${new Date(digest.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  // week_start is a calendar date, so format it UTC-anchored rather than
+  // reparsing it against whatever zone the server happens to run in.
+  const subject = `Weekly Recap · week of ${formatDayKeyShort(digest.week_start)}`
 
   // Sending via the existing bulk helper — but with custom HTML, so we
   // call the per-recipient sender directly via service. Keep this

@@ -1,4 +1,6 @@
 'use client'
+import { formatShortDate, formatTime } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -48,6 +50,7 @@ export default function GameDayClient({
   initialAttendance,
   initialFeedback,
 }: Props) {
+  const timezone = useClubTimezone()
   const { toast } = useToast()
   const [tab, setTab] = useState<Tab>('attendance')
   const [attendance, setAttendance] = useState<Record<string, string>>(initialAttendance)
@@ -98,12 +101,12 @@ export default function GameDayClient({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray mt-1">
             <span>{teamName} · {ageGroup}</span>
             <span>·</span>
-            <span>{start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <span>{formatShortDate(start, timezone)}</span>
             <span>·</span>
             <span>
-              {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              {formatTime(start, timezone)}
               {' – '}
-              {end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              {formatTime(end, timezone)}
             </span>
             {venueName && (
               <>

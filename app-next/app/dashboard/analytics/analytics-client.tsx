@@ -1,4 +1,5 @@
 'use client'
+import { formatDayKeyShort } from '@/lib/format-datetime'
 
 import { useState, useTransition } from 'react'
 import { getAnalyticsData } from './actions'
@@ -12,8 +13,8 @@ function formatCurrency(cents: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  // Calendar date, not an instant — UTC-anchored so server and client agree.
+  return formatDayKeyShort(dateStr)
 }
 
 interface AnalyticsData {

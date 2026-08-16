@@ -1,4 +1,6 @@
 'use client'
+import { formatMonthDay } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useTransition } from 'react'
 import { generateDigestNow, emailDigest } from './actions'
@@ -86,12 +88,16 @@ function renderMarkdown(md: string): React.ReactNode {
 }
 
 function fmtWeek(weekStart: string) {
-  const start = new Date(weekStart + 'T00:00:00')
+  // Week bounds are calendar dates. Anchor at UTC so adding 6 days cannot land
+  // on the wrong side of a DST change and so both ends format identically on
+  // the server and in the browser.
+  const start = new Date(weekStart + 'T00:00:00Z')
   const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000)
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  return `${formatDayKeyShort(weekStart)} – ${formatDayKeyShort(end.toISOString().slice(0, 10))}`
 }
 
 export default function DigestClient({ digests, isDoc }: { digests: DigestRow[]; isDoc: boolean }) {
+  const timezone = useClubTimezone()
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
   const [emailing, setEmailing] = useState<string | null>(null)
@@ -165,7 +171,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
               {latest.emailed_at && (
                 <p className="text-xs text-gray mt-1">
                   Emailed to {latest.email_recipients} {latest.email_recipients === 1 ? 'person' : 'people'} on{' '}
-                  {new Date(latest.emailed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {formatMonthDay(latest.emailed_at, timezone)}
                 </p>
               )}
             </div>

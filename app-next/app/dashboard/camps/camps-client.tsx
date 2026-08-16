@@ -1,4 +1,6 @@
 'use client'
+import { formatShortDate, formatTimeRange } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState } from 'react'
 import CampDetailModal from './camp-detail-modal'
@@ -183,11 +185,11 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
 function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
   camp: Camp; isDoc: boolean; isParent: boolean; now: Date; onManage: () => void; onRegister: () => void
 }) {
+  const timezone = useClubTimezone()
   const start = new Date(camp.startTime)
   const end = new Date(camp.endTime)
-  const dateStr = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  const timeStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) +
-    ' – ' + end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const dateStr = formatShortDate(start, timezone)
+  const timeStr = formatTimeRange(start, end, timezone)
   const fillPct = camp.capacity ? Math.round((camp.registeredCount / camp.capacity) * 100) : null
 
   // Urgency signal: time until start. Upcoming camps show "Starts in Nd"; we

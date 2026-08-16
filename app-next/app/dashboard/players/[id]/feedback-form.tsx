@@ -1,4 +1,6 @@
 'use client'
+import { formatMonthDay } from '@/lib/format-datetime'
+import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState, useRef } from 'react'
 import { addFeedback } from './actions'
@@ -19,6 +21,7 @@ interface RecentEvent {
 }
 
 export default function FeedbackForm({ playerId, recentEvents }: { playerId: string; recentEvents: RecentEvent[] }) {
+  const timezone = useClubTimezone()
   const [category, setCategory] = useState('general')
   const [rating, setRating] = useState(3)
   const [notes, setNotes] = useState('')
@@ -133,7 +136,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
             <option value="">No event</option>
             {recentEvents.map(e => (
               <option key={e.id} value={e.id}>
-                {e.title} — {new Date(e.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {e.title} — {formatMonthDay(e.start_time, timezone)}
               </option>
             ))}
           </select>
