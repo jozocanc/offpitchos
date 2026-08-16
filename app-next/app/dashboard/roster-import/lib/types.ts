@@ -13,11 +13,14 @@ export type OffPitchField =
   | 'position'
   | 'date_of_birth'
 
+// parent1_email is NOT required. A college roster has no parents, and youth
+// clubs routinely have players whose parent email the DOC does not have yet.
+// A row without one imports as an unlinked player, which the roster page
+// already displays and the DOC can link later.
 export const REQUIRED_FIELDS: OffPitchField[] = [
   'player_first_name',
   'player_last_name',
   'team_name',
-  'parent1_email',
 ]
 
 // CSV header → OffPitchOS field. Empty string = unmapped.

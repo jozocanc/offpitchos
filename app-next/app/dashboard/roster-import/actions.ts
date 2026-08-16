@@ -127,13 +127,16 @@ export async function previewImport(
     }
     const parent1Email = normalizeEmail(parent1EmailRaw)
     if (!parent1Email) {
-      warnings.push({
-        rowNumber: row.rowNumber,
-        field: 'parent1_email',
-        message: parent1EmailRaw ? 'Invalid parent email — row skipped' : 'Missing parent email — row skipped',
-      })
-      skippedRows++
-      continue
+      // Imported as an unlinked player rather than skipped. Only flag it when
+      // an email was supplied but could not be parsed — a blank column is the
+      // normal case for a college roster and is not worth a warning per row.
+      if (parent1EmailRaw) {
+        warnings.push({
+          rowNumber: row.rowNumber,
+          field: 'parent1_email',
+          message: 'Invalid parent email — player imported without a parent link',
+        })
+      }
     }
 
     // Player dedup within CSV
@@ -186,8 +189,10 @@ export async function previewImport(
       }
     }
 
-    parentEmails.add(parent1Email)
-    playersByEmail.set(parent1Email, (playersByEmail.get(parent1Email) ?? 0) + 1)
+    if (parent1Email) {
+      parentEmails.add(parent1Email)
+      playersByEmail.set(parent1Email, (playersByEmail.get(parent1Email) ?? 0) + 1)
+    }
     const parent2Email = normalizeEmail(parent2EmailRaw)
     if (parent2Email && parent2Email !== parent1Email) {
       parentEmails.add(parent2Email)
@@ -298,13 +303,17 @@ export async function commitImport(
     const lastName = trimName(get(row, 'player_last_name'))
     const teamName = trimName(get(row, 'team_name'))
     const parent1Email = normalizeEmail(get(row, 'parent1_email'))
-    if (!firstName || !lastName || !teamName || !parent1Email) continue
+    if (!firstName || !lastName || !teamName) continue
     const teamId = teamIdByKey.get(teamKey(teamName))
     if (!teamId) continue
 
     const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
     if (seenPlayerKeys.has(playerKey)) continue
     seenPlayerKeys.add(playerKey)
+
+    // No parent email on this row: the player is still imported below, just
+    // without a parent account to create or link.
+    if (!parent1Email) continue
 
     let p1 = parentByEmail.get(parent1Email)
     if (!p1) {
@@ -402,7 +411,7 @@ export async function commitImport(
     const lastName = trimName(get(row, 'player_last_name'))
     const teamName = trimName(get(row, 'team_name'))
     const parent1Email = normalizeEmail(get(row, 'parent1_email'))
-    if (!firstName || !lastName || !teamName || !parent1Email) continue
+    if (!firstName || !lastName || !teamName) continue
 
     const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
     if (seenPlayerKeys2.has(playerKey)) continue
@@ -410,15 +419,16 @@ export async function commitImport(
 
     const teamId = teamIdByKey.get(teamKey(teamName))
     if (!teamId) continue
-    const parentId = parentUserIdByEmail.get(parent1Email)
-    if (!parentId) continue
+    // null for a roster row with no parent email — players.parent_id is
+    // nullable and the roster page already renders these as "unlinked".
+    const parentId = parent1Email ? (parentUserIdByEmail.get(parent1Email) ?? null) : null
 
     const dob = normalizeDate(get(row, 'date_of_birth'))
     const jerseyRaw = get(row, 'jersey_number').replace(/\D/g, '')
     playerInserts.push({
       club_id: clubId,
       team_id: teamId,
-      parent_id: parentId,
+      parent_id: parentId ?? null,
       first_name: firstName,
       last_name: lastName,
       jersey_number: jerseyRaw ? parseInt(jerseyRaw, 10) : null,
