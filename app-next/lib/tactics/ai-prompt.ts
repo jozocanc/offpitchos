@@ -69,7 +69,7 @@ Respond with ONLY a valid JSON object matching the DrillDoc type.
 - No comments inside the JSON.
 - Validate mentally: every object must have "id" and "type"; coordinates must be within field bounds; "color" fields on zones must be #rrggbb hex.
 - At most ONE labelled zone per area of the pitch. Do not stack two labelled zones over the same region — their labels render on top of each other and become unreadable. If a zone needs two ideas expressed, put them in one label or leave the second zone unlabelled.
-- Number the arrows with `animate_order` (1, 2, 3 …) in the sequence the movement actually happens, so the coach can press Play and watch the pattern build. Arrows that happen at the same moment share a number. Leave `animate_order` off only for arrows that are standing context rather than part of the sequence.
+- Number the arrows with "animate_order" (1, 2, 3 …) in the sequence the movement actually happens, so the coach can press Play and watch the pattern build. Arrows that happen at the same moment share a number. Leave "animate_order" off only for arrows that are standing context rather than part of the sequence.
 - If drill type or player count is ambiguous, choose a sensible default and proceed.`
 
 // ─── Few-shot examples ────────────────────────────────────────────────────────
