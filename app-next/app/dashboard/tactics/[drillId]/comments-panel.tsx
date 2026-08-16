@@ -56,7 +56,10 @@ export default function CommentsPanel({
 
   const load = useCallback(() => {
     listDrillComments(drillId)
-      .then(c => { setComments(c); setLoading(false) })
+      .then(res => {
+        if (!res.ok) { setError(res.error); setLoading(false); return }
+        setComments(res.data); setLoading(false)
+      })
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [drillId])
 
@@ -68,7 +71,8 @@ export default function CommentsPanel({
     setPosting(true)
     setError(null)
     try {
-      await postDrillComment(drillId, trimmed)
+      const r = await postDrillComment(drillId, trimmed)
+      if (!r.ok) { setError(r.error); return }
       setBody('')
       load()
       // Scroll to bottom after small delay
@@ -85,7 +89,8 @@ export default function CommentsPanel({
 
   const handleDelete = useCallback(async (commentId: string) => {
     try {
-      await deleteDrillComment(commentId)
+      const r = await deleteDrillComment(commentId)
+      if (!r.ok) { setError(r.error); return }
       setComments(prev => prev.filter(c => c.id !== commentId))
     } catch (e) {
       console.error('Delete failed:', e)

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
 import { DRILL_CATEGORIES, type DrillCategory } from '@/lib/tactics/drill-categories'
 import {
+import { type ActionResult, toActionError } from '@/lib/action-result'
   SYSTEM_PROMPT_CACHED_MESSAGES,
   PDF_IMPORT_SYSTEM_CACHED_MESSAGES,
 } from '@/lib/tactics/ai-prompt'
@@ -181,6 +182,16 @@ async function callClaude(
 // ─── Server action ────────────────────────────────────────────────────────────
 
 export async function generateDrillFromDescription(
+  ...args: Parameters<typeof _generateDrillFromDescription>
+): Promise<ActionResult<Awaited<ReturnType<typeof _generateDrillFromDescription>>>> {
+  try {
+    return { ok: true, data: await _generateDrillFromDescription(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _generateDrillFromDescription(
   input: GenerateDrillInput,
 ): Promise<GenerateDrillResult> {
   // ── Auth check ──────────────────────────────────────────────────────────────
@@ -392,6 +403,16 @@ async function callClaudePdf(
 }
 
 export async function generateDrillFromPdf(
+  ...args: Parameters<typeof _generateDrillFromPdf>
+): Promise<ActionResult<Awaited<ReturnType<typeof _generateDrillFromPdf>>>> {
+  try {
+    return { ok: true, data: await _generateDrillFromPdf(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _generateDrillFromPdf(
   input: GenerateDrillFromPdfInput,
 ): Promise<GenerateDrillResult> {
   // ── Auth check ──────────────────────────────────────────────────────────────

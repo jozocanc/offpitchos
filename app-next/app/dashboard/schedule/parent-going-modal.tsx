@@ -33,9 +33,13 @@ export default function ParentGoingModal({
 
   useEffect(() => {
     async function load() {
-      const data = await getMyKidsOnTeamForRsvp(teamId)
+      const kidsRes = await getMyKidsOnTeamForRsvp(teamId)
+      if (!kidsRes.ok) return
+      const data = kidsRes.data
       setKids(data)
-      const existing = await getMyExistingRsvps(eventId, data.map(k => k.id))
+      const existingRes = await getMyExistingRsvps(eventId, data.map(k => k.id))
+      if (!existingRes.ok) return
+      const existing = existingRes.data
       // Preselect kids already marked 'going' so a save doesn't blow them
       // away. New kids default to selected when there's only one — same
       // shortcut as the can't-attend modal.
@@ -66,12 +70,14 @@ export default function ParentGoingModal({
     }
     startTransition(async () => {
       try {
-        const result = await parentRsvp({
+        const rsvpRes = await parentRsvp({
           eventId,
           teamId,
           playerIds: Array.from(selected),
           response,
         })
+        if (!rsvpRes.ok) { toast(rsvpRes.error, 'error'); return }
+        const result = rsvpRes.data
         const verb = response === 'going' ? 'confirmed' : 'marked not going'
         const parts = [`${result.saved} ${verb}`]
         if (result.notifiedCoaches > 0) {

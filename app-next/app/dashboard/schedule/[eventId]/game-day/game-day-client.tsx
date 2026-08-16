@@ -68,7 +68,8 @@ export default function GameDayClient({
     setAttendance(prev => ({ ...prev, [playerId]: status }))
     startTransition(async () => {
       try {
-        await markAttendance(eventId, playerId, status)
+        const r = await markAttendance(eventId, playerId, status)
+        if (!r.ok) { toast(r.error, 'error'); return }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to save'
         toast(msg, 'error')

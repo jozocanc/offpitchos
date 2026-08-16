@@ -406,7 +406,7 @@ export default function EditorClient({
       category: debouncedPayload.category,
       visibility: debouncedPayload.visibility,
     })
-      .then(() => setSaveStatus('saved'))
+      .then(r => setSaveStatus(r.ok ? 'saved' : 'error'))
       .catch(() => setSaveStatus('error'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedPayload])
@@ -421,9 +421,9 @@ export default function EditorClient({
       isThumbnailMounted.current = true
       return
     }
-    regenerateThumbnail(drill.id).catch((err) => {
-      console.error('[thumbnail] regen failed:', err)
-    })
+    regenerateThumbnail(drill.id)
+      .then(r => { if (!r.ok) console.error('[thumbnail] regen failed:', r.error) })
+      .catch((err) => { console.error('[thumbnail] regen failed:', err) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedThumbPayload])
 

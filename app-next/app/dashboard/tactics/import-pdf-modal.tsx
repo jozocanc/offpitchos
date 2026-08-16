@@ -62,12 +62,13 @@ export default function ImportPdfModal({
       const pages = await extractPdfPages(file)
 
       setPhase('analyzing')
-      const { drillId } = await generateDrillFromPdf({
+      const res = await generateDrillFromPdf({
         pages: pages.map(p => ({ pngDataUrl: p.pngDataUrl, text: p.text })),
         teamId: teamId || null,
       })
+      if (!res.ok) { setPhase('idle'); setError(res.error); return }
       onClose()
-      router.push(`/dashboard/tactics/${drillId}`)
+      router.push(`/dashboard/tactics/${res.data.drillId}`)
     } catch (err) {
       setPhase('idle')
       setError(

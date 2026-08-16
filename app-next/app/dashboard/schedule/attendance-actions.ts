@@ -5,8 +5,19 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
-export async function getAttendanceData(eventId: string, teamId: string) {
+export async function getAttendanceData(
+  ...args: Parameters<typeof _getAttendanceData>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getAttendanceData>>>> {
+  try {
+    return { ok: true, data: await _getAttendanceData(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getAttendanceData(eventId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -34,6 +45,16 @@ export async function getAttendanceData(eventId: string, teamId: string) {
 }
 
 export async function markAttendance(
+  ...args: Parameters<typeof _markAttendance>
+): Promise<ActionResult<Awaited<ReturnType<typeof _markAttendance>>>> {
+  try {
+    return { ok: true, data: await _markAttendance(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _markAttendance(
   eventId: string,
   playerId: string,
   status: 'present' | 'absent' | 'late' | 'excused'
@@ -60,6 +81,16 @@ export async function markAttendance(
 }
 
 export async function markBulkAttendance(
+  ...args: Parameters<typeof _markBulkAttendance>
+): Promise<ActionResult<Awaited<ReturnType<typeof _markBulkAttendance>>>> {
+  try {
+    return { ok: true, data: await _markBulkAttendance(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _markBulkAttendance(
   eventId: string,
   playerIds: string[],
   status: 'present' | 'absent'
@@ -86,7 +117,17 @@ export async function markBulkAttendance(
 
 // ---- Parent-facing "my kid can't attend" flow ----
 
-export async function getMyKidsOnTeam(teamId: string) {
+export async function getMyKidsOnTeam(
+  ...args: Parameters<typeof _getMyKidsOnTeam>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getMyKidsOnTeam>>>> {
+  try {
+    return { ok: true, data: await _getMyKidsOnTeam(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getMyKidsOnTeam(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -104,7 +145,17 @@ export async function getMyKidsOnTeam(teamId: string) {
 // Marks selected kids as "excused" and notifies the team's coaches with
 // an optional reason. Does NOT create a coverage request (that's the
 // coach flow) — just a heads-up so the coach knows before practice.
-export async function parentExcuseChildren(input: {
+export async function parentExcuseChildren(
+  ...args: Parameters<typeof _parentExcuseChildren>
+): Promise<ActionResult<Awaited<ReturnType<typeof _parentExcuseChildren>>>> {
+  try {
+    return { ok: true, data: await _parentExcuseChildren(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _parentExcuseChildren(input: {
   eventId: string
   teamId: string
   playerIds: string[]

@@ -10,7 +10,7 @@ import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getRsvpTalliesForEvents } from './rsvp-actions'
-import { type ActionResult, toActionError } from '@/lib/action-result'
+import { type ActionResult, toActionError, unwrap } from '@/lib/action-result'
 
 // ---------- Types ----------
 
@@ -739,7 +739,7 @@ export async function getScheduleData() {
   // RSVP forecast counts per upcoming event so the agenda can paint
   // "8 going · 2 not coming · 5 no response" without extra round-trips.
   const upcomingEventIds = (events ?? []).map(e => e.id)
-  const rsvpTallies = await getRsvpTalliesForEvents(upcomingEventIds)
+  const rsvpTallies = unwrap(await getRsvpTalliesForEvents(upcomingEventIds))
 
   return {
     events: events ?? [],

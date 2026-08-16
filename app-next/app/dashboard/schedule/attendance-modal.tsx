@@ -48,16 +48,20 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
   const { toast } = useToast()
 
   useEffect(() => {
-    getAttendanceData(eventId, teamId).then(data => {
-      setPlayers(data.players)
-      setAttendance(data.attendance)
+    getAttendanceData(eventId, teamId).then(res => {
+      if (!res.ok) { toast(res.error, 'error'); setLoading(false); return }
+      setPlayers(res.data.players)
+      setAttendance(res.data.attendance)
       setLoading(false)
     })
   }, [eventId, teamId])
 
   function handleMark(playerId: string, status: Status) {
     setAttendance(prev => ({ ...prev, [playerId]: status }))
-    startTransition(() => markAttendance(eventId, playerId, status))
+    startTransition(async () => {
+      const r = await markAttendance(eventId, playerId, status)
+      if (!r.ok) toast(r.error, 'error')
+    })
   }
 
   function handleMarkAll(status: 'present' | 'absent') {
@@ -65,7 +69,10 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
     const newAttendance: Record<string, string> = {}
     ids.forEach(id => { newAttendance[id] = status })
     setAttendance(prev => ({ ...prev, ...newAttendance }))
-    startTransition(() => markBulkAttendance(eventId, ids, status))
+    startTransition(async () => {
+      const r = await markBulkAttendance(eventId, ids, status)
+      if (!r.ok) toast(r.error, 'error')
+    })
   }
 
   function openNote(playerId: string) {

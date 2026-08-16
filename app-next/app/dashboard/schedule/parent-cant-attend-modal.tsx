@@ -36,7 +36,9 @@ export default function ParentCantAttendModal({
 
   useEffect(() => {
     getMyKidsOnTeam(teamId)
-      .then(data => {
+      .then(res => {
+        if (!res.ok) return
+        const data = res.data
         setKids(data)
         // Auto-select all if the parent only has one kid on this team.
         if (data.length === 1) setSelected(new Set([data[0].id]))
@@ -60,12 +62,14 @@ export default function ParentCantAttendModal({
     }
     startTransition(async () => {
       try {
-        const result = await parentExcuseChildren({
+        const excuseRes = await parentExcuseChildren({
           eventId,
           teamId,
           playerIds: Array.from(selected),
           reason,
         })
+        if (!excuseRes.ok) { toast(excuseRes.error, 'error'); return }
+        const result = excuseRes.data
         const parts = [`${result.excused} marked excused`]
         if (result.notifiedCoaches > 0) {
           parts.push(`coach${result.notifiedCoaches === 1 ? '' : 'es'} notified`)

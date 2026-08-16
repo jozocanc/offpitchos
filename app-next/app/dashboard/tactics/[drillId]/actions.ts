@@ -4,8 +4,19 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
 import { renderThumbnailPng } from '@/lib/tactics/thumbnail'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
-export async function saveDrill(drillId: string, patch: {
+export async function saveDrill(
+  ...args: Parameters<typeof _saveDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _saveDrill>>>> {
+  try {
+    return { ok: true, data: await _saveDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _saveDrill(drillId: string, patch: {
   title?: string
   description?: string
   category?: string
@@ -64,7 +75,17 @@ export interface DrillVersion {
   saved_at: string
 }
 
-export async function listDrillVersions(drillId: string): Promise<DrillVersion[]> {
+export async function listDrillVersions(
+  ...args: Parameters<typeof _listDrillVersions>
+): Promise<ActionResult<Awaited<ReturnType<typeof _listDrillVersions>>>> {
+  try {
+    return { ok: true, data: await _listDrillVersions(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _listDrillVersions(drillId: string): Promise<DrillVersion[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('drill_versions')
@@ -76,7 +97,17 @@ export async function listDrillVersions(drillId: string): Promise<DrillVersion[]
   return (data ?? []) as DrillVersion[]
 }
 
-export async function restoreDrillVersion(drillId: string, versionId: string): Promise<DrillVersion> {
+export async function restoreDrillVersion(
+  ...args: Parameters<typeof _restoreDrillVersion>
+): Promise<ActionResult<Awaited<ReturnType<typeof _restoreDrillVersion>>>> {
+  try {
+    return { ok: true, data: await _restoreDrillVersion(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _restoreDrillVersion(drillId: string, versionId: string): Promise<DrillVersion> {
   const supabase = await createClient()
   const { data: version, error: fetchErr } = await supabase
     .from('drill_versions')
@@ -107,7 +138,17 @@ export interface DrillComment {
   author_name: string
 }
 
-export async function listDrillComments(drillId: string): Promise<DrillComment[]> {
+export async function listDrillComments(
+  ...args: Parameters<typeof _listDrillComments>
+): Promise<ActionResult<Awaited<ReturnType<typeof _listDrillComments>>>> {
+  try {
+    return { ok: true, data: await _listDrillComments(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _listDrillComments(drillId: string): Promise<DrillComment[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('drill_comments')
@@ -132,7 +173,17 @@ export async function listDrillComments(drillId: string): Promise<DrillComment[]
   })
 }
 
-export async function postDrillComment(drillId: string, body: string): Promise<void> {
+export async function postDrillComment(
+  ...args: Parameters<typeof _postDrillComment>
+): Promise<ActionResult<Awaited<ReturnType<typeof _postDrillComment>>>> {
+  try {
+    return { ok: true, data: await _postDrillComment(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _postDrillComment(drillId: string, body: string): Promise<void> {
   const trimmed = body.trim()
   if (!trimmed || trimmed.length > 2000) throw new Error('Invalid comment body')
   const supabase = await createClient()
@@ -149,14 +200,34 @@ export async function postDrillComment(drillId: string, body: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
-export async function deleteDrillComment(commentId: string): Promise<void> {
+export async function deleteDrillComment(
+  ...args: Parameters<typeof _deleteDrillComment>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteDrillComment>>>> {
+  try {
+    return { ok: true, data: await _deleteDrillComment(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteDrillComment(commentId: string): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase
     .from('drill_comments').delete().eq('id', commentId)
   if (error) throw new Error(error.message)
 }
 
-export async function regenerateThumbnail(drillId: string) {
+export async function regenerateThumbnail(
+  ...args: Parameters<typeof _regenerateThumbnail>
+): Promise<ActionResult<Awaited<ReturnType<typeof _regenerateThumbnail>>>> {
+  try {
+    return { ok: true, data: await _regenerateThumbnail(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _regenerateThumbnail(drillId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')

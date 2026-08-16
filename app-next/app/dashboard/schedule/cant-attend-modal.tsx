@@ -33,7 +33,9 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
       return
     }
     getAvailableCoaches()
-      .then(data => {
+      .then(res => {
+        if (!res.ok) return
+        const data = res.data
         setCoaches(data)
         if (data.length > 0) setSelectedCoachId(data[0].id)
       })

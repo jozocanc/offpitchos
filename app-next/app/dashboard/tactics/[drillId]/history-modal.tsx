@@ -78,7 +78,10 @@ export default function HistoryModal({ drillId, onClose, onRestore }: HistoryMod
   useEffect(() => {
     setLoading(true)
     listDrillVersions(drillId)
-      .then(v => { setVersions(v); setLoading(false) })
+      .then(res => {
+        if (!res.ok) { setError(res.error); setLoading(false); return }
+        setVersions(res.data); setLoading(false)
+      })
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [drillId])
 

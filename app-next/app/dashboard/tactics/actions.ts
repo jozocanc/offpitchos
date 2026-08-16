@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 export interface DrillSummary {
   id: string
@@ -81,6 +82,9 @@ export async function listDrills(filters?: {
 
 // Form-action variant: reads teamId from FormData and redirects to the new drill.
 // Invoked as `<form action={createBlankDrillFormAction}>` from the library.
+// NOT converted to ActionResult: this is passed straight to <form action={...}>
+// in library-client, where React requires (formData) => void | Promise<void>.
+// It also redirects on success, so there is no result for a caller to read.
 export async function createBlankDrillFormAction(formData: FormData): Promise<void> {
   const raw = formData.get('teamId')
   const teamId = typeof raw === 'string' && raw.length > 0 ? raw : null
@@ -88,7 +92,17 @@ export async function createBlankDrillFormAction(formData: FormData): Promise<vo
   redirect(`/dashboard/tactics/${id}`)
 }
 
-export async function createBlankDrill(teamId: string | null): Promise<string> {
+export async function createBlankDrill(
+  ...args: Parameters<typeof _createBlankDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createBlankDrill>>>> {
+  try {
+    return { ok: true, data: await _createBlankDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createBlankDrill(teamId: string | null): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -113,14 +127,34 @@ export async function createBlankDrill(teamId: string | null): Promise<string> {
   return data.id
 }
 
-export async function deleteDrill(drillId: string) {
+export async function deleteDrill(
+  ...args: Parameters<typeof _deleteDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteDrill>>>> {
+  try {
+    return { ok: true, data: await _deleteDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteDrill(drillId: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('drills').delete().eq('id', drillId)
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/tactics')
 }
 
-export async function duplicateDrill(drillId: string): Promise<string> {
+export async function duplicateDrill(
+  ...args: Parameters<typeof _duplicateDrill>
+): Promise<ActionResult<Awaited<ReturnType<typeof _duplicateDrill>>>> {
+  try {
+    return { ok: true, data: await _duplicateDrill(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _duplicateDrill(drillId: string): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -147,7 +181,17 @@ export async function duplicateDrill(drillId: string): Promise<string> {
   return data.id
 }
 
-export async function updateVisibility(drillId: string, visibility: Visibility) {
+export async function updateVisibility(
+  ...args: Parameters<typeof _updateVisibility>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateVisibility>>>> {
+  try {
+    return { ok: true, data: await _updateVisibility(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateVisibility(drillId: string, visibility: Visibility) {
   const supabase = await createClient()
   const { error } = await supabase.from('drills').update({ visibility }).eq('id', drillId)
   if (error) throw new Error(error.message)

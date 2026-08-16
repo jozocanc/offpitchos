@@ -7,6 +7,7 @@ import { createBlankDrillFormAction, deleteDrill, duplicateDrill, updateVisibili
 import type { DrillSummary } from './actions'
 import GenerateModal from './generate-modal'
 import ImportPdfModal from './import-pdf-modal'
+import { useToast } from '@/components/toast'
 
 interface Props {
   drills: DrillSummary[]
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function LibraryClient({ drills, teams, role, currentProfileId }: Props) {
+  const { toast } = useToast()
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [teamId, setTeamId] = useState<string>('all')
@@ -44,18 +46,27 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
 
   function handleDelete(id: string) {
     if (!confirm('Delete this drill? This cannot be undone.')) return
-    startTransition(async () => { await deleteDrill(id); router.refresh() })
+    startTransition(async () => {
+      const r = await deleteDrill(id)
+      if (!r.ok) { toast(r.error, 'error'); return }
+      router.refresh()
+    })
   }
 
   function handleDuplicate(id: string) {
     startTransition(async () => {
-      const newId = await duplicateDrill(id)
-      router.push(`/dashboard/tactics/${newId}`)
+      const r = await duplicateDrill(id)
+      if (!r.ok) { toast(r.error, 'error'); return }
+      router.push(`/dashboard/tactics/${r.data}`)
     })
   }
 
   function handleVisibilityChange(id: string, v: 'private'|'team'|'club') {
-    startTransition(async () => { await updateVisibility(id, v); router.refresh() })
+    startTransition(async () => {
+      const r = await updateVisibility(id, v)
+      if (!r.ok) { toast(r.error, 'error'); return }
+      router.refresh()
+    })
   }
 
   function toggleSelectMode() {

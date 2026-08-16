@@ -59,9 +59,10 @@ export default function GenerateModal({
 
     startTransition(async () => {
       try {
-        const { drillId } = await generateDrillFromDescription(input)
+        const res = await generateDrillFromDescription(input)
+        if (!res.ok) { setError(res.error); return }
         onClose()
-        router.push(`/dashboard/tactics/${drillId}`)
+        router.push(`/dashboard/tactics/${res.data.drillId}`)
       } catch (err) {
         setError(
           err instanceof Error

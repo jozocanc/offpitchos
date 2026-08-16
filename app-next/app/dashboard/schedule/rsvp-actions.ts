@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // Parent-driven RSVP. Lives in its own table (event_rsvps) so the
 // attendance table remains the coach's source of truth — a parent
@@ -18,7 +19,17 @@ export interface RsvpTally {
   totalKids: number
 }
 
-export async function getMyKidsOnTeamForRsvp(teamId: string) {
+export async function getMyKidsOnTeamForRsvp(
+  ...args: Parameters<typeof _getMyKidsOnTeamForRsvp>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getMyKidsOnTeamForRsvp>>>> {
+  try {
+    return { ok: true, data: await _getMyKidsOnTeamForRsvp(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getMyKidsOnTeamForRsvp(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -35,7 +46,17 @@ export async function getMyKidsOnTeamForRsvp(teamId: string) {
 
 // Returns the current parent's RSVPs for the given (event, kids) pairs
 // so the modal can preselect the existing answer instead of erasing it.
-export async function getMyExistingRsvps(eventId: string, playerIds: string[]) {
+export async function getMyExistingRsvps(
+  ...args: Parameters<typeof _getMyExistingRsvps>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getMyExistingRsvps>>>> {
+  try {
+    return { ok: true, data: await _getMyExistingRsvps(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getMyExistingRsvps(eventId: string, playerIds: string[]) {
   if (playerIds.length === 0) return {}
   const supabase = await createClient()
   const { data } = await supabase
@@ -51,7 +72,17 @@ export async function getMyExistingRsvps(eventId: string, playerIds: string[]) {
   return map
 }
 
-export async function parentRsvp(input: {
+export async function parentRsvp(
+  ...args: Parameters<typeof _parentRsvp>
+): Promise<ActionResult<Awaited<ReturnType<typeof _parentRsvp>>>> {
+  try {
+    return { ok: true, data: await _parentRsvp(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _parentRsvp(input: {
   eventId: string
   teamId: string
   playerIds: string[]
@@ -126,7 +157,17 @@ export async function parentRsvp(input: {
 
 // Bulk-load RSVP tallies for a list of events. Used by the schedule page
 // to render forecast counts on each event card without N+1 queries.
-export async function getRsvpTalliesForEvents(eventIds: string[]): Promise<Record<string, RsvpTally>> {
+export async function getRsvpTalliesForEvents(
+  ...args: Parameters<typeof _getRsvpTalliesForEvents>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getRsvpTalliesForEvents>>>> {
+  try {
+    return { ok: true, data: await _getRsvpTalliesForEvents(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getRsvpTalliesForEvents(eventIds: string[]): Promise<Record<string, RsvpTally>> {
   if (eventIds.length === 0) return {}
   const supabase = await createClient()
 
