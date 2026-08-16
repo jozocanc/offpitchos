@@ -16,3 +16,16 @@ export const DRILL_CATEGORY_LABELS: Record<DrillCategory, string> = {
 
 export const VISIBILITIES = ['private','team','club'] as const
 export type Visibility = typeof VISIBILITIES[number]
+
+/**
+ * Visibility a newly created drill starts with.
+ *
+ * Drills used to be created 'private', which meant a coach joining a club
+ * opened an empty Tactics library — none of the DOC's work was visible until
+ * somebody remembered to change a dropdown per drill. Defaulting to the widest
+ * scope the drill actually belongs to matches how a staff of a few coaches
+ * works; anything genuinely private can still be set back on the drill itself.
+ */
+export function defaultDrillVisibility(teamId: string | null | undefined): Visibility {
+  return teamId ? 'team' : 'club'
+}
