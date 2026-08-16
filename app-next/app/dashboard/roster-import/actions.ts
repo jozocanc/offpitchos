@@ -396,7 +396,9 @@ export async function commitImport(
   type PlayerInsert = {
     club_id: string
     team_id: string
-    parent_id: string
+    // Nullable: a roster row with no parent email imports as an unlinked
+    // player, which is the normal case for a college squad.
+    parent_id: string | null
     first_name: string
     last_name: string
     jersey_number: number | null
