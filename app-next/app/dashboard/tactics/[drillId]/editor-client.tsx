@@ -34,6 +34,20 @@ let clipboard: BoardObject[] = []
 
 const MAX_HISTORY = 100
 
+// Rotation snapping for the goal handle. Every 15° covers the angles a coach
+// actually wants (0 / 45 / 90 / 180) while still allowing anything in between,
+// and the tolerance is small enough that a deliberate odd angle survives.
+const ANGLE_STEP = 15
+const ANGLE_SNAP_TOLERANCE = 4
+
+function snapAngle(deg: number, enabled: boolean): number {
+  const norm = ((deg % 360) + 360) % 360
+  if (!enabled) return Math.round(norm) % 360
+  const nearest = Math.round(norm / ANGLE_STEP) * ANGLE_STEP
+  const snapped = Math.abs(norm - nearest) <= ANGLE_SNAP_TOLERANCE ? nearest : Math.round(norm)
+  return snapped % 360
+}
+
 function snapshot(s: EditorState) {
   return { field: s.field, objects: s.objects }
 }
@@ -1618,6 +1632,13 @@ export default function EditorClient({
                     }
                   }}
                   onDragEnd={(id, x, y) => dispatch({ type: 'MOVE_OBJECT', id, x, y })}
+                  onRotate={(id, deg) =>
+                    dispatch({
+                      type: 'UPDATE_OBJECT',
+                      id,
+                      patch: { rotation: snapAngle(deg, snapEnabled) },
+                    })
+                  }
                   onContextMenu={(id, clientX, clientY) => setContextMenu({ id, clientX, clientY })}
                   previewArrow={
                     state.tool === 'arrow' && state.arrowDraftTail && previewHead

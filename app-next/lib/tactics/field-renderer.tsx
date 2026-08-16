@@ -522,8 +522,10 @@ export function GoalNode({
   onDragEnd,
   onDoubleClick,
   onContextMenu,
-}: NodeProps<GoalObj>) {
+  onRotate,
+}: NodeProps<GoalObj> & { onRotate?: (id: string, deg: number) => void }) {
   const groupRef = React.useRef<Konva.Group | null>(null)
+  const handleRef = React.useRef<Konva.Circle | null>(null)
   useFadeInOnMount(groupRef as KonvaRef)
   const dragScale = useDragScale(groupRef as KonvaRef, 1.04)
 
@@ -555,6 +557,24 @@ export function GoalNode({
     : {}
 
   const postThickness = Math.max(2, Math.min(w, h) * 0.08)
+
+  // Drag-to-rotate. The goal already turns around its own centre (the group is
+  // offset by half its size), so the handle only has to report the angle from
+  // that centre out to the pointer. Rotation is applied imperatively while
+  // dragging and only committed on release, so a single turn is one undo step
+  // rather than one per frame.
+  const showRotateHandle = interactive && selected && !obj.locked && !!onRotate
+  const handleGap = Math.max(16, mLen(2.5, layout))
+  const anchorX = w / 2
+  const anchorY = h / 2 - (h / 2 + handleGap)
+
+  function angleFromPointer(node: Konva.Node): number | null {
+    const stage = node.getStage()
+    const p = stage?.getPointerPosition()
+    if (!p) return null
+    const deg = (Math.atan2(p.y - y, p.x - x) * 180) / Math.PI + 90
+    return ((deg % 360) + 360) % 360
+  }
 
   return (
     <Group
@@ -600,6 +620,49 @@ export function GoalNode({
         strokeWidth={0.75}
         listening={false}
       />
+      {showRotateHandle && (
+        <>
+          <Line
+            points={[anchorX, h / 2, anchorX, anchorY]}
+            stroke={SEL_COLOR}
+            strokeWidth={1.5}
+            listening={false}
+          />
+          <Circle
+            ref={handleRef}
+            x={anchorX}
+            y={anchorY}
+            radius={6}
+            fill={SEL_COLOR}
+            stroke="#0b3d22"
+            strokeWidth={1.5}
+            draggable
+            onMouseEnter={e => {
+              const c = e.target.getStage()?.container()
+              if (c) c.style.cursor = 'grab'
+            }}
+            onMouseLeave={e => {
+              const c = e.target.getStage()?.container()
+              if (c) c.style.cursor = 'default'
+            }}
+            onDragMove={e => {
+              const deg = angleFromPointer(e.target)
+              if (deg === null) return
+              groupRef.current?.rotation(deg)
+              // Pin the handle to its anchor so it rides the rotation instead
+              // of drifting away under the pointer.
+              e.target.position({ x: anchorX, y: anchorY })
+            }}
+            onDragEnd={e => {
+              const deg = angleFromPointer(e.target)
+              e.target.position({ x: anchorX, y: anchorY })
+              const c = e.target.getStage()?.container()
+              if (c) c.style.cursor = 'default'
+              if (deg !== null) onRotate?.(obj.id, deg)
+            }}
+          />
+        </>
+      )}
     </Group>
   )
 }
@@ -856,6 +919,7 @@ export interface FieldRendererProps {
   onDragEnd?: (id: string, x: number, y: number) => void
   onDoubleClick?: (id: string) => void
   onContextMenu?: (id: string, clientX: number, clientY: number) => void
+  onRotate?: (id: string, deg: number) => void
   stageRef?: React.MutableRefObject<Konva.Stage | null>
   previewArrow?: PreviewArrow
   marquee?: MarqueeRect | null
@@ -874,6 +938,7 @@ export default function FieldRenderer({
   onDragEnd,
   onDoubleClick,
   onContextMenu,
+  onRotate,
   stageRef,
   previewArrow,
   marquee,
@@ -956,7 +1021,14 @@ export default function FieldRenderer({
       case 'ball':
         return <BallNode key={obj.id} {...commonProps} obj={obj} />
       case 'goal':
-        return <GoalNode key={obj.id} {...commonProps} obj={obj} />
+        return (
+          <GoalNode
+            key={obj.id}
+            {...commonProps}
+            obj={obj}
+            onRotate={interactive ? onRotate : undefined}
+          />
+        )
       case 'player':
         return <PlayerNode key={obj.id} {...commonProps} obj={obj} />
       case 'arrow':
