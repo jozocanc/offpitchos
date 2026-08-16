@@ -34,7 +34,7 @@ export default function MoreTeams({ clubId, joinedTeamId }: { clubId: string; jo
       try {
         const { acceptInviteCode } = await import('./actions')
         const r = await acceptInviteCode(team.invite_code)
-        if (!r.ok) { setError(r.error); return }
+        if (!r.ok) { toast(r.error, 'error'); return }
       } catch {
         // acceptInviteCode redirects, so if we get here it means it worked
         // but the redirect was caught. Just mark as joined.
