@@ -68,6 +68,7 @@ Respond with ONLY a valid JSON object matching the DrillDoc type.
 - No prose before or after the JSON.
 - No comments inside the JSON.
 - Validate mentally: every object must have "id" and "type"; coordinates must be within field bounds; "color" fields on zones must be #rrggbb hex.
+- At most ONE labelled zone per area of the pitch. Do not stack two labelled zones over the same region — their labels render on top of each other and become unreadable. If a zone needs two ideas expressed, put them in one label or leave the second zone unlabelled.
 - If drill type or player count is ambiguous, choose a sensible default and proceed.`
 
 // ─── Few-shot examples ────────────────────────────────────────────────────────

@@ -145,6 +145,9 @@ interface NodeProps<T extends BoardObject> {
 }
 
 // ── ZoneNode ──────────────────────────────────────────────────────────────────
+/** Padding from a zone's top edge to its label, in px. */
+const ZONE_LABEL_INSET_PX = 6
+
 type ZoneObj = Extract<BoardObject, { type: 'zone' }>
 
 export function ZoneNode({
@@ -221,11 +224,18 @@ export function ZoneNode({
         <Text
           text={obj.label}
           x={0}
-          y={0}
+          // Anchored to the TOP of the zone rather than its middle. Zones are
+          // usually full-height bands, so a vertically-centred label sits on
+          // the halfway line directly over the players — and two overlapping
+          // zones stack their text in exactly the same place. An AI-generated
+          // drill produced precisely that: three zone labels rendered on top
+          // of one another across the centre circle, completely unreadable.
+          // Labelling at the edge is also the convention in coaching diagrams.
+          y={ZONE_LABEL_INSET_PX}
           width={w}
           height={h}
           align="center"
-          verticalAlign="middle"
+          verticalAlign="top"
           fill="#ffffff"
           shadowColor="#000000"
           shadowBlur={3}
