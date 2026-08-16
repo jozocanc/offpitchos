@@ -22,14 +22,21 @@ export default function DangerZone({ userRole }: { userRole: string }) {
 
   function handleDelete() {
     // Wording matches what actually happens (migration 037). The account is
-    // soft-deleted: personal details are scrubbed and sign-in is disabled, but
-    // things you authored stay with the club so its records don't develop
-    // holes. Promising "all your data is permanently removed" would not be
-    // true, and a deletion promise is the wrong place to be loose.
+    // soft-deleted: display_name is scrubbed to 'Deleted user', club_id is
+    // nulled and team memberships are dropped, while the profile row itself
+    // survives so the club's history keeps its foreign keys. Sign-in is
+    // stopped by banning the auth user rather than deleting it.
+    //
+    // Says "your name" rather than "your personal details" on purpose: the
+    // ONLY field scrubbed is display_name. The auth email is deliberately left
+    // in place, because profiles.user_id -> auth.users is ON DELETE CASCADE
+    // and removing it would hit the NO ACTION foreign keys on player_feedback,
+    // drill_versions and camp_registrations. A deletion prompt is the wrong
+    // place to claim more than is true.
     if (!confirm(
       'Delete your account?\n\n' +
-      'Your name and personal details will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
-      'Anything you posted or recorded stays with the club, but is no longer linked to your name. This cannot be undone.'
+      'Your name will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
+      'Your email address stays on record, and anything you posted stays with the club but is no longer linked to your name. This cannot be undone.'
     )) return
     if (!confirm('Are you really sure? This cannot be undone.')) return
     startTransition(async () => {
@@ -64,7 +71,14 @@ export default function DangerZone({ userRole }: { userRole: string }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-sm">Delete Account</p>
-            <p className="text-gray text-xs">Permanently delete your account and all associated data.</p>
+            {/* Must match what migration 037 actually does. This is a soft
+                delete: the profile row survives so the club's history keeps
+                its foreign keys, and sign-in is disabled by banning the auth
+                user rather than deleting it. */}
+            <p className="text-gray text-xs">
+              Removes your name, takes you off every team, and stops you signing in.
+              Anything you posted stays with the club.
+            </p>
           </div>
           <button
             onClick={handleDelete}
