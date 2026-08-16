@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
 import CoverageActionsInline from './coverage-actions-inline'
 import EventPhotosModal from './event-photos-modal'
+import { useClubTimezone } from '@/components/club-timezone'
+import { formatTimeRange } from '@/lib/format-datetime'
 
 interface EventCardProps {
   event: {
@@ -50,6 +52,7 @@ interface EventCardProps {
 
 export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
+  const timezone = useClubTimezone()
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
@@ -57,7 +60,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
   // depending on context. Normalize so we can read .age_group reliably.
   const team = Array.isArray(event.teams) ? event.teams[0] : event.teams
 
-  const timeStr = `${formatTime(start)} – ${formatTime(end)}`
+  const timeStr = formatTimeRange(start, end, timezone)
 
   return (
     <div
@@ -306,10 +309,6 @@ function getTypeBadgeColors(type: string): string {
     case 'practice':
     default: return 'bg-green/10 text-green'
   }
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 // Show "Game Day" CTA only inside the ±12-hour window so the button

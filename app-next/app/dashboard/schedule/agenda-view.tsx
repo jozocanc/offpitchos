@@ -1,6 +1,8 @@
 'use client'
 
 import EventCard from './event-card'
+import { useClubTimezone } from '@/components/club-timezone'
+import { dayKey, daysFromToday, formatDayKeyLong } from '@/lib/format-datetime'
 
 interface Event {
   id: string
@@ -46,6 +48,9 @@ interface AgendaViewProps {
 }
 
 export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally }: AgendaViewProps) {
+  // Before the early return — hooks must run unconditionally.
+  const timezone = useClubTimezone()
+
   if (events.length === 0) {
     return (
       <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
@@ -56,7 +61,7 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
   }
 
   // Group events by date
-  const grouped = groupByDate(events)
+  const grouped = groupByDate(events, timezone)
 
   return (
     <div className="space-y-8">
@@ -109,31 +114,28 @@ interface DateGroup {
   isPast: boolean
 }
 
-function groupByDate(events: Event[]): DateGroup[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
+function groupByDate(events: Event[], timeZone: string): DateGroup[] {
   const groups: Map<string, Event[]> = new Map()
 
   for (const event of events) {
-    const date = new Date(event.start_time)
-    const dateStr = date.toISOString().split('T')[0]
-    if (!groups.has(dateStr)) groups.set(dateStr, [])
-    groups.get(dateStr)!.push(event)
+    // Was date.toISOString().split('T')[0], which buckets by the UTC calendar
+    // date. An 8pm Eastern session is 00:00 UTC the next morning, so it filed
+    // under tomorrow's heading. No current event falls in that window, but any
+    // evening session would.
+    const key = dayKey(event.start_time, timeZone)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(event)
   }
 
   return Array.from(groups.entries()).map(([dateStr, events]) => {
-    const date = new Date(dateStr + 'T00:00:00')
-    const isPast = date < today
+    const diffDays = daysFromToday(dateStr, timeZone)
 
     let label: string
-    const diffDays = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
     if (diffDays === 0) label = 'Today'
     else if (diffDays === 1) label = 'Tomorrow'
     else if (diffDays === -1) label = 'Yesterday'
-    else label = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    else label = formatDayKeyLong(dateStr)
 
-    return { dateStr, label, events, isPast }
+    return { dateStr, label, events, isPast: diffDays < 0 }
   })
 }

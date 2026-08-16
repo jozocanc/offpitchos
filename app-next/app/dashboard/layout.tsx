@@ -5,6 +5,8 @@ import { ToastProvider } from '@/components/toast'
 import VoiceCommand from '@/components/voice-command'
 import { VoiceFocusProvider } from '@/components/voice-context'
 import { canSwitchRole, getEffectiveRole } from '@/lib/admin-role'
+import { ClubTimezoneProvider } from '@/components/club-timezone'
+import { DEFAULT_TIMEZONE } from '@/lib/format-datetime'
 
 export default async function DashboardLayout({
   children,
@@ -19,10 +21,12 @@ export default async function DashboardLayout({
 
   if (!claims) redirect('/login')
 
-  // Check onboarding status
+  // Check onboarding status. The club's timezone rides along on the same query
+  // so every date below this layout formats against it rather than against the
+  // runtime's zone (UTC on the server, local in the browser) — see migration 043.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_complete, role')
+    .select('onboarding_complete, role, clubs(timezone)')
     .eq('user_id', claims.sub)
     .single()
 
@@ -34,6 +38,12 @@ export default async function DashboardLayout({
   const actualRole = profile.role ?? 'parent'
   const effectiveRole = await getEffectiveRole(actualRole)
 
+  // Supabase returns a to-one embed as an object or a one-element array
+  // depending on how it infers the relationship; normalize both. Falls back to
+  // the default for a profile detached from its club (soft-deleted).
+  const club = Array.isArray(profile.clubs) ? profile.clubs[0] : profile.clubs
+  const timezone = (club as { timezone?: string } | null)?.timezone ?? DEFAULT_TIMEZONE
+
   return (
     <div className="flex min-h-screen bg-dark">
       <Sidebar
@@ -42,6 +52,7 @@ export default async function DashboardLayout({
         canSwitchRole={canSwitchRole(actualRole)}
       />
       <ToastProvider>
+        <ClubTimezoneProvider timezone={timezone}>
         <VoiceFocusProvider>
           {/* pt-14 on mobile clears the fixed hamburger button (top-4 + ~38px
               button = 54px footprint) so page headers don't render underneath
@@ -52,6 +63,7 @@ export default async function DashboardLayout({
           </main>
           <VoiceCommand userRole={effectiveRole} />
         </VoiceFocusProvider>
+        </ClubTimezoneProvider>
       </ToastProvider>
     </div>
   )
