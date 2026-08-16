@@ -360,6 +360,7 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
 }
 
 function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
+  const { toast } = useToast()
   const [jerseySize, setJerseySize] = useState(player.jerseySize ?? '')
   const [shortsSize, setShortsSize] = useState(player.shortsSize ?? '')
   const [saving, setSaving] = useState(false)
