@@ -32,7 +32,9 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
 
   useEffect(() => {
     getParentPlayers()
-      .then(data => {
+      .then(res => {
+        if (!res.ok) return
+        const data = res.data
         setPlayers(data as unknown as Player[])
         if (data.length > 0) setSelectedPlayerId(data[0].id)
       })
@@ -60,7 +62,8 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
         }
       }
       // Free camp — register directly
-      await registerForCamp(camp.eventId, selectedPlayerId)
+      const r = await registerForCamp(camp.eventId, selectedPlayerId)
+      if (!r.ok) { setError(r.error); return }
       setSuccess(true)
     } catch (err: any) {
       setError(err.message)

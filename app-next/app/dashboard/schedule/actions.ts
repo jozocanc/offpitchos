@@ -709,7 +709,9 @@ export async function getScheduleData() {
     .eq('club_id', profile.club_id!)
     .order('name')
 
-  // Check coverage timeouts
+  // Check coverage timeouts. Result intentionally ignored: this is a
+  // best-effort sweep inside a page-data load, and a failure here must not
+  // take down the whole schedule.
   await checkAndEscalateTimeouts()
 
   // Get coverage requests for events

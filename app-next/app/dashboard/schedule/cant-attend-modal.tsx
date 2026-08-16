@@ -46,8 +46,10 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
     setError(null)
     startTransition(async () => {
       try {
-        const result = await createCoverageRequest(eventId, userProfileId)
-        await assignCoverage(result.requestId, selectedCoachId)
+        const reqRes = await createCoverageRequest(eventId, userProfileId)
+        if (!reqRes.ok) { setError(reqRes.error); return }
+        const assignRes = await assignCoverage(reqRes.data.requestId, selectedCoachId)
+        if (!assignRes.ok) { setError(assignRes.error); return }
         const coachName = coaches.find(c => c.id === selectedCoachId)?.display_name ?? 'Coach'
         toast(`${coachName} assigned to cover`, 'success')
         onClose()
@@ -62,7 +64,9 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
     setError(null)
     startTransition(async () => {
       try {
-        const result = await createCoverageRequest(eventId, userProfileId)
+        const bcRes = await createCoverageRequest(eventId, userProfileId)
+        if (!bcRes.ok) { setError(bcRes.error); return }
+        const result = bcRes.data
         if (result.autoAssigned) {
           toast(`${result.coveringCoachName} auto-assigned to cover`, 'success')
         } else {

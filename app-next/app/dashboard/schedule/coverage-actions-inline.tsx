@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { acceptCoverage, declineCoverage } from '../coverage/actions'
+import { useToast } from '@/components/toast'
 
 interface CoverageActionsInlineProps {
   requestId: string
@@ -9,20 +10,19 @@ interface CoverageActionsInlineProps {
 
 export default function CoverageActionsInline({ requestId }: CoverageActionsInlineProps) {
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   function handleAccept() {
     startTransition(async () => {
-      try {
-        await acceptCoverage(requestId)
-      } catch (err) {
-        alert(err instanceof Error ? err.message : 'Something went wrong')
-      }
+      const r = await acceptCoverage(requestId)
+      if (!r.ok) toast(r.error, 'error')
     })
   }
 
   function handleDecline() {
     startTransition(async () => {
-      await declineCoverage(requestId)
+      const r = await declineCoverage(requestId)
+      if (!r.ok) toast(r.error, 'error')
     })
   }
 

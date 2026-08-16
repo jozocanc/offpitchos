@@ -69,12 +69,14 @@ export default function NewAnnouncementModal({
 
     startTransition(async () => {
       try {
-        const result = await createAnnouncement({
+        const annRes = await createAnnouncement({
           teamId: teamId || null,
           title: title.trim(),
           body: body.trim(),
           pollEnabled: pollEnabled && !isParent,
         })
+        if (!annRes.ok) { toast(annRes.error, 'error'); return }
+        const result = annRes.data
         toast(
           formatRecipientToast({
             action: 'announcement_posted',

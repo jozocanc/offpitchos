@@ -10,6 +10,7 @@ import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate, formatTime } from '@/lib/format-datetime'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 // ---------- Helpers ----------
 
@@ -115,6 +116,16 @@ export interface CreateCoverageResult {
 }
 
 export async function createCoverageRequest(
+  ...args: Parameters<typeof _createCoverageRequest>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createCoverageRequest>>>> {
+  try {
+    return { ok: true, data: await _createCoverageRequest(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createCoverageRequest(
   eventId: string,
   unavailableCoachId: string,
 ): Promise<CreateCoverageResult> {
@@ -214,7 +225,17 @@ export async function createCoverageRequest(
  * Rank available coaches for an existing coverage request. Used by the
  * DOC's "Assign" modal to surface the best candidates at the top.
  */
-export async function getAssignmentSuggestions(requestId: string): Promise<RankedCandidate[]> {
+export async function getAssignmentSuggestions(
+  ...args: Parameters<typeof _getAssignmentSuggestions>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getAssignmentSuggestions>>>> {
+  try {
+    return { ok: true, data: await _getAssignmentSuggestions(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getAssignmentSuggestions(requestId: string): Promise<RankedCandidate[]> {
   const { profile, supabase } = await getUserProfile()
 
   if (profile.role !== 'doc') {
@@ -239,7 +260,17 @@ export async function getAssignmentSuggestions(requestId: string): Promise<Ranke
   return ranked.slice(0, 5)
 }
 
-export async function acceptCoverage(requestId: string) {
+export async function acceptCoverage(
+  ...args: Parameters<typeof _acceptCoverage>
+): Promise<ActionResult<Awaited<ReturnType<typeof _acceptCoverage>>>> {
+  try {
+    return { ok: true, data: await _acceptCoverage(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _acceptCoverage(requestId: string) {
   const { profile, supabase } = await getUserProfile()
 
   // Atomic update — only succeeds if still pending
@@ -314,7 +345,17 @@ export async function acceptCoverage(requestId: string) {
   revalidatePath('/dashboard')
 }
 
-export async function declineCoverage(requestId: string) {
+export async function declineCoverage(
+  ...args: Parameters<typeof _declineCoverage>
+): Promise<ActionResult<Awaited<ReturnType<typeof _declineCoverage>>>> {
+  try {
+    return { ok: true, data: await _declineCoverage(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _declineCoverage(requestId: string) {
   const { profile, supabase } = await getUserProfile()
 
   await supabase.from('coverage_responses').insert({
@@ -326,7 +367,17 @@ export async function declineCoverage(requestId: string) {
   revalidatePath('/dashboard/coverage')
 }
 
-export async function assignCoverage(requestId: string, coachProfileId: string) {
+export async function assignCoverage(
+  ...args: Parameters<typeof _assignCoverage>
+): Promise<ActionResult<Awaited<ReturnType<typeof _assignCoverage>>>> {
+  try {
+    return { ok: true, data: await _assignCoverage(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _assignCoverage(requestId: string, coachProfileId: string) {
   const { supabase } = await getUserProfile()
 
   // Check if the assigned coach has a conflicting event
@@ -408,7 +459,17 @@ export async function assignCoverage(requestId: string, coachProfileId: string) 
   revalidatePath('/dashboard')
 }
 
-export async function checkAndEscalateTimeouts() {
+export async function checkAndEscalateTimeouts(
+  ...args: Parameters<typeof _checkAndEscalateTimeouts>
+): Promise<ActionResult<Awaited<ReturnType<typeof _checkAndEscalateTimeouts>>>> {
+  try {
+    return { ok: true, data: await _checkAndEscalateTimeouts(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _checkAndEscalateTimeouts() {
   const service = createServiceClient()
 
   const { data: expired } = await service
@@ -446,7 +507,17 @@ export async function checkAndEscalateTimeouts() {
 // Returns other coaches in the club (excluding the caller). Used by the
 // "Can't Attend" modal so a coach can directly assign a replacement
 // instead of broadcasting to everyone.
-export async function getAvailableCoaches(): Promise<Array<{ id: string; display_name: string | null }>> {
+export async function getAvailableCoaches(
+  ...args: Parameters<typeof _getAvailableCoaches>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getAvailableCoaches>>>> {
+  try {
+    return { ok: true, data: await _getAvailableCoaches(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getAvailableCoaches(): Promise<Array<{ id: string; display_name: string | null }>> {
   const { profile, supabase } = await getUserProfile()
 
   const { data: coaches } = await supabase
@@ -499,7 +570,17 @@ export async function getCoverageData() {
   }
 }
 
-export async function updateCoverageTimeout(minutes: number) {
+export async function updateCoverageTimeout(
+  ...args: Parameters<typeof _updateCoverageTimeout>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateCoverageTimeout>>>> {
+  try {
+    return { ok: true, data: await _updateCoverageTimeout(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateCoverageTimeout(minutes: number) {
   const { profile, supabase } = await getUserProfile()
 
   if (minutes < 15 || minutes > 1440) throw new Error('Timeout must be between 15 minutes and 24 hours')
@@ -516,7 +597,17 @@ export async function updateCoverageTimeout(minutes: number) {
   revalidatePath('/dashboard/settings')
 }
 
-export async function getCoverageTimeout() {
+export async function getCoverageTimeout(
+  ...args: Parameters<typeof _getCoverageTimeout>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getCoverageTimeout>>>> {
+  try {
+    return { ok: true, data: await _getCoverageTimeout(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getCoverageTimeout() {
   const { profile } = await getUserProfile()
   return getClubTimeoutMinutes(profile.club_id!)
 }

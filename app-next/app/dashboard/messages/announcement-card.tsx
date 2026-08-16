@@ -77,7 +77,9 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
     // Optimistic local update
     setKids(prev => prev.map(k => k.playerId === playerId ? { ...k, response } : k))
     startTransition(async () => {
-      const result = await respondToPoll(announcement.id, playerId, response)
+      const pollRes = await respondToPoll(announcement.id, playerId, response)
+      if (!pollRes.ok) { toast(pollRes.error, 'error'); return }
+      const result = pollRes.data
       setRespondingKidId(null)
       if (result.error) {
         toast(result.error, 'error')
@@ -102,14 +104,16 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
 
   function handlePin() {
     startTransition(async () => {
-      await togglePin(announcement.id)
+      const r = await togglePin(announcement.id)
+      if (!r.ok) { toast(r.error, 'error'); return }
     })
   }
 
   function handleDelete() {
     if (!confirm('Delete this announcement and all its replies?')) return
     startTransition(async () => {
-      await deleteAnnouncement(announcement.id)
+      const r = await deleteAnnouncement(announcement.id)
+      if (!r.ok) { toast(r.error, 'error'); return }
     })
   }
 

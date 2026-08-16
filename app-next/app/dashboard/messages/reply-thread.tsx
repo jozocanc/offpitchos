@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { getAnnouncementReplies, createReply, deleteReply } from './actions'
+import { useToast } from '@/components/toast'
 
 interface Reply {
   id: string
@@ -20,20 +21,23 @@ export default function ReplyThread({ announcementId, userProfileId, userRole }:
   const [replies, setReplies] = useState<Reply[]>([])
   const [replyText, setReplyText] = useState('')
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   useEffect(() => {
     loadReplies()
   }, [announcementId])
 
   async function loadReplies() {
-    const data = await getAnnouncementReplies(announcementId)
-    setReplies(data)
+    const res = await getAnnouncementReplies(announcementId)
+    if (!res.ok) { toast(res.error, 'error'); return }
+    setReplies(res.data)
   }
 
   function handleSubmitReply() {
     if (!replyText.trim()) return
     startTransition(async () => {
-      await createReply(announcementId, replyText)
+      const r = await createReply(announcementId, replyText)
+      if (!r.ok) { toast(r.error, 'error'); return }
       setReplyText('')
       await loadReplies()
     })
@@ -41,7 +45,8 @@ export default function ReplyThread({ announcementId, userProfileId, userRole }:
 
   function handleDelete(replyId: string) {
     startTransition(async () => {
-      await deleteReply(replyId)
+      const r = await deleteReply(replyId)
+      if (!r.ok) { toast(r.error, 'error'); return }
       await loadReplies()
     })
   }

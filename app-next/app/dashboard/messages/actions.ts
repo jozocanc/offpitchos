@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -34,7 +35,17 @@ export interface CreateAnnouncementResult {
   emailFailed: number
 }
 
-export async function createAnnouncement(input: {
+export async function createAnnouncement(
+  ...args: Parameters<typeof _createAnnouncement>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createAnnouncement>>>> {
+  try {
+    return { ok: true, data: await _createAnnouncement(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createAnnouncement(input: {
   teamId: string | null
   title: string
   body: string
@@ -147,7 +158,17 @@ export async function createAnnouncement(input: {
  * Called when the user expands an announcement card so read receipts
  * are accurate on the author's view.
  */
-export async function markAnnouncementRead(announcementId: string) {
+export async function markAnnouncementRead(
+  ...args: Parameters<typeof _markAnnouncementRead>
+): Promise<ActionResult<Awaited<ReturnType<typeof _markAnnouncementRead>>>> {
+  try {
+    return { ok: true, data: await _markAnnouncementRead(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _markAnnouncementRead(announcementId: string) {
   const { profile, supabase } = await getUserProfile()
 
   await supabase
@@ -161,7 +182,17 @@ export async function markAnnouncementRead(announcementId: string) {
   // no need to refetch the whole page on every open.
 }
 
-export async function createReply(announcementId: string, body: string) {
+export async function createReply(
+  ...args: Parameters<typeof _createReply>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createReply>>>> {
+  try {
+    return { ok: true, data: await _createReply(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createReply(announcementId: string, body: string) {
   const { profile, supabase } = await getUserProfile()
 
   if (!body.trim()) throw new Error('Reply cannot be empty')
@@ -204,7 +235,17 @@ export async function createReply(announcementId: string, body: string) {
   revalidatePath('/dashboard/messages')
 }
 
-export async function togglePin(announcementId: string) {
+export async function togglePin(
+  ...args: Parameters<typeof _togglePin>
+): Promise<ActionResult<Awaited<ReturnType<typeof _togglePin>>>> {
+  try {
+    return { ok: true, data: await _togglePin(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _togglePin(announcementId: string) {
   const { supabase } = await getUserProfile()
 
   const { data: current } = await supabase
@@ -225,7 +266,17 @@ export async function togglePin(announcementId: string) {
   revalidatePath('/dashboard/messages')
 }
 
-export async function deleteAnnouncement(announcementId: string) {
+export async function deleteAnnouncement(
+  ...args: Parameters<typeof _deleteAnnouncement>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteAnnouncement>>>> {
+  try {
+    return { ok: true, data: await _deleteAnnouncement(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteAnnouncement(announcementId: string) {
   const { supabase } = await getUserProfile()
 
   const { error } = await supabase
@@ -238,7 +289,17 @@ export async function deleteAnnouncement(announcementId: string) {
   revalidatePath('/dashboard/messages')
 }
 
-export async function deleteReply(replyId: string) {
+export async function deleteReply(
+  ...args: Parameters<typeof _deleteReply>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteReply>>>> {
+  try {
+    return { ok: true, data: await _deleteReply(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteReply(replyId: string) {
   const { supabase } = await getUserProfile()
 
   const { error } = await supabase
@@ -458,6 +519,16 @@ export async function getMessagesData() {
 }
 
 export async function respondToPoll(
+  ...args: Parameters<typeof _respondToPoll>
+): Promise<ActionResult<Awaited<ReturnType<typeof _respondToPoll>>>> {
+  try {
+    return { ok: true, data: await _respondToPoll(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _respondToPoll(
   announcementId: string,
   playerId: string,
   response: 'yes' | 'no' | 'maybe'
@@ -497,7 +568,17 @@ export async function respondToPoll(
   return {}
 }
 
-export async function getAnnouncementReplies(announcementId: string) {
+export async function getAnnouncementReplies(
+  ...args: Parameters<typeof _getAnnouncementReplies>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getAnnouncementReplies>>>> {
+  try {
+    return { ok: true, data: await _getAnnouncementReplies(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getAnnouncementReplies(announcementId: string) {
   const { supabase } = await getUserProfile()
 
   const { data } = await supabase

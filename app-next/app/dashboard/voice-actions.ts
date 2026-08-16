@@ -492,11 +492,11 @@ export async function executeVoicePlan(
       }
 
       case 'send_announcement': {
-        const result = await createAnnouncement({
+        const result = unwrap(await createAnnouncement({
           teamId: input.teamId ?? null,
           title: String(input.title ?? '').slice(0, 120),
           body: String(input.body ?? ''),
-        })
+        }))
         const parts: string[] = []
         if (result.parentCount > 0) parts.push(`${result.parentCount} ${result.parentCount === 1 ? 'parent' : 'parents'}`)
         if (result.coachCount > 0) parts.push(`${result.coachCount} ${result.coachCount === 1 ? 'coach' : 'coaches'}`)
@@ -511,7 +511,7 @@ export async function executeVoicePlan(
         const event = events.find(e => e.id === input.eventId)
         if (!event) return { success: false, message: 'Could not find that event.' }
 
-        const result = await createCoverageRequest(input.eventId, profile.id)
+        const result = unwrap(await createCoverageRequest(input.eventId, profile.id))
         if (result.autoAssigned && result.coveringCoachName) {
           const reasonTail = result.reason ? ` (${result.reason.toLowerCase()})` : ''
           return {

@@ -39,7 +39,9 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
 
   useEffect(() => {
     getCampRegistrations(camp.eventId)
-      .then(data => setRegistrations(data.registrations as unknown as Registration[]))
+      .then(res => {
+        if (res.ok) setRegistrations(res.data.registrations as unknown as Registration[])
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [camp.eventId])
@@ -53,7 +55,8 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
       if (feeCents < 0) throw new Error('Fee cannot be negative')
       if (cap !== null && cap < 1) throw new Error('Capacity must be at least 1')
 
-      await setCampDetails({ eventId: camp.eventId, feeCents, capacity: cap })
+      const r = await setCampDetails({ eventId: camp.eventId, feeCents, capacity: cap })
+      if (!r.ok) { setError(r.error); return }
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save')
@@ -64,7 +67,8 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
 
   async function handleTogglePayment(regId: string) {
     try {
-      await togglePayment(regId)
+      const r = await togglePayment(regId)
+      if (!r.ok) { toast(r.error, 'error'); return }
       setRegistrations(prev =>
         prev.map(r => r.id === regId
           ? { ...r, payment_status: r.payment_status === 'paid' ? 'unpaid' : 'paid' }
@@ -78,7 +82,9 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
     if (nudging) return
     setNudging(true)
     try {
-      const result = await sendCampPaymentReminders(camp.eventId)
+      const nudgeRes = await sendCampPaymentReminders(camp.eventId)
+      if (!nudgeRes.ok) { toast(nudgeRes.error, 'error'); return }
+      const result = nudgeRes.data
       if (result.nudged === 0 && result.skipped === 0) {
         toast('No unpaid registrations', 'success')
       } else if (result.nudged === 0) {

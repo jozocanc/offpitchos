@@ -26,8 +26,10 @@ export default function AssignModal({ requestId, coaches, onClose }: AssignModal
   useEffect(() => {
     let cancelled = false
     getAssignmentSuggestions(requestId)
-      .then(result => {
+      .then(res => {
         if (cancelled) return
+        if (!res.ok) return
+        const result = res.data
         setSuggestions(result)
         // Default the dropdown to the top suggestion (for the fallback path)
         if (result.length > 0) {
@@ -56,7 +58,8 @@ export default function AssignModal({ requestId, coaches, onClose }: AssignModal
     setError(null)
     startTransition(async () => {
       try {
-        await assignCoverage(requestId, target)
+        const r = await assignCoverage(requestId, target)
+        if (!r.ok) { setError(r.error); return }
         onClose()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')

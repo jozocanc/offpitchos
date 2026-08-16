@@ -77,7 +77,7 @@ export default function CreateCampModal({
 
     startTransition(async () => {
       try {
-        const result = await createCamp({
+        const campRes = await createCamp({
           title: title.trim(),
           teamId: teamId || null,
           startTime: startLocal.toISOString(),
@@ -89,6 +89,8 @@ export default function CreateCampModal({
           description: description.trim() || null,
           notes: notes.trim() || null,
         })
+        if (!campRes.ok) { toast(campRes.error, 'error'); return }
+        const result = campRes.data
         toast(
           formatRecipientToast({
             action: 'camp_created',

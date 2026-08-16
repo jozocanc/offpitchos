@@ -10,7 +10,7 @@ export default function CoverageSettings() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    getCoverageTimeout().then(setMinutes)
+    getCoverageTimeout().then(r => { if (r.ok) setMinutes(r.data) })
   }, [])
 
   function handleSave() {
@@ -18,7 +18,8 @@ export default function CoverageSettings() {
     setSaved(false)
     startTransition(async () => {
       try {
-        await updateCoverageTimeout(minutes)
+        const r = await updateCoverageTimeout(minutes)
+        if (!r.ok) { setError(r.error); return }
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
       } catch (err) {

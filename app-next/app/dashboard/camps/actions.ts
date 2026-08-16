@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -107,7 +108,17 @@ export async function getCampsData() {
   }
 }
 
-export async function setCampDetails(input: {
+export async function setCampDetails(
+  ...args: Parameters<typeof _setCampDetails>
+): Promise<ActionResult<Awaited<ReturnType<typeof _setCampDetails>>>> {
+  try {
+    return { ok: true, data: await _setCampDetails(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _setCampDetails(input: {
   eventId: string
   feeCents: number
   capacity: number | null
@@ -140,7 +151,17 @@ export async function setCampDetails(input: {
   revalidatePath('/dashboard/camps')
 }
 
-export async function getCampRegistrations(eventId: string) {
+export async function getCampRegistrations(
+  ...args: Parameters<typeof _getCampRegistrations>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getCampRegistrations>>>> {
+  try {
+    return { ok: true, data: await _getCampRegistrations(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getCampRegistrations(eventId: string) {
   const { supabase } = await getUserProfile()
 
   const { data: detail } = await supabase
@@ -164,7 +185,17 @@ export async function getCampRegistrations(eventId: string) {
   }
 }
 
-export async function registerForCamp(eventId: string, playerId: string) {
+export async function registerForCamp(
+  ...args: Parameters<typeof _registerForCamp>
+): Promise<ActionResult<Awaited<ReturnType<typeof _registerForCamp>>>> {
+  try {
+    return { ok: true, data: await _registerForCamp(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _registerForCamp(eventId: string, playerId: string) {
   const { profile, supabase } = await getUserProfile()
 
   const { data: detail } = await supabase
@@ -201,7 +232,17 @@ export async function registerForCamp(eventId: string, playerId: string) {
   revalidatePath('/dashboard/camps')
 }
 
-export async function togglePayment(registrationId: string) {
+export async function togglePayment(
+  ...args: Parameters<typeof _togglePayment>
+): Promise<ActionResult<Awaited<ReturnType<typeof _togglePayment>>>> {
+  try {
+    return { ok: true, data: await _togglePayment(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _togglePayment(registrationId: string) {
   const { profile, supabase } = await getUserProfile()
   if (profile.role !== 'doc') throw new Error('Only directors can update payment status')
 
@@ -223,7 +264,17 @@ export async function togglePayment(registrationId: string) {
   revalidatePath('/dashboard/camps')
 }
 
-export async function getParentPlayers() {
+export async function getParentPlayers(
+  ...args: Parameters<typeof _getParentPlayers>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getParentPlayers>>>> {
+  try {
+    return { ok: true, data: await _getParentPlayers(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getParentPlayers() {
   const { user, supabase } = await getUserProfile()
 
   const { data: players } = await supabase
@@ -251,7 +302,17 @@ interface CreateCampInput {
 // notifies the team (parents + coaches) via the existing push/email path.
 // Before this existed, a DOC had to open /dashboard/schedule, create the
 // event, come back to /dashboard/camps, find it, and set the fee/capacity.
-export async function createCamp(input: CreateCampInput) {
+export async function createCamp(
+  ...args: Parameters<typeof _createCamp>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createCamp>>>> {
+  try {
+    return { ok: true, data: await _createCamp(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createCamp(input: CreateCampInput) {
   const { user, profile, supabase } = await getUserProfile()
   if (profile.role !== 'doc') throw new Error('Only directors can create camps')
 
@@ -369,7 +430,17 @@ export async function createCamp(input: CreateCampInput) {
 // Returns counts so the UI can show "Nudged N · skipped M unlinked" — the
 // skipped count catches kids whose parent_id still points at the DOC (i.e.
 // the Roster Ops "Unlinked" case).
-export async function sendCampPaymentReminders(eventId: string): Promise<{
+export async function sendCampPaymentReminders(
+  ...args: Parameters<typeof _sendCampPaymentReminders>
+): Promise<ActionResult<Awaited<ReturnType<typeof _sendCampPaymentReminders>>>> {
+  try {
+    return { ok: true, data: await _sendCampPaymentReminders(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _sendCampPaymentReminders(eventId: string): Promise<{
   nudged: number
   skipped: number
   campTitle: string
