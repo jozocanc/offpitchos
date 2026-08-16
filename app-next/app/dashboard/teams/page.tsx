@@ -174,7 +174,7 @@ export default async function TeamsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {teams.map(team => (
-            <TeamCard key={team.id} team={team} />
+            <TeamCard key={team.id} team={team} timezone={timezone} />
           ))}
         </div>
       )}
@@ -182,7 +182,7 @@ export default async function TeamsPage() {
   )
 }
 
-function TeamCard({ team }: { team: Team }) {
+function TeamCard({ team, timezone }: { team: Team; timezone: string }) {
   const rateColor = team.attendance_rate >= 80 ? 'text-green' : team.attendance_rate >= 60 ? 'text-yellow-400' : 'text-red-400'
   const issueCount = team.unlinked_count + team.missing_sizes_count + team.low_attendance_count
   // "Needs attention" if there are any unlinked players (the biggest silent

@@ -134,6 +134,7 @@ function ThreadView({
   otherName: string
   onBack: () => void
 }) {
+  const timezone = useClubTimezone()
   const [messages, setMessages] = useState<DMMessage[] | null>(null)
   const [text, setText] = useState('')
   const [isSending, startSend] = useTransition()
