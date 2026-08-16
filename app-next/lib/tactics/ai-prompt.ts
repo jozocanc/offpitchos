@@ -24,7 +24,7 @@ type BoardObject =
   | { id: string; type: 'player'; x: number; y: number; role: 'red'|'blue'|'neutral'|'outside'|'gk'|'coach'; number?: number; position?: string }
   | { id: string; type: 'cone';   x: number; y: number; color: 'orange'|'yellow'|'red'|'blue'|'white' }
   | { id: string; type: 'ball';   x: number; y: number }
-  | { id: string; type: 'goal';   x: number; y: number; variant: 'mini-h'|'mini-v'|'full'; rotation?: number }
+  | { id: string; type: 'goal';   x: number; y: number; variant: 'mini-h'|'mini-v'|'full'; rotation?: number }  // rotation REQUIRED — see the goal rules
   | { id: string; type: 'arrow';  points: number[]; style: 'pass'|'run'|'free'; thickness?: number; animate_order?: number }
   | { id: string; type: 'zone';   x: number; y: number; width: number; height: number; color: string; opacity: number; label?: string }
   | { id: string; type: 'zone-line'; points: [number, number, number, number]; color: string }
@@ -69,6 +69,22 @@ Respond with ONLY a valid JSON object matching the DrillDoc type.
 - No comments inside the JSON.
 - Validate mentally: every object must have "id" and "type"; coordinates must be within field bounds; "color" fields on zones must be #rrggbb hex.
 - At most ONE labelled zone per area of the pitch. Do not stack two labelled zones over the same region — their labels render on top of each other and become unreadable. If a zone needs two ideas expressed, put them in one label or leave the second zone unlabelled.
+- GOALS: a goal is drawn with its mouth open toward the BOTTOM of the diagram and
+  its solid back bar along the top, then turned by "rotation" (degrees clockwise).
+  So rotation decides which way the goal faces, and getting it wrong leaves the goal
+  lying on its side across the pitch. On a horizontal field (x runs goal-to-goal):
+    * a goal on the LEFT end (x near 0) needs rotation: 270  (mouth faces right, into play)
+    * a goal on the RIGHT end (x near length_m) needs rotation: 90  (mouth faces left)
+  On a vertical field the ends are top and bottom instead: use rotation: 0 for the
+  goal at x near 0 and rotation: 180 for the goal at x near length_m.
+  ALWAYS set rotation explicitly on every goal. Never leave it out and never use 0
+  on a horizontal field.
+- Goal size comes from "variant", not from rotation: "full" is a real 7.32 m goal and
+  "mini-h" is a 3 m small goal. Both are rotated as above. Do not reach for "mini-v"
+  to make a goal stand upright — it is a narrow 1 m goal, not a rotated one.
+- Keep every goal on the field: x between 0 and length_m, y between 0 and width_m.
+  Put end goals exactly on the line (x = 0 or x = length_m) and centre them on
+  width_m / 2 unless the drill says otherwise.
 - Number the arrows with "animate_order" (1, 2, 3 …) in the sequence the movement actually happens, so the coach can press Play and watch the pattern build. Arrows that happen at the same moment share a number. Leave "animate_order" off only for arrows that are standing context rather than part of the sequence.
 - If drill type or player count is ambiguous, choose a sensible default and proceed.`
 
@@ -166,7 +182,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
         { id: 'p8', type: 'player', x: 20, y: 26, role: 'blue', number: 9 },
         { id: 'p9', type: 'player', x: 20, y: 42, role: 'blue', number: 10 },
         // Full goal at own end
-        { id: 'g1', type: 'goal', x: 0, y: 34, variant: 'full', rotation: 0 },
+        { id: 'g1', type: 'goal', x: 0, y: 34, variant: 'full', rotation: 270 },
         // Ball starts with GK
         { id: 'b1', type: 'ball', x: 3, y: 34 },
         // GK plays to CB — animate_order follows the sequence of play, so the
@@ -266,7 +282,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
         { id: 'zl1', type: 'zone-line', points: [18, 15, 12, 30], color: '#ef4444' },
         { id: 'zl2', type: 'zone-line', points: [18, 53, 12, 38], color: '#ef4444' },
         // Full goal at opponent end
-        { id: 'g1', type: 'goal', x: 0, y: 34, variant: 'full' },
+        { id: 'g1', type: 'goal', x: 0, y: 34, variant: 'full', rotation: 270 },
       ],
     }),
   },
@@ -282,7 +298,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
       field: { width_m: 68, length_m: 52.5, units: 'm', orientation: 'horizontal', half_field: true, style: 'schematic' },
       objects: [
         // Full goal at the top (opponent goal)
-        { id: 'g1', type: 'goal', x: 52.5, y: 34, variant: 'full' },
+        { id: 'g1', type: 'goal', x: 52.5, y: 34, variant: 'full', rotation: 90 },
         // Penalty area zone
         { id: 'z1', type: 'zone', x: 36, y: 13.85, width: 16.5, height: 40.3, color: '#3b82f6', opacity: 0.08, label: 'Penalty area' },
         // LB starts wide left
@@ -321,7 +337,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
       field: { width_m: 68, length_m: 40, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Full goal
-        { id: 'g1', type: 'goal', x: 38, y: 34, variant: 'full' },
+        { id: 'g1', type: 'goal', x: 38, y: 34, variant: 'full', rotation: 90 },
         // Penalty area zone
         { id: 'z1', type: 'zone', x: 21.5, y: 13.85, width: 16.5, height: 40.3, color: '#fde047', opacity: 0.12, label: 'Finishing zone' },
         // GK in goal
@@ -366,8 +382,8 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
       field: { width_m: 25, length_m: 35, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Mini-goals at each end
-        { id: 'g1', type: 'goal', x: 0,  y: 12.5, variant: 'mini-h' },
-        { id: 'g2', type: 'goal', x: 35, y: 12.5, variant: 'mini-h', rotation: 180 },
+        { id: 'g1', type: 'goal', x: 0,  y: 12.5, variant: 'mini-h', rotation: 270 },
+        { id: 'g2', type: 'goal', x: 35, y: 12.5, variant: 'mini-h', rotation: 90 },
         // Full field zone
         { id: 'z1', type: 'zone', x: 0, y: 0, width: 35, height: 25, color: '#22c55e', opacity: 0.05 },
         // ── Red team (4 outfield + GK) ──
