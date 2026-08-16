@@ -1,0 +1,60 @@
+-- 041_profiles_club_read.sql
+--
+-- profiles had exactly four policies:
+--   profiles_own_insert / profiles_own_read (user_id = auth.uid())
+--   profiles_own_update / profiles_doc_read (club_id IN get_doc_club_ids())
+--
+-- So a coach or parent could read exactly ONE profile row: their own. Only the
+-- club's creator could read anybody else's.
+--
+-- Nothing errors when that happens, because PostgREST embedded joins resolve
+-- under the caller's RLS. The name simply comes back null. Measured against
+-- production as coach Carlos Mendoza, who is in Riverbend FC:
+--
+--   profiles visible to this coach     1
+--   real profiles in Riverbend FC      9
+--
+-- One of nine. The consequences are spread across the app wherever a
+-- user-scoped client joins to profiles:
+--
+--   messages/actions.ts:267   author:profiles!announcements_author_id_fkey
+--   messages/actions.ts:507   author:profiles!announcement_replies_author_id_fkey
+--   coverage/actions.ts:473   profiles!coverage_requests_unavailable_coach_id_fkey
+--   coverage/actions.ts:474   covering:profiles!coverage_requests_covering_coach_id_fkey
+--   schedule/actions.ts:597   coverage profile join
+--
+-- Verified live: a coach reading the club's one announcement gets
+-- author.display_name = null. Every announcement written by anyone else shows
+-- no author, to everyone who is not the DOC.
+--
+-- Two of these are !inner joins:
+--   dm-actions.ts:75      profiles!inner(user_id)
+--   coverage/actions.ts:291  profiles!inner(role)
+-- An inner join against a row RLS hides does not blank a field, it DROPS THE
+-- ROW. So this silently shortens result sets rather than showing a gap.
+--
+-- Coach coverage is the product's headline differentiator and it renders the
+-- unavailable coach and the covering coach through exactly these joins.
+--
+-- The fix is the missing policy: any club member may read profiles belonging
+-- to their own club. get_user_club_ids() is intentionally the role-blind
+-- helper here — unlike migrations 034/036/038, where the bug was that a
+-- write policy used the role-blind helper, this is a read of a club roster
+-- and every member legitimately needs it.
+--
+-- Not a recursion hazard despite being a policy on profiles that reads
+-- profiles: get_user_club_ids() is SECURITY DEFINER, so its inner SELECT is
+-- not itself subject to RLS. That is precisely why these helpers exist.
+--
+-- Safe to expose. profiles carries no contact information at all — the
+-- columns are id, user_id, club_id, role, display_name, onboarding_complete,
+-- created_at, updated_at, deleted_at. Names and roles within one's own club
+-- are what a club roster is. Email lives in auth.users, which is untouched.
+--
+-- Soft-deleted profiles stay invisible: 037 nulls club_id, so club_id IN
+-- (...) does not match. That is intentional here, and the callers fall back
+-- to a placeholder name rather than rendering an empty author.
+
+create policy profiles_club_read on public.profiles
+  for select
+  using (club_id in (select public.get_user_club_ids()));
