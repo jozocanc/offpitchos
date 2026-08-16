@@ -54,7 +54,13 @@ export async function acceptInviteCode(
   }
 }
 
-async function _acceptInviteCode(code: string) {
+// 'player' is a self-declaration, not a privilege. A player and a parent
+// resolve to the same RLS (both are `parent_id = auth.uid()` on their own
+// player row), so choosing the wrong one changes labels and navigation, never
+// access. Defaults to 'parent' so existing youth invite links are unaffected.
+type JoinRole = 'parent' | 'player'
+
+async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -69,14 +75,14 @@ async function _acceptInviteCode(code: string) {
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
     user.email?.split('@')[0] ||
-    'Parent'
+    (joinAs === 'player' ? 'Player' : 'Parent')
 
   const { error: profileError } = await supabase
     .from('profiles')
     .upsert({
       user_id: user.id,
       club_id: team.clubId,
-      role: 'parent',
+      role: joinAs,
       display_name: displayName,
       onboarding_complete: true,
     }, { onConflict: 'user_id' })
@@ -96,7 +102,7 @@ async function _acceptInviteCode(code: string) {
       .upsert({
         team_id: team.teamId,
         profile_id: profile.id,
-        role: 'parent',
+        role: joinAs,
       }, { onConflict: 'team_id,profile_id' })
 
     if (memberError) throw new Error(`Failed to join team: ${memberError.message}`)
@@ -104,5 +110,5 @@ async function _acceptInviteCode(code: string) {
 
   revalidatePath('/dashboard')
 
-  return { clubId: team.clubId, teamId: team.teamId }
+  return { clubId: team.clubId, teamId: team.teamId, role: joinAs }
 }

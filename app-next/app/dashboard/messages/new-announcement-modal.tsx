@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { createAnnouncement } from './actions'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
+import { isStaff } from '@/lib/constants'
 
 interface Team {
   id: string
@@ -48,7 +49,7 @@ export default function NewAnnouncementModal({
   const { toast } = useToast()
 
   const isDoc = userRole === 'doc'
-  const isParent = userRole === 'parent'
+  const isParent = !isStaff(userRole)
 
   // Live audience preview based on selection
   const selectedAudience: AudienceCounts = teamId

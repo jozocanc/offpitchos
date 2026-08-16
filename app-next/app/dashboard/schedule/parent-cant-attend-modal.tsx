@@ -11,7 +11,8 @@ interface Player {
   jersey_number: number | null
 }
 
-// Parent-facing modal: "Which of your children can't make it?"
+// Member-facing modal: who can't make it. Used by a parent for their
+// children and by a player for themselves, hence the neutral wording.
 // Lists the parent's claimed kids on this event's team with checkboxes,
 // plus an optional reason field. On submit, marks each selected kid as
 // "excused" in the attendance table and pushes a notification to the
@@ -99,13 +100,13 @@ export default function ParentCantAttendModal({
         ) : kids.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
             <p className="text-gray text-sm">
-              No kids linked to your account on this team. Claim your children from the dashboard first.
+              Nobody is linked to your account on this team yet. Claim from the dashboard first.
             </p>
           </div>
         ) : (
           <>
             <p className="text-xs text-gray uppercase tracking-wide mb-3">
-              {kids.length === 1 ? 'Your child' : 'Which children can\'t make it?'}
+              {kids.length === 1 ? 'Confirm absence' : 'Who can\'t make it?'}
             </p>
             <div className="space-y-2 mb-4">
               {kids.map(kid => {

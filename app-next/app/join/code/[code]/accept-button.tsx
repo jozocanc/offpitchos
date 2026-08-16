@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation'
 import { acceptInviteCode } from './actions'
 import MoreTeams from './more-teams'
 
-export default function AcceptCodeButton({ code }: { code: string }) {
+export default function AcceptCodeButton({
+  code,
+  joinAs = 'parent',
+}: {
+  code: string
+  joinAs?: 'parent' | 'player'
+}) {
   const [isPending, startTransition] = useTransition()
   const [joinResult, setJoinResult] = useState<{ clubId: string; teamId: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -14,7 +20,7 @@ export default function AcceptCodeButton({ code }: { code: string }) {
   function handleClick() {
     startTransition(async () => {
       try {
-        const accRes = await acceptInviteCode(code)
+        const accRes = await acceptInviteCode(code, joinAs)
         if (!accRes.ok) { setError(accRes.error); return }
         const result = accRes.data
         setJoinResult(result)

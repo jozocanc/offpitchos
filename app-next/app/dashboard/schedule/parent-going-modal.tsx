@@ -108,13 +108,13 @@ export default function ParentGoingModal({
         ) : kids.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
             <p className="text-gray text-sm">
-              No kids linked to your account on this team. Claim your children from the dashboard first.
+              Nobody is linked to your account on this team yet. Claim from the dashboard first.
             </p>
           </div>
         ) : (
           <>
             <p className="text-xs text-gray uppercase tracking-wide mb-3">
-              {kids.length === 1 ? 'Your child' : 'Which children are coming?'}
+              {kids.length === 1 ? 'Confirm attendance' : 'Who is coming?'}
             </p>
             <div className="space-y-2 mb-6">
               {kids.map(kid => {

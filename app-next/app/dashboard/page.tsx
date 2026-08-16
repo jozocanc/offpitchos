@@ -13,6 +13,7 @@ import InstallPrompt from '@/components/install-prompt'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime } from '@/lib/format-datetime'
+import { isMember } from '@/lib/constants'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -159,7 +160,7 @@ async function DashboardBody({
       {userRole === 'coach' && <CoachAttentionPanel />}
 
       {/* Parent-scoped attention panel. */}
-      {userRole === 'parent' && <ParentAttentionPanel />}
+      {isMember(userRole) && <ParentAttentionPanel />}
 
       {/* Stat cards. */}
       <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>

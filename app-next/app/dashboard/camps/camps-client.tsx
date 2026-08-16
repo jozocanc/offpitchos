@@ -6,6 +6,7 @@ import { useState } from 'react'
 import CampDetailModal from './camp-detail-modal'
 import RegisterModal from './register-modal'
 import CreateCampModal from './create-camp-modal'
+import { isStaff } from '@/lib/constants'
 
 interface Camp {
   eventId: string
@@ -61,7 +62,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
   const [createOpen, setCreateOpen] = useState(false)
 
   const isDoc = userRole === 'doc'
-  const isParent = userRole === 'parent'
+  const isParent = !isStaff(userRole)
 
   // Split into upcoming and past
   const now = new Date()

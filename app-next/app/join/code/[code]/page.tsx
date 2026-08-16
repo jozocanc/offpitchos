@@ -6,10 +6,18 @@ import Wordmark from '@/components/wordmark'
 
 export default async function JoinByCodePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>
+  searchParams: Promise<{ as?: string }>
 }) {
   const { code } = await params
+  // ?as=player marks this as the squad link. One team code serves both
+  // audiences: a college program shares the player link, a youth club shares
+  // the plain one. Anything other than 'player' falls back to parent, so
+  // every existing invite link keeps behaving exactly as before.
+  const { as } = await searchParams
+  const joinAs: 'parent' | 'player' = as === 'player' ? 'player' : 'parent'
 
   let team: { teamId: string; teamName: string; ageGroup: string; clubId: string; clubName: string } | null = null
   let user: { id: string; email?: string | null } | null = null
@@ -85,7 +93,7 @@ export default async function JoinByCodePage({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray text-sm">Role</span>
-              <span className="font-semibold text-green">Parent</span>
+              <span className="font-semibold text-green">{joinAs === 'player' ? 'Player' : 'Parent'}</span>
             </div>
           </div>
 
@@ -95,7 +103,7 @@ export default async function JoinByCodePage({
                 <p className="text-gray text-sm text-center mb-4">
                   Signed in as <span className="text-white">{user.email}</span>
                 </p>
-                <AcceptCodeButton code={code.toUpperCase()} />
+                <AcceptCodeButton code={code.toUpperCase()} joinAs={joinAs} />
               </div>
             ) : (
               <div className="space-y-3">

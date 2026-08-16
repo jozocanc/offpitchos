@@ -14,6 +14,7 @@ interface AccountSettingsProps {
 function roleLabel(role?: string): string {
   if (role === 'doc') return 'Director of Coaching'
   if (role === 'coach') return 'Coach'
+  if (role === 'player') return 'Player'
   if (role === 'parent') return 'Parent'
   return 'Member'
 }

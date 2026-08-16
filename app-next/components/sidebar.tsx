@@ -181,7 +181,7 @@ const navItems: NavItem[] = [
   { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
   { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
   { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
-  { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'parent'] },
+  { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'parent', 'player'] },
   { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]

@@ -184,7 +184,7 @@ export default function ParentAttentionPanel() {
 function MyKidsSection({ kids }: { kids: ClaimedKid[] }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-bold mb-4">My Kids</h2>
+      <h2 className="text-lg font-bold mb-4">Linked to you</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {kids.map(kid => (
           <Link
@@ -271,16 +271,16 @@ function ClaimKidsModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl max-h-[85vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-2">Claim your kids</h2>
+        <h2 className="text-xl font-bold mb-2">Claim from the roster</h2>
         <p className="text-gray text-sm mb-6">
-          Select the children on your team that belong to you. We&apos;ll use this to send you
+          Select yourself, or the players you are responsible for. We&apos;ll use this to send you
           the right reminders, gear requests, and coach feedback.
         </p>
 
         {claimable.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5">
             <p className="text-gray text-sm">
-              No unlinked players on your team — ask your director to add your child, or
+              No unlinked players on your team — ask your director to add you to the roster, or
               you&apos;re already linked.
             </p>
           </div>

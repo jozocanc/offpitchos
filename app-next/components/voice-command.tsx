@@ -11,6 +11,7 @@ import {
   type PageContext,
 } from '@/app/dashboard/voice-actions'
 import { useVoiceFocus } from './voice-context'
+import { isStaff } from '@/lib/constants'
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'confirming' | 'executing' | 'result'
 
@@ -184,7 +185,8 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
   }, [state, result, dismiss])
 
   // Gate to DOC + coach only — hooks must run before this early return.
-  if (userRole === 'parent') return null
+  // Staff tool. A player would have been shown it under the old check.
+  if (!isStaff(userRole)) return null
   if (pathname === '/dashboard/ask') return null
 
   const isListening = state === 'listening'

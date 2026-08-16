@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { togglePin, deleteAnnouncement, markAnnouncementRead, respondToPoll } from './actions'
 import ReplyThread from './reply-thread'
 import { useToast } from '@/components/toast'
+import { isStaff } from '@/lib/constants'
 
 interface PollKid {
   playerId: string
@@ -64,7 +65,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const replyCount = announcement.announcement_replies?.length ?? 0
   const isDoc = userRole === 'doc'
   const isAuthor = author?.id === userProfileId
-  const isParent = userRole === 'parent'
+  const isParent = !isStaff(userRole)
   const readCount = announcement.read_count ?? 0
   const totalRecipients = announcement.total_recipients ?? 0
   const showReadReceipt = isAuthor && totalRecipients > 0

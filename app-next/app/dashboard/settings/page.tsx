@@ -9,6 +9,7 @@ import CoverageSettings from './coverage-settings'
 import AccountSettings from './account-settings'
 import DangerZone from './danger-zone'
 import StripeConnect from './stripe-connect'
+import { isStaff } from '@/lib/constants'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -21,7 +22,8 @@ export default async function SettingsPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role === 'parent') redirect('/dashboard')
+  // Staff-only page. Was `role === 'parent'`, which would have let a player in.
+  if (!isStaff(profile?.role)) redirect('/dashboard')
 
   const { data: club } = await supabase
     .from('clubs')

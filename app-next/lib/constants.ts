@@ -2,7 +2,26 @@ export const ROLES = {
   DOC: "doc",
   COACH: "coach",
   PARENT: "parent",
+  PLAYER: "player",
 } as const;
+
+/**
+ * Staff run the club; members belong to it.
+ *
+ * Most role checks in the UI mean "is this person staff?", not "is this person
+ * specifically a parent". They were written as `role === 'parent'` only because
+ * parent was the sole non-staff role. Adding 'player' in migration 045 made
+ * that assumption wrong: a player would have fallen through every one of those
+ * checks and been treated as staff.
+ */
+export function isStaff(role: string | null | undefined): boolean {
+  return role === ROLES.DOC || role === ROLES.COACH;
+}
+
+/** A parent or a player — belongs to the club, does not run it. */
+export function isMember(role: string | null | undefined): boolean {
+  return role === ROLES.PARENT || role === ROLES.PLAYER;
+}
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
