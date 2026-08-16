@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
+import { writeDrillThumbnail } from '@/lib/tactics/thumbnail-store'
 import { DRILL_CATEGORIES, type DrillCategory } from '@/lib/tactics/drill-categories'
 import {
   SYSTEM_PROMPT_CACHED_MESSAGES,
@@ -325,6 +326,10 @@ async function _generateDrillFromDescription(
     throw new Error(insertError?.message ?? 'Failed to save drill to database')
   }
 
+  // Give the drill a library preview immediately. Without this a generated
+  // drill shows "No preview yet" until somebody happens to open and edit it.
+  await writeDrillThumbnail(inserted.id, profile.club_id, doc.field, doc.objects)
+
   revalidatePath('/dashboard/tactics')
   return { drillId: inserted.id }
 }
@@ -519,6 +524,10 @@ async function _generateDrillFromPdf(
   if (insertError || !inserted) {
     throw new Error(insertError?.message ?? 'Failed to save drill to database')
   }
+
+  // Give the drill a library preview immediately. Without this a generated
+  // drill shows "No preview yet" until somebody happens to open and edit it.
+  await writeDrillThumbnail(inserted.id, profile.club_id, doc.field, doc.objects)
 
   revalidatePath('/dashboard/tactics')
   return { drillId: inserted.id }

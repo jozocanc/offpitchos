@@ -1,8 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
-import { renderThumbnailPng } from '@/lib/tactics/thumbnail'
+import { writeDrillThumbnail } from '@/lib/tactics/thumbnail-store'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
@@ -244,13 +243,7 @@ async function _regenerateThumbnail(drillId: string) {
       await isRosteredOnTeam(supabase, profile.id, drill.team_id))
   if (!canEdit) throw new Error('Forbidden')
 
-  const parsed = DrillDocSchema.safeParse({ field: drill.field, objects: drill.objects })
-  if (!parsed.success) return
-  const png = await renderThumbnailPng(parsed.data.field, parsed.data.objects)
-  const path = `${drill.club_id}/${drill.id}.png`
-  const svc = createServiceClient()
-  await svc.storage.from('drill-thumbnails').upload(path, png, { contentType: 'image/png', upsert: true })
-  await supabase.from('drills').update({ thumbnail_path: path }).eq('id', drillId)
+  await writeDrillThumbnail(drill.id, drill.club_id, drill.field, drill.objects)
   revalidatePath('/dashboard/tactics')
 }
 

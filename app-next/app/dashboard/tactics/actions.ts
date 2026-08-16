@@ -1,5 +1,6 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
+import { writeDrillThumbnail } from '@/lib/tactics/thumbnail-store'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { DrillCategory, Visibility } from '@/lib/tactics/drill-categories'
@@ -120,9 +121,14 @@ async function _createBlankDrill(teamId: string | null): Promise<string> {
     team_id: teamId,
     created_by: profile.id,
     title: 'Untitled drill',
-  }).select('id').single()
+  }).select('id, field, objects').single()
 
   if (error || !data) throw new Error(error?.message ?? 'Insert failed')
+
+  // field/objects come from the column defaults here, so read them back rather
+  // than guessing what an empty board looks like.
+  await writeDrillThumbnail(data.id, profile.club_id, data.field, data.objects)
+
   revalidatePath('/dashboard/tactics')
   return data.id
 }
@@ -177,6 +183,9 @@ async function _duplicateDrill(drillId: string): Promise<string> {
     objects: src.objects,
   }).select('id').single()
   if (error || !data) throw new Error(error?.message ?? 'Duplicate failed')
+
+  await writeDrillThumbnail(data.id, profile.club_id, src.field, src.objects)
+
   revalidatePath('/dashboard/tactics')
   return data.id
 }
