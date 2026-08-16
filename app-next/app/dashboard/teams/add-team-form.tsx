@@ -27,12 +27,18 @@ export default function AddTeamForm() {
     const addedName = teamName.trim()
     startTransition(async () => {
       try {
-        await addTeam(formData)
+        const res = await addTeam(formData)
+        if (!res.ok) {
+          setError(res.error)
+          return
+        }
         setTeamName('')
         setAgeGroup(String(AGE_GROUPS[0]))
         setOpen(false)
         toast(`${addedName} added`, 'success')
       } catch (err) {
+        // Only network/framework failures reach here now; the action reports
+        // its own errors as { ok: false }.
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
