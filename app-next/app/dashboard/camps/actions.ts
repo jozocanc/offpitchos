@@ -96,7 +96,7 @@ export async function getCampsData() {
       .order('name', { ascending: true }),
   ])
 
-  const effectiveRole = await getEffectiveRole(user.email ?? '', profile.role)
+  const effectiveRole = await getEffectiveRole(profile.role)
 
   return {
     camps,

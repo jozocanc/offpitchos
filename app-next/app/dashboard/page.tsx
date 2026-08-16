@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 import AttentionPanel from './attention-panel'
 import CoachAttentionPanel from './coach-attention-panel'
@@ -11,8 +10,7 @@ import OnboardingChecklist from './onboarding-checklist'
 import DemoSeedButton from './demo-seed-button'
 import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
-
-const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -31,15 +29,8 @@ export default async function DashboardPage() {
     .eq('user_id', claims.sub)
     .single()
 
-  // Respect the admin role switcher (same logic as layout)
-  let userRole = profile?.role ?? 'parent'
-  if (claims.email === ADMIN_EMAIL) {
-    const cookieStore = await cookies()
-    const viewAs = cookieStore.get('viewAsRole')?.value
-    if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
-      userRole = viewAs
-    }
-  }
+  // Respect the "preview as" switcher (same helper as the layout)
+  const userRole = await getEffectiveRole(profile?.role ?? 'parent')
 
   const displayName = profile?.display_name
     ?? claims.user_metadata?.full_name

@@ -186,21 +186,20 @@ const navItems: NavItem[] = [
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
 
-const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
-
 interface SidebarProps {
   userEmail: string
   userRole: string
+  /** True only for a DOC — decided server-side from their real profile role. */
+  canSwitchRole?: boolean
 }
 
-export default function Sidebar({ userEmail, userRole }: SidebarProps) {
+export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [viewAs, setViewAs] = useState(userRole)
-  const isAdmin = userEmail === ADMIN_EMAIL
   const router = useRouter()
 
-  const activeRole = isAdmin ? viewAs : userRole
+  const activeRole = canSwitchRole ? viewAs : userRole
 
   function switchRole(role: string) {
     setViewAs(role)
@@ -262,8 +261,10 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
 
       {/* User info + sign out — pb includes safe-area for iPhone home bar */}
       <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/5">
-        {isAdmin && (
-          <div className="mb-3 flex gap-1">
+        {canSwitchRole && (
+          <div className="mb-3">
+            <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">Preview as</p>
+            <div className="flex gap-1">
             {(['doc', 'coach', 'parent'] as const).map(role => (
               <button
                 key={role}
@@ -277,6 +278,7 @@ export default function Sidebar({ userEmail, userRole }: SidebarProps) {
                 {role === 'doc' ? 'DOC' : role}
               </button>
             ))}
+            </div>
           </div>
         )}
         <div className="mb-3 flex items-center justify-between">

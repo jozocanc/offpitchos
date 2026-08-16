@@ -493,7 +493,7 @@ export async function getCoverageData() {
     requests: requests ?? [],
     responses: responses ?? [],
     coaches: coaches ?? [],
-    userRole: await getEffectiveRole(user.email ?? '', profile.role),
+    userRole: await getEffectiveRole(profile.role),
     userProfileId: profile.id,
   }
 }

@@ -121,7 +121,7 @@ export async function getGearData(): Promise<GearData> {
 
   return {
     teams: teamSummaries,
-    userRole: await getEffectiveRole(user.email ?? '', profile.role),
+    userRole: await getEffectiveRole(profile.role),
     lastRequestedAt,
     lastRequestedParentCount,
     respondedSinceRequest,

@@ -19,7 +19,7 @@ export default async function FilesPage() {
     .select('role')
     .eq('user_id', user.id)
     .single()
-  const role = await getEffectiveRole(user.email ?? '', prof?.role ?? 'parent')
+  const role = await getEffectiveRole(prof?.role ?? 'parent')
 
   const files = await listClubFiles()
 

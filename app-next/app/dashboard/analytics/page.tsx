@@ -14,7 +14,7 @@ export default async function AnalyticsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
-  const role = await getEffectiveRole(user.email ?? '', prof?.role ?? 'parent')
+  const role = await getEffectiveRole(prof?.role ?? 'parent')
   if (role !== 'doc') redirect('/dashboard')
 
   const data = await getAnalyticsData()

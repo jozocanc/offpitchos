@@ -27,7 +27,7 @@ export async function getAskPageData() {
   // persisted to ai_chats (for the DOC AI Log), but we don't restore them
   // into the chat UI across page loads.
   return {
-    userRole: await getEffectiveRole(user.email ?? '', profile.role),
+    userRole: await getEffectiveRole(profile.role),
     chatHistory: [] as { id: string; question: string; answer: string; created_at: string }[],
   }
 }

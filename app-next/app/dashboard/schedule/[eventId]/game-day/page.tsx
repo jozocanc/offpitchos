@@ -21,7 +21,7 @@ export default async function GameDayPage({ params }: { params: Promise<{ eventI
 
   if (!profile?.club_id) redirect('/dashboard')
 
-  const role = await getEffectiveRole(user.email ?? '', profile.role)
+  const role = await getEffectiveRole(profile.role)
   if (role !== 'doc' && role !== 'coach') redirect('/dashboard')
 
   const { data: event } = await supabase

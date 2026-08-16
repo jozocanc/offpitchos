@@ -635,7 +635,7 @@ export async function getScheduleData() {
     coverageRequests: coverageRequests ?? [],
     coachesByTeam,
     rsvpTallies,
-    userRole: await getEffectiveRole(user.email ?? '', profile.role),
+    userRole: await getEffectiveRole(profile.role),
     userProfileId: profile.id,
   }
 }

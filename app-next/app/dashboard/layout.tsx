@@ -1,12 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import Sidebar from '@/components/sidebar'
 import { ToastProvider } from '@/components/toast'
 import VoiceCommand from '@/components/voice-command'
 import { VoiceFocusProvider } from '@/components/voice-context'
-
-const ADMIN_EMAIL = 'jozo.cancar27@gmail.com'
+import { canSwitchRole, getEffectiveRole } from '@/lib/admin-role'
 
 export default async function DashboardLayout({
   children,
@@ -32,19 +30,17 @@ export default async function DashboardLayout({
     redirect('/onboarding')
   }
 
-  // Admin role switcher — read cookie
-  let effectiveRole = profile.role ?? 'parent'
-  if (claims.email === ADMIN_EMAIL) {
-    const cookieStore = await cookies()
-    const viewAs = cookieStore.get('viewAsRole')?.value
-    if (viewAs && ['doc', 'coach', 'parent'].includes(viewAs)) {
-      effectiveRole = viewAs
-    }
-  }
+  // "Preview as" — a DOC can view the app as one of their coaches or parents.
+  const actualRole = profile.role ?? 'parent'
+  const effectiveRole = await getEffectiveRole(actualRole)
 
   return (
     <div className="flex min-h-screen bg-dark">
-      <Sidebar userEmail={claims.email ?? ''} userRole={effectiveRole} />
+      <Sidebar
+        userEmail={claims.email ?? ''}
+        userRole={effectiveRole}
+        canSwitchRole={canSwitchRole(actualRole)}
+      />
       <ToastProvider>
         <VoiceFocusProvider>
           {/* pt-14 on mobile clears the fixed hamburger button (top-4 + ~38px
