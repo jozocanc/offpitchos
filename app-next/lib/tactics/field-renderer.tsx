@@ -890,19 +890,37 @@ export default function FieldRenderer({
     }
   }
 
-  // Zones drawn at the same spot would otherwise print their labels on top of
-  // one another — an AI-generated drill produced two zones at identical
-  // coordinates and the text was unreadable. Each labelled zone gets its
-  // position within the stack so its label can be offset by a line.
+  // Zone labels sit centred on the zone's top edge, so overlapping zones print
+  // their text on top of one another and none of it is readable — an
+  // AI-generated drill produced two zones at identical coordinates plus a wide
+  // band whose centred label landed on a narrower zone's. Each label is packed
+  // into the lowest row where it clears every label already placed on that row.
   const zoneLabelRow = new Map<string, number>()
   {
-    const seenAt = new Map<string, number>()
-    for (const o of objects) {
-      if (o.type !== 'zone' || !o.label) continue
-      const key = `${o.x},${o.y}`
-      const row = seenAt.get(key) ?? 0
-      zoneLabelRow.set(o.id, row)
-      seenAt.set(key, row + 1)
+    const boxes = objects.flatMap(o => {
+      if (o.type !== 'zone' || !o.label || o.hidden || hiddenSet.has(o.id)) return []
+      const { x, y } = mToPx(o.x, o.y, field, layout)
+      const w = mLen(field.orientation === 'horizontal' ? o.width : o.height, layout)
+      const fontPx = Math.max(10, mLen(1.5, layout)) * (o.scale ?? 1)
+      // Konva gives no text metrics before render; approximate from the glyph
+      // count at roughly half an em per character.
+      const halfW = Math.max(o.label.length * fontPx * 0.28, fontPx)
+      return [{ id: o.id, centre: x + w / 2, halfW, top: y, fontPx }]
+    })
+    boxes.sort((a, b) => a.centre - b.centre)
+
+    const placed: (typeof boxes)[] = []
+    for (const b of boxes) {
+      let row = 0
+      while (
+        placed[row]?.some(
+          p =>
+            Math.abs(p.top - b.top) < Math.max(p.fontPx, b.fontPx) * 1.2 &&
+            Math.abs(p.centre - b.centre) < p.halfW + b.halfW,
+        )
+      ) row++
+      ;(placed[row] ??= []).push(b)
+      zoneLabelRow.set(b.id, row)
     }
   }
 
