@@ -27,6 +27,7 @@ import AnimationOverlay from './animation-overlay'
 import type { AnimArrow } from './animation-overlay'
 import HistoryModal from './history-modal'
 import CommentsPanel from './comments-panel'
+import { useToast } from '@/components/toast'
 
 // ─── Module-level clipboard (Phase A: in-memory only) ─────────────────────────
 let clipboard: BoardObject[] = []
@@ -331,6 +332,7 @@ export default function EditorClient({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const { toast } = useToast()
   const [commentsOpen, setCommentsOpen] = useState(false)
   // Arrow preview: tracks current mouse position in field-meter coords
   const [previewHead, setPreviewHead] = useState<{ x: number; y: number } | null>(null)
@@ -1165,10 +1167,10 @@ export default function EditorClient({
                     return
                   }
                   if (animArrows.length === 0) {
-                    // Gentle toast-like feedback via the save status area — a proper toast
-                    // would require a library; we use a temp state trick
-                    setSaveStatus('error')
-                    setTimeout(() => setSaveStatus('saved'), 2500)
+                    // Never fake a save error here. Flashing the save indicator
+                    // red reads as "your drill failed to save" — the one thing
+                    // a coach must never wrongly believe mid-session.
+                    toast('Nothing to animate yet. Select an arrow and set its animation order in Properties.', 'error')
                     return
                   }
                   setIsPlaying(true)

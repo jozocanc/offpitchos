@@ -25,7 +25,7 @@ type BoardObject =
   | { id: string; type: 'cone';   x: number; y: number; color: 'orange'|'yellow'|'red'|'blue'|'white' }
   | { id: string; type: 'ball';   x: number; y: number }
   | { id: string; type: 'goal';   x: number; y: number; variant: 'mini-h'|'mini-v'|'full'; rotation?: number }
-  | { id: string; type: 'arrow';  points: number[]; style: 'pass'|'run'|'free'; thickness?: number }
+  | { id: string; type: 'arrow';  points: number[]; style: 'pass'|'run'|'free'; thickness?: number; animate_order?: number }
   | { id: string; type: 'zone';   x: number; y: number; width: number; height: number; color: string; opacity: number; label?: string }
   | { id: string; type: 'zone-line'; points: [number, number, number, number]; color: string }
 
@@ -69,6 +69,7 @@ Respond with ONLY a valid JSON object matching the DrillDoc type.
 - No comments inside the JSON.
 - Validate mentally: every object must have "id" and "type"; coordinates must be within field bounds; "color" fields on zones must be #rrggbb hex.
 - At most ONE labelled zone per area of the pitch. Do not stack two labelled zones over the same region — their labels render on top of each other and become unreadable. If a zone needs two ideas expressed, put them in one label or leave the second zone unlabelled.
+- Number the arrows with `animate_order` (1, 2, 3 …) in the sequence the movement actually happens, so the coach can press Play and watch the pattern build. Arrows that happen at the same moment share a number. Leave `animate_order` off only for arrows that are standing context rather than part of the sequence.
 - If drill type or player count is ambiguous, choose a sensible default and proceed.`
 
 // ─── Few-shot examples ────────────────────────────────────────────────────────
@@ -168,15 +169,16 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
         { id: 'g1', type: 'goal', x: 0, y: 34, variant: 'full', rotation: 0 },
         // Ball starts with GK
         { id: 'b1', type: 'ball', x: 3, y: 34 },
-        // GK plays to CB
-        { id: 'a1', type: 'arrow', points: [3, 34, 10.5, 26.5], style: 'pass', thickness: 2 },
+        // GK plays to CB — animate_order follows the sequence of play, so the
+        // coach can press Play and watch the build-up unfold step by step.
+        { id: 'a1', type: 'arrow', points: [3, 34, 10.5, 26.5], style: 'pass', thickness: 2, animate_order: 1 },
+        // CM offers as option at the same moment as the first pass
+        { id: 'a3', type: 'arrow', points: [24.5, 27.5, 18, 27.5], style: 'run', thickness: 2, animate_order: 1 },
         // CB switches to RB
-        { id: 'a2', type: 'arrow', points: [10.5, 26.5, 10.5, 56], style: 'pass', thickness: 2 },
-        // CM offers as option
-        { id: 'a3', type: 'arrow', points: [24.5, 27.5, 18, 27.5], style: 'run', thickness: 2 },
-        // Pressure arrows from blue forwards
-        { id: 'a4', type: 'arrow', points: [20, 26.5, 11, 26.5], style: 'run', thickness: 1 },
-        { id: 'a5', type: 'arrow', points: [20, 42, 11, 42], style: 'run', thickness: 1 },
+        { id: 'a2', type: 'arrow', points: [10.5, 26.5, 10.5, 56], style: 'pass', thickness: 2, animate_order: 2 },
+        // Pressure arrows from blue forwards, triggered by the switch
+        { id: 'a4', type: 'arrow', points: [20, 26.5, 11, 26.5], style: 'run', thickness: 1, animate_order: 3 },
+        { id: 'a5', type: 'arrow', points: [20, 42, 11, 42], style: 'run', thickness: 1, animate_order: 3 },
       ],
     }),
   },
