@@ -830,13 +830,21 @@ export default function EditorClient({
   // ── Marquee pointer handlers ──────────────────────────────────────────────────
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (stateRef.current.tool !== 'select') return
-    // Only start marquee on primary button on empty canvas (not on a Konva child)
-    const target = e.target as HTMLElement
-    // If the pointer is on the canvas element itself (stage background) start marquee
-    if (target.tagName !== 'CANVAS') return
+    if (e.button !== 0) return
+
     const rect = e.currentTarget.getBoundingClientRect()
     const sx = e.clientX - rect.left
     const sy = e.clientY - rect.top
+
+    // Ask Konva what is under the pointer, not the DOM. Konva draws the whole
+    // board into a single <canvas>, so an event that starts on a player and one
+    // that starts on empty grass both report tagName 'CANVAS' — the old check
+    // could never tell them apart and so began a marquee on every press,
+    // including the press that starts dragging an object. That is why dragging
+    // one token also selected everything the drag swept over.
+    const stage = stageRef.current
+    if (stage?.getIntersection({ x: sx, y: sy })) return
+
     marqueeStartRef.current = { x: sx, y: sy }
     isMarqueeRef.current = false
     setMarquee(null)
