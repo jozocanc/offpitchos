@@ -160,7 +160,8 @@ export function ZoneNode({
   onDragEnd,
   onDoubleClick,
   onContextMenu,
-}: NodeProps<ZoneObj>) {
+  labelRow = 0,
+}: NodeProps<ZoneObj> & { labelRow?: number }) {
   const groupRef = React.useRef<Konva.Group | null>(null)
   useFadeInOnMount(groupRef as KonvaRef)
   const dragScale = useDragScale(groupRef as KonvaRef, 1.03)
@@ -170,6 +171,7 @@ export function ZoneNode({
   const w = field.orientation === 'horizontal' ? mLen(obj.width, layout) : mLen(obj.height, layout)
   const h = field.orientation === 'horizontal' ? mLen(obj.height, layout) : mLen(obj.width, layout)
   const draggable = interactive && !obj.locked
+  const fontPx = Math.max(10, mLen(1.5, layout)) * (obj.scale ?? 1)
 
   const handlers = interactive
     ? {
@@ -231,7 +233,7 @@ export function ZoneNode({
           // drill produced precisely that: three zone labels rendered on top
           // of one another across the centre circle, completely unreadable.
           // Labelling at the edge is also the convention in coaching diagrams.
-          y={ZONE_LABEL_INSET_PX}
+          y={ZONE_LABEL_INSET_PX + labelRow * (fontPx + 2)}
           width={w}
           height={h}
           align="center"
@@ -241,7 +243,7 @@ export function ZoneNode({
           shadowBlur={3}
           shadowOpacity={0.8}
           fontFamily="Inter, system-ui, sans-serif"
-          fontSize={Math.max(10, mLen(1.5, layout)) * (obj.scale ?? 1)}
+          fontSize={fontPx}
           listening={false}
         />
       )}
@@ -888,6 +890,22 @@ export default function FieldRenderer({
     }
   }
 
+  // Zones drawn at the same spot would otherwise print their labels on top of
+  // one another — an AI-generated drill produced two zones at identical
+  // coordinates and the text was unreadable. Each labelled zone gets its
+  // position within the stack so its label can be offset by a line.
+  const zoneLabelRow = new Map<string, number>()
+  {
+    const seenAt = new Map<string, number>()
+    for (const o of objects) {
+      if (o.type !== 'zone' || !o.label) continue
+      const key = `${o.x},${o.y}`
+      const row = seenAt.get(key) ?? 0
+      zoneLabelRow.set(o.id, row)
+      seenAt.set(key, row + 1)
+    }
+  }
+
   function renderObject(obj: BoardObject) {
     if (hiddenSet.has(obj.id)) return null
     const selected = selectedSet.has(obj.id)
@@ -905,7 +923,14 @@ export default function FieldRenderer({
 
     switch (obj.type) {
       case 'zone':
-        return <ZoneNode key={obj.id} {...commonProps} obj={obj} />
+        return (
+          <ZoneNode
+            key={obj.id}
+            {...commonProps}
+            obj={obj}
+            labelRow={zoneLabelRow.get(obj.id) ?? 0}
+          />
+        )
       case 'zone-line':
         return <ZoneLineNode key={obj.id} {...commonProps} obj={obj} />
       case 'cone':
