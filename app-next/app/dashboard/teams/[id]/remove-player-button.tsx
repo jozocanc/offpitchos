@@ -2,13 +2,18 @@
 
 import { useTransition } from 'react'
 import { removePlayer } from './player-actions'
+import { useToast } from '@/components/toast'
 
 export default function RemovePlayerButton({ playerId, teamId }: { playerId: string; teamId: string }) {
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   function handleRemove() {
     if (!confirm('Remove this player from the team?')) return
-    startTransition(() => removePlayer(playerId, teamId))
+    startTransition(async () => {
+      const r = await removePlayer(playerId, teamId)
+      if (!r.ok) toast(r.error, 'error')
+    })
   }
 
   return (

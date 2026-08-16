@@ -25,7 +25,8 @@ export default function GroupChatLink({
   function handleSave() {
     startTransition(async () => {
       try {
-        await updateGroupChatLink(teamId, link)
+        const r = await updateGroupChatLink(teamId, link)
+        if (!r.ok) { toast(r.error, 'error'); return }
         toast(link.trim() ? 'Group chat link saved' : 'Group chat link removed', 'success')
         setEditing(false)
       } catch (err: unknown) {

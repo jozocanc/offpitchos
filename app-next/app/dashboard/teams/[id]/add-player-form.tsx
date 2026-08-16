@@ -26,7 +26,8 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
     const lastName = (formData.get('lastName') as string)?.trim() ?? ''
     startTransition(async () => {
       try {
-        await addPlayer(formData)
+        const r = await addPlayer(formData)
+        if (!r.ok) { toast(r.error, 'error'); return }
         setJustAdded({ firstName, lastName })
         setOpen(false)
       } catch (err: unknown) {
@@ -40,7 +41,9 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
     if (invitePending) return
     setInvitePending(true)
     try {
-      const { url } = await createParentInviteReturningUrl(teamId)
+      const inviteRes = await createParentInviteReturningUrl(teamId)
+      if (!inviteRes.ok) { toast(inviteRes.error, 'error'); setInvitePending(false); return }
+      const { url } = inviteRes.data
       try {
         await navigator.clipboard.writeText(url)
       } catch {

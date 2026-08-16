@@ -23,8 +23,9 @@ export default function VenuesSection() {
   }, [])
 
   async function loadVenues() {
-    const data = await getVenues()
-    setVenues(data)
+    const res = await getVenues()
+    if (!res.ok) return
+    setVenues(res.data)
   }
 
   function openAdd() {
@@ -58,9 +59,11 @@ export default function VenuesSection() {
     startTransition(async () => {
       try {
         if (editingVenue) {
-          await updateVenue(formData)
+          const r = await updateVenue(formData)
+          if (!r.ok) { setError(r.error); return }
         } else {
-          await addVenue(formData)
+          const r = await addVenue(formData)
+          if (!r.ok) { setError(r.error); return }
         }
         setModalOpen(false)
         await loadVenues()
@@ -75,7 +78,8 @@ export default function VenuesSection() {
     formData.set('id', venueId)
     startTransition(async () => {
       try {
-        await deleteVenue(formData)
+        const r = await deleteVenue(formData)
+        if (!r.ok) { setError(r.error); return }
         await loadVenues()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')

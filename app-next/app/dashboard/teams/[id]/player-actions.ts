@@ -3,8 +3,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
-export async function addPlayer(formData: FormData) {
+export async function addPlayer(
+  ...args: Parameters<typeof _addPlayer>
+): Promise<ActionResult<Awaited<ReturnType<typeof _addPlayer>>>> {
+  try {
+    return { ok: true, data: await _addPlayer(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _addPlayer(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -42,7 +53,17 @@ export async function addPlayer(formData: FormData) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-export async function removePlayer(playerId: string, teamId: string) {
+export async function removePlayer(
+  ...args: Parameters<typeof _removePlayer>
+): Promise<ActionResult<Awaited<ReturnType<typeof _removePlayer>>>> {
+  try {
+    return { ok: true, data: await _removePlayer(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _removePlayer(playerId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -59,7 +80,17 @@ export async function removePlayer(playerId: string, teamId: string) {
 
 // Link an existing player to a parent user (one of the team's parent members).
 // Used to fix "unlinked" players where parent_id currently points at the DOC who added them.
-export async function linkPlayerToParent(playerId: string, parentUserId: string, teamId: string) {
+export async function linkPlayerToParent(
+  ...args: Parameters<typeof _linkPlayerToParent>
+): Promise<ActionResult<Awaited<ReturnType<typeof _linkPlayerToParent>>>> {
+  try {
+    return { ok: true, data: await _linkPlayerToParent(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _linkPlayerToParent(playerId: string, parentUserId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -110,6 +141,16 @@ export async function linkPlayerToParent(playerId: string, parentUserId: string,
 // player for the arriving parent so they don't have to run the manual
 // claim-your-kids flow on the dashboard.
 export async function createPlayerScopedInvite(
+  ...args: Parameters<typeof _createPlayerScopedInvite>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createPlayerScopedInvite>>>> {
+  try {
+    return { ok: true, data: await _createPlayerScopedInvite(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createPlayerScopedInvite(
   playerId: string,
   teamId: string,
 ): Promise<{ url: string }> {
@@ -166,7 +207,17 @@ export async function createPlayerScopedInvite(
 // Generate a parent invite for a team and return the shareable URL so the UI
 // can copy it to clipboard right after a player is added, skipping the two-step
 // "generate then find the link" dance.
-export async function createParentInviteReturningUrl(teamId: string): Promise<{ url: string }> {
+export async function createParentInviteReturningUrl(
+  ...args: Parameters<typeof _createParentInviteReturningUrl>
+): Promise<ActionResult<Awaited<ReturnType<typeof _createParentInviteReturningUrl>>>> {
+  try {
+    return { ok: true, data: await _createParentInviteReturningUrl(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _createParentInviteReturningUrl(teamId: string): Promise<{ url: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

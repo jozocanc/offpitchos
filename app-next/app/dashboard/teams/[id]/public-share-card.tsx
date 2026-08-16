@@ -24,7 +24,8 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
     const next = !enabled
     startTransition(async () => {
       try {
-        await setTeamPublicShare(teamId, next)
+        const r = await setTeamPublicShare(teamId, next)
+        if (!r.ok) { toast(r.error, 'error'); return }
         setEnabled(next)
         if (next && !token) {
           // Server-side mint — UI updates on the next render via
@@ -48,7 +49,8 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
     if (!confirm('Rotate the share link? Anyone using the old link will lose access immediately.')) return
     startTransition(async () => {
       try {
-        await rotateTeamPublicShareToken(teamId)
+        const r = await rotateTeamPublicShareToken(teamId)
+        if (!r.ok) { toast(r.error, 'error'); return }
         toast('Share link rotated', 'success')
         window.location.reload()
       } catch (err: unknown) {

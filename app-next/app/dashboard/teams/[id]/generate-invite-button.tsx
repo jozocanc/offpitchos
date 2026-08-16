@@ -2,15 +2,18 @@
 
 import { useTransition } from 'react'
 import { generateParentInvite } from './actions'
+import { useToast } from '@/components/toast'
 
 export default function GenerateInviteButton({ teamId }: { teamId: string }) {
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   function handleClick() {
     const formData = new FormData()
     formData.set('teamId', teamId)
     startTransition(async () => {
-      await generateParentInvite(formData)
+      const r = await generateParentInvite(formData)
+      if (!r.ok) toast(r.error, 'error')
     })
   }
 

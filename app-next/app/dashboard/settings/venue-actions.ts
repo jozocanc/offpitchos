@@ -3,8 +3,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
-export async function getVenues() {
+export async function getVenues(
+  ...args: Parameters<typeof _getVenues>
+): Promise<ActionResult<Awaited<ReturnType<typeof _getVenues>>>> {
+  try {
+    return { ok: true, data: await _getVenues(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getVenues() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -26,7 +37,17 @@ export async function getVenues() {
   return data ?? []
 }
 
-export async function addVenue(formData: FormData) {
+export async function addVenue(
+  ...args: Parameters<typeof _addVenue>
+): Promise<ActionResult<Awaited<ReturnType<typeof _addVenue>>>> {
+  try {
+    return { ok: true, data: await _addVenue(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _addVenue(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -53,7 +74,17 @@ export async function addVenue(formData: FormData) {
   revalidatePath('/dashboard/settings')
 }
 
-export async function updateVenue(formData: FormData) {
+export async function updateVenue(
+  ...args: Parameters<typeof _updateVenue>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateVenue>>>> {
+  try {
+    return { ok: true, data: await _updateVenue(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateVenue(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -74,7 +105,17 @@ export async function updateVenue(formData: FormData) {
   revalidatePath('/dashboard/settings')
 }
 
-export async function deleteVenue(formData: FormData) {
+export async function deleteVenue(
+  ...args: Parameters<typeof _deleteVenue>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteVenue>>>> {
+  try {
+    return { ok: true, data: await _deleteVenue(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteVenue(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

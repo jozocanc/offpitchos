@@ -16,17 +16,22 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
   const [draftName, setDraftName] = useState(name)
   const [draftAge, setDraftAge] = useState(ageGroup)
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   function handleSave() {
     startTransition(async () => {
-      await updateTeam(teamId, draftName, draftAge)
+      const r = await updateTeam(teamId, draftName, draftAge)
+      if (!r.ok) { toast(r.error, 'error'); return }
       setEditing(false)
     })
   }
 
   function handleDelete() {
     if (!confirm(`Delete "${name}"? This will remove all members and revoke all pending invites. This cannot be undone.`)) return
-    startTransition(() => deleteTeam(teamId))
+    startTransition(async () => {
+      const r = await deleteTeam(teamId)
+      if (!r.ok) toast(r.error, 'error')
+    })
   }
 
   if (editing) {

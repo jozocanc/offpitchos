@@ -37,7 +37,8 @@ export default function LinkParentMenu({
   function handlePick(parentUserId: string, displayName: string) {
     startTransition(async () => {
       try {
-        await linkPlayerToParent(playerId, parentUserId, teamId)
+        const r = await linkPlayerToParent(playerId, parentUserId, teamId)
+        if (!r.ok) { toast(r.error, 'error'); return }
         toast(`${playerName} linked to ${displayName}`, 'success')
         setOpen(false)
       } catch (err: unknown) {
@@ -51,7 +52,9 @@ export default function LinkParentMenu({
     if (invitePending) return
     setInvitePending(true)
     try {
-      const { url } = await createPlayerScopedInvite(playerId, teamId)
+      const scopedRes = await createPlayerScopedInvite(playerId, teamId)
+      if (!scopedRes.ok) { toast(scopedRes.error, 'error'); return }
+      const { url } = scopedRes.data
       try {
         await navigator.clipboard.writeText(url)
       } catch {

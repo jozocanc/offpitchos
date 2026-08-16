@@ -2,13 +2,18 @@
 
 import { useTransition } from 'react'
 import { revokeParentInvite } from './actions'
+import { useToast } from '@/components/toast'
 
 export default function RevokeInviteButton({ inviteId, teamId }: { inviteId: string; teamId: string }) {
   const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
 
   function handleRevoke() {
     if (!confirm('Revoke this invite link? It will stop working immediately.')) return
-    startTransition(() => revokeParentInvite(inviteId, teamId))
+    startTransition(async () => {
+      const r = await revokeParentInvite(inviteId, teamId)
+      if (!r.ok) toast(r.error, 'error')
+    })
   }
 
   return (

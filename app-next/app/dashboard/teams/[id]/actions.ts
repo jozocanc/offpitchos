@@ -3,8 +3,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { type ActionResult, toActionError } from '@/lib/action-result'
 
-export async function generateParentInvite(formData: FormData) {
+export async function generateParentInvite(
+  ...args: Parameters<typeof _generateParentInvite>
+): Promise<ActionResult<Awaited<ReturnType<typeof _generateParentInvite>>>> {
+  try {
+    return { ok: true, data: await _generateParentInvite(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _generateParentInvite(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -50,7 +61,17 @@ export async function generateParentInvite(formData: FormData) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-export async function updateTeam(teamId: string, name: string, ageGroup: string) {
+export async function updateTeam(
+  ...args: Parameters<typeof _updateTeam>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateTeam>>>> {
+  try {
+    return { ok: true, data: await _updateTeam(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateTeam(teamId: string, name: string, ageGroup: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -75,7 +96,17 @@ export async function updateTeam(teamId: string, name: string, ageGroup: string)
   revalidatePath('/dashboard/teams')
 }
 
-export async function updateGroupChatLink(teamId: string, link: string) {
+export async function updateGroupChatLink(
+  ...args: Parameters<typeof _updateGroupChatLink>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updateGroupChatLink>>>> {
+  try {
+    return { ok: true, data: await _updateGroupChatLink(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updateGroupChatLink(teamId: string, link: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -99,7 +130,17 @@ export async function updateGroupChatLink(teamId: string, link: string) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-export async function deleteTeam(teamId: string) {
+export async function deleteTeam(
+  ...args: Parameters<typeof _deleteTeam>
+): Promise<ActionResult<Awaited<ReturnType<typeof _deleteTeam>>>> {
+  try {
+    return { ok: true, data: await _deleteTeam(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _deleteTeam(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -128,7 +169,17 @@ export async function deleteTeam(teamId: string) {
   redirect('/dashboard/teams')
 }
 
-export async function removeMember(teamId: string, userId: string) {
+export async function removeMember(
+  ...args: Parameters<typeof _removeMember>
+): Promise<ActionResult<Awaited<ReturnType<typeof _removeMember>>>> {
+  try {
+    return { ok: true, data: await _removeMember(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _removeMember(teamId: string, userId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -167,7 +218,17 @@ export async function removeMember(teamId: string, userId: string) {
 // state without owning the mutation logic.
 // ============================================================
 
-export async function setTeamPublicShare(teamId: string, enabled: boolean) {
+export async function setTeamPublicShare(
+  ...args: Parameters<typeof _setTeamPublicShare>
+): Promise<ActionResult<Awaited<ReturnType<typeof _setTeamPublicShare>>>> {
+  try {
+    return { ok: true, data: await _setTeamPublicShare(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _setTeamPublicShare(teamId: string, enabled: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -211,7 +272,17 @@ export async function setTeamPublicShare(teamId: string, enabled: boolean) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-export async function rotateTeamPublicShareToken(teamId: string) {
+export async function rotateTeamPublicShareToken(
+  ...args: Parameters<typeof _rotateTeamPublicShareToken>
+): Promise<ActionResult<Awaited<ReturnType<typeof _rotateTeamPublicShareToken>>>> {
+  try {
+    return { ok: true, data: await _rotateTeamPublicShareToken(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _rotateTeamPublicShareToken(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -235,7 +306,17 @@ export async function rotateTeamPublicShareToken(teamId: string) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-export async function revokeParentInvite(inviteId: string, teamId: string) {
+export async function revokeParentInvite(
+  ...args: Parameters<typeof _revokeParentInvite>
+): Promise<ActionResult<Awaited<ReturnType<typeof _revokeParentInvite>>>> {
+  try {
+    return { ok: true, data: await _revokeParentInvite(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _revokeParentInvite(inviteId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
