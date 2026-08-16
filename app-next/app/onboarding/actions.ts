@@ -4,7 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ROLES } from '@/lib/constants'
 
-export async function completeOnboarding(formData: FormData) {
+// Every failure returns { ok: false, error } rather than throwing. Next.js
+// redacts thrown Server Action messages in production and replaces them with an
+// opaque digest, so a throw here reached real users as an unactionable string.
+type OnboardingResult = { ok: true } | { ok: false; error: string }
+
+export async function completeOnboarding(formData: FormData): Promise<OnboardingResult> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -15,7 +20,7 @@ export async function completeOnboarding(formData: FormData) {
   const ageGroup = formData.get('ageGroup') as string
 
   if (!clubName?.trim() || !teamName?.trim() || !ageGroup) {
-    throw new Error('All fields are required')
+    return { ok: false, error: 'All fields are required' }
   }
 
   // 1. Create the club
@@ -25,14 +30,14 @@ export async function completeOnboarding(formData: FormData) {
     .select('id')
     .single()
 
-  if (clubError) throw new Error(`Failed to create club: ${clubError.message}`)
+  if (clubError) return { ok: false, error: `Couldn't create your club: ${clubError.message}` }
 
   // 2. Create the first team
   const { error: teamError } = await supabase
     .from('teams')
     .insert({ name: teamName.trim(), age_group: ageGroup, club_id: club.id })
 
-  if (teamError) throw new Error(`Failed to create team: ${teamError.message}`)
+  if (teamError) return { ok: false, error: `Couldn't create your first team: ${teamError.message}` }
 
   // 3. Upsert the profile.
   // `display_name` (set by email signup at signup/page.tsx:30) is the
@@ -56,7 +61,7 @@ export async function completeOnboarding(formData: FormData) {
       display_name: displayName,
     }, { onConflict: 'user_id' })
 
-  if (profileError) throw new Error(`Failed to update profile: ${profileError.message}`)
+  if (profileError) return { ok: false, error: `Couldn't save your profile: ${profileError.message}` }
 
-  return { ok: true as const }
+  return { ok: true }
 }

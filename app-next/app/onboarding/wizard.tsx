@@ -40,10 +40,14 @@ export default function OnboardingWizard() {
     startTransition(async () => {
       try {
         const res = await completeOnboarding(formData)
-        if (res?.ok) {
+        if (res.ok) {
           setStep(3)
+        } else {
+          setError(res.error)
         }
       } catch (err) {
+        // Only network / framework failures land here now; the action itself
+        // reports its own errors as { ok: false }.
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
