@@ -285,46 +285,36 @@ export async function updateEvent(input: UpdateEventInput): Promise<NotifyCounts
   }
 
   if (input.updateFuture) {
-    // Get the event to find its recurrence_group and start_time
-    const { data: event } = await supabase
+    // Only team_id is needed here — the RPC does its own lookup of the
+    // recurrence group and start time, and returns just a row count.
+    const { data: event, error: fetchError } = await supabase
       .from('events')
-      .select('recurrence_group, start_time, team_id')
+      .select('team_id')
       .eq('id', input.eventId)
       .single()
 
-    if (!event?.recurrence_group) throw new Error('Event is not part of a recurring series')
+    if (fetchError || !event) throw new Error('Could not load the event to update')
 
-    // Calculate time offset from original to apply to all future events
-    const originalStart = new Date(event.start_time)
-    const newStart = new Date(input.startTime)
-    const offsetMs = newStart.getTime() - originalStart.getTime()
+    // One atomic statement (migration 040) instead of N unchecked awaits in a
+    // loop. SECURITY INVOKER, so RLS still applies and a caller without write
+    // access gets 0 rows back rather than a half-updated series.
+    const { data: updatedCount, error: seriesError } = await supabase.rpc('update_event_series', {
+      p_event_id: input.eventId,
+      p_title: updates.title,
+      p_start_time: input.startTime,
+      p_end_time: input.endTime,
+      p_venue_id: input.venueId,
+      p_address: updates.address,
+      p_link: updates.link,
+      p_notes: updates.notes,
+    })
 
-    // Get all future events in this series
-    const { data: futureEvents } = await supabase
-      .from('events')
-      .select('id, start_time, end_time')
-      .eq('recurrence_group', event.recurrence_group)
-      .gte('start_time', event.start_time)
-      .order('start_time')
+    if (seriesError) throw new Error(`Failed to update the series: ${seriesError.message}`)
 
-    if (futureEvents) {
-      for (const fe of futureEvents) {
-        const feStart = new Date(new Date(fe.start_time).getTime() + offsetMs)
-        const feEnd = new Date(new Date(fe.end_time).getTime() + offsetMs)
-
-        await supabase
-          .from('events')
-          .update({
-            title: input.title.trim(),
-            start_time: feStart.toISOString(),
-            end_time: feEnd.toISOString(),
-            venue_id: input.venueId,
-            address: input.address?.trim() || null,
-            link: input.link?.trim() || null,
-            notes: input.notes?.trim() || null,
-          })
-          .eq('id', fe.id)
-      }
+    // Checked before notifying. The old code skipped its loop silently when the
+    // fetch failed and then messaged every parent that the schedule had moved.
+    if (!updatedCount) {
+      throw new Error('No events were updated. You may not have permission to edit this series.')
     }
 
     const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
