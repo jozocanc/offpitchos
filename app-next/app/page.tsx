@@ -10,6 +10,7 @@ const ink = '#0F1510'
 const subtext = '#5C6660'
 const forest = '#1F4E3D'
 const border = '#E8E3DC'
+const DEMO_URL = 'https://calendly.com/jozo-cancar27/offpitchos-demo'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -21,12 +22,12 @@ export default async function Home() {
       style={{ backgroundColor: cream, color: ink }}
       className="min-h-screen antialiased overflow-x-hidden"
     >
-      {/* Nav */}
+      {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav
-        style={{ backgroundColor: `${cream}cc`, borderColor: border }}
-        className="sticky top-0 z-40 backdrop-blur border-b"
+        style={{ backgroundColor: `${cream}e6`, borderColor: border }}
+        className="sticky top-0 z-40 backdrop-blur-xl border-b"
       >
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
           <span style={{ color: ink }}>
             <Wordmark size="md" />
           </span>
@@ -34,7 +35,7 @@ export default async function Home() {
             <Link
               href="/pricing"
               style={{ color: subtext }}
-              className="text-sm hover:text-black transition-colors px-2 sm:px-3 py-2"
+              className="text-[15px] hover:text-black transition-colors px-3 py-2"
             >
               Pricing
             </Link>
@@ -42,7 +43,7 @@ export default async function Home() {
               <Link
                 href="/dashboard"
                 style={{ backgroundColor: forest, color: cream }}
-                className="font-semibold text-sm px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
+                className="font-semibold text-sm px-4 py-2.5 rounded-full hover:opacity-90 transition-opacity"
               >
                 Dashboard →
               </Link>
@@ -51,16 +52,16 @@ export default async function Home() {
                 <Link
                   href="/login"
                   style={{ color: subtext }}
-                  className="hidden sm:inline-block text-sm hover:text-black transition-colors px-3 py-2"
+                  className="hidden sm:inline-block text-[15px] hover:text-black transition-colors px-3 py-2"
                 >
                   Sign in
                 </Link>
                 <a
-                  href="https://calendly.com/jozo-cancar27/offpitchos-demo"
+                  href={DEMO_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ backgroundColor: forest, color: cream }}
-                  className="font-semibold text-sm px-3 sm:px-4 py-2 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="font-semibold text-sm px-4 sm:px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Book a demo
                 </a>
@@ -70,22 +71,89 @@ export default async function Home() {
         </div>
       </nav>
 
-      {/* Scroll-reveal hero (headline + pitch video card) */}
+      {/* ── Hero (static — no scroll-linked motion, see component note) ──── */}
       <ScrollHero signedIn={signedIn} />
 
-      {/* Product demo video — see it in action */}
-      <section className="max-w-5xl mx-auto px-6 pt-4 pb-16">
-        <div className="text-center mb-8">
-          <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-            See it in action
-          </span>
-          <h2 style={{ color: ink }} className="mt-3 text-3xl md:text-4xl font-semibold tracking-[-0.02em]">
+      {/* ── Who it is built for ─────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-20 md:pb-28">
+        <p
+          style={{ color: subtext }}
+          className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] mb-8"
+        >
+          Built for the whole organisation
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
+          {[
+            { k: 'Youth clubs', v: 'Multiple age groups, one directory' },
+            { k: 'Academies', v: 'Full-time staff and training blocks' },
+            { k: 'College programs', v: 'Season schedule, film and tactics' },
+            { k: 'Multi-site clubs', v: 'Several venues, one source of truth' },
+          ].map((x) => (
+            <div key={x.k} style={{ backgroundColor: cream }} className="px-6 py-7 text-center">
+              <p style={{ color: ink }} className="font-semibold text-[15px] tracking-[-0.01em]">{x.k}</p>
+              <p style={{ color: subtext }} className="text-[13px] mt-1.5 leading-relaxed">{x.v}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── The week a club actually has ────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
+        <div className="max-w-2xl mb-14">
+          <SectionLabel n="01">The problem</SectionLabel>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+            A club does not fail on the pitch.
+            <br />
+            It fails on Sunday night.
+          </h2>
+          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
+            A coach pulls out. A field floods. A fixture moves. Every one of those is
+            twenty messages, four apps and an hour your director does not have — and it
+            happens every single week of the season.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {[
+            {
+              t: 'The change is the easy part',
+              d: 'Moving a session takes ten seconds. Telling everyone, finding cover and updating the record is what eats the evening.',
+            },
+            {
+              t: 'Nothing talks to anything',
+              d: 'The schedule lives in one tool, the roster in another, the conversation in a group chat nobody reads twice.',
+            },
+            {
+              t: 'The director becomes the system',
+              d: 'When the software cannot react, a person has to. That person is the one who should be building the club.',
+            },
+          ].map((x) => (
+            <div
+              key={x.t}
+              style={{ backgroundColor: card, borderColor: border }}
+              className="rounded-3xl border p-7"
+            >
+              <h3 style={{ color: ink }} className="font-semibold text-[17px] tracking-[-0.01em] mb-3">{x.t}</h3>
+              <p style={{ color: subtext }} className="text-[15px] leading-relaxed">{x.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Product demo video ──────────────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 pb-24 md:pb-32">
+        <div className="text-center mb-10">
+          <SectionLabel n="02" center>See it work</SectionLabel>
+          <h2 style={{ color: ink }} className="mt-4 text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05]">
             One change. Everyone notified.
           </h2>
+          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5 max-w-xl mx-auto">
+            No forms to fill in, no chat to copy-paste into. The change propagates to
+            every person it touches, and the club carries on.
+          </p>
         </div>
         <div
           style={{ backgroundColor: card, borderColor: border }}
-          className="rounded-3xl border overflow-hidden shadow-[0_8px_24px_rgba(15,21,16,0.06)]"
+          className="rounded-[28px] border overflow-hidden shadow-[0_24px_60px_-30px_rgba(15,21,16,0.28)]"
         >
           <video
             key="product-demo-v3"
@@ -100,155 +168,136 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Product mockups */}
-      <section className="max-w-6xl mx-auto px-6 pt-8 pb-24 space-y-24">
-        {/* Mockup 1: voice command — text left, mockup right */}
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-              Voice-driven scheduling
-            </span>
-            <h3 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-5 leading-[1.1]">
-              Say it. Done.
-            </h3>
-            <p style={{ color: subtext }} className="text-base leading-relaxed">
-              Cancel a practice from your car. Every parent gets notified, the coach sees the change, the schedule updates. No forms, no group texts, no apologies.
-            </p>
-          </div>
-          <VoiceMockup />
+      {/* ── Capabilities ────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
+        <div className="max-w-2xl mb-16">
+          <SectionLabel n="03">What it does</SectionLabel>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+            Built to react, not just record.
+          </h2>
         </div>
 
-        {/* Mockup 2: attention panel — mockup left, text right */}
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div className="md:order-2">
-            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-              Morning triage
-            </span>
-            <h3 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-5 leading-[1.1]">
-              What needs you, ranked.
-            </h3>
-            <p style={{ color: subtext }} className="text-base leading-relaxed">
-              Open the dashboard, see the day in one glance. The attention panel surfaces what&rsquo;s urgent, what&rsquo;s today, what&rsquo;s this week — so you stop firefighting and start leading.
-            </p>
-          </div>
-          <div className="md:order-1">
-            <AttentionMockup />
-          </div>
-        </div>
-
-        {/* Mockup 3: event card — text left, mockup right */}
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-              For parents
-            </span>
-            <h3 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-5 leading-[1.1]">
-              Every event in their pocket.
-            </h3>
-            <p style={{ color: subtext }} className="text-base leading-relaxed">
-              Practice times, venue maps, RSVP — all in one place, all on their phone. No more &ldquo;what time Saturday?&rdquo; texts at 9 PM.
-            </p>
-          </div>
-          <EventMockup />
+        <div className="space-y-24 md:space-y-32">
+          <Feature
+            label="Voice-driven operations"
+            title="Say it. It is done."
+            body="Cancel a session from the car park. The schedule updates, cover is requested, and everyone affected is told — before you have put your phone down."
+            mockup={<VoiceMockup />}
+          />
+          <Feature
+            reverse
+            label="Decisions, surfaced"
+            title="The five things that actually need you."
+            body="Instead of a feed to scroll, the club opens on a ranked list: who is short a coach, which sessions are unconfirmed, what is unanswered. Everything else waits."
+            mockup={<AttentionMockup />}
+          />
+          <Feature
+            label="Sessions and tactics"
+            title="From an idea to a session plan."
+            body="Describe a drill in plain language and Pep AI builds it on the board — animated, printable, attached to the session, and shared with the staff who need it."
+            mockup={<EventMockup />}
+          />
         </div>
       </section>
 
-      {/* Comparison — "vs the tools you're using today" */}
-      <section className="max-w-6xl mx-auto px-6 py-28">
-        <div className="text-center mb-14 max-w-3xl mx-auto">
-          <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-            The difference
-          </span>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.025em] mt-4 mb-5 leading-[1.05]">
-            Other tools move the work around. <span style={{ color: forest }}>We do the work.</span>
+      {/* ── Roles ───────────────────────────────────────────────────────── */}
+      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
+        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <SectionLabel n="04" center>Every role</SectionLabel>
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+              One system. Four points of view.
+            </h2>
+            <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
+              Everyone sees precisely what their job requires — and nothing that belongs
+              to someone else.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <RoleCard
+              label="Director"
+              title="Runs the club"
+              points={['The week at a glance', 'Coverage gaps before they bite', 'Every team, one directory', 'Reporting without spreadsheets']}
+            />
+            <RoleCard
+              label="Coach"
+              title="Runs the session"
+              points={['Squad and availability', 'Tactics board with Pep AI', 'Session plans as PDF', 'Request cover in one tap']}
+            />
+            <RoleCard
+              label="Player"
+              title="Knows the plan"
+              points={['Schedule and location', 'Session plans and clips', 'Feedback from staff', 'Availability in a tap']}
+            />
+            <RoleCard
+              label="Parent"
+              title="Stays informed"
+              points={['Changes pushed instantly', 'RSVP without a group chat', 'Payments and forms', 'Only their own child']}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Comparison ──────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+        <div className="max-w-2xl mb-14">
+          <SectionLabel n="05">The alternative</SectionLabel>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+            Four tools that have never met.
           </h2>
-          <p style={{ color: subtext }} className="text-base md:text-lg leading-relaxed">
-            Every other club platform gives you a faster way to click through the same tasks. OffPitchOS does the tasks.
+          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
+            Most clubs are running a registration platform, a scheduling app, a group
+            chat and a spreadsheet. None of them know the others exist, so the director
+            is the integration layer.
           </p>
         </div>
-
-        <div className="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-          {/* Them */}
+        <div className="grid md:grid-cols-2 gap-5">
           <div
             style={{ backgroundColor: card, borderColor: border }}
             className="rounded-3xl border p-8 md:p-10"
           >
-            <span
-              style={{ color: subtext }}
-              className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-            >
-              SportsEngine · TeamSnap
-            </span>
-            <h3
-              style={{ color: ink }}
-              className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] mt-3 mb-7 leading-[1.1]"
-            >
-              You do it.
-            </h3>
+            <p style={{ color: subtext }} className="text-[11px] font-semibold uppercase tracking-[0.18em] mb-6">
+              Stitched together
+            </p>
             <ul className="space-y-4">
               {[
-                'Log in, find the event, change every field by hand',
-                'Copy-paste the update into every parent chat',
-                'Schedule in one app, comms in another, payments in a third',
-                'You notice the problem first — if you ever do',
-              ].map((item, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 text-[15px]"
-                  style={{ color: subtext }}
-                >
-                  <span style={{ color: subtext }} className="mt-2 text-xs">—</span>
-                  <span>{item}</span>
+                'Open four apps to answer one question',
+                'Copy the same update into every chat',
+                'Find cover by texting coaches one by one',
+                'Chase the same parents every week',
+                'Rebuild the picture from memory each Sunday',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-3 text-[15px]" style={{ color: subtext }}>
+                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C9C2B8' }} />
+                  <span>{t}</span>
                 </li>
               ))}
             </ul>
           </div>
-
-          {/* Us */}
           <div
-            style={{
-              backgroundColor: forest,
-              borderColor: forest,
-              boxShadow: '0 12px 32px -12px rgba(31, 78, 61, 0.35)',
-            }}
-            className="rounded-3xl border p-8 md:p-10 relative overflow-hidden"
+            style={{ backgroundColor: ink, borderColor: ink }}
+            className="relative rounded-3xl border p-8 md:p-10 overflow-hidden"
           >
-            {/* subtle radial highlight */}
             <div
-              aria-hidden="true"
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse 60% 50% at 30% 0%, rgba(250,247,242,0.12), transparent 70%)',
-              }}
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ background: 'radial-gradient(ellipse 60% 50% at 30% 0%, rgba(250,247,242,0.10), transparent 70%)' }}
             />
             <div className="relative">
-              <span
-                style={{ color: 'rgba(250,247,242,0.7)' }}
-                className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-              >
+              <p style={{ color: '#8FBFA8' }} className="text-[11px] font-semibold uppercase tracking-[0.18em] mb-6">
                 OffPitchOS
-              </span>
-              <h3
-                style={{ color: cream }}
-                className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] mt-3 mb-7 leading-[1.1]"
-              >
-                The system does it.
-              </h3>
+              </p>
               <ul className="space-y-4">
                 {[
-                  '“Move U14 to 5pm at Riverside” — done',
-                  'Parents notified in seconds, no message typed',
-                  'Schedule, comms, coverage, payments — one platform',
-                  'AI surfaces what actually needs your attention',
-                ].map((item, i) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-3 text-[15px]"
-                    style={{ color: 'rgba(250,247,242,0.92)' }}
-                  >
-                    <span style={{ color: cream }} className="mt-0.5 font-bold">✓</span>
-                    <span>{item}</span>
+                  'One place that already knows your club',
+                  'Everyone notified in seconds, nothing typed twice',
+                  'Cover requested automatically when a coach drops',
+                  'Answers pulled from the club, not from memory',
+                  'The season stays current without being maintained',
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-3 text-[15px]" style={{ color: cream }}>
+                    <span style={{ color: '#34D399' }} className="mt-0.5 flex-shrink-0">✓</span>
+                    <span>{t}</span>
                   </li>
                 ))}
               </ul>
@@ -257,238 +306,218 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Roles */}
+      {/* ── Trust / data ────────────────────────────────────────────────── */}
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
-        <div className="max-w-6xl mx-auto px-6 py-28">
-          <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold text-center tracking-[-0.02em] mb-16">
-            One platform. Three perfect workflows.
-          </h2>
-          <div className="grid md:grid-cols-3 gap-5">
-            <RoleCard
-              label="For the Director"
-              title="Your command center"
-              points={[
-                'Attention panel ranked by urgency',
-                'Voice commands for any schedule change',
-                'Real-time audience reach on announcements',
-                'Full club analytics: attendance, coverage, payments',
-              ]}
-            />
-            <RoleCard
-              label="For the Coach"
-              title="Focus on coaching"
-              points={[
-                'Coverage inbox — accept or decline with one tap',
-                'Attendance + per-player feedback in the same flow',
-                'Email + push alerts the moment anything changes',
-                'Mobile-first — works on the sideline',
-              ]}
-            />
-            <RoleCard
-              label="For the Parent"
-              title="Everything you need"
-              points={[
-                'Every practice and game with directions',
-                'DM your kid\'s coach without sharing phones',
-                'Camp registration and payment in two taps',
-                'Email + push notifications for real-time changes',
-              ]}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Trust */}
-      <section className="max-w-6xl mx-auto px-6 py-28">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-              Privacy by default
-            </span>
-            <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-6">
-              Your club data is <span style={{ color: forest }}>yours.</span>
+        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+          <div className="max-w-2xl mb-14">
+            <SectionLabel n="06">Your data</SectionLabel>
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+              A club roster is not a mailing list.
             </h2>
-            <p style={{ color: subtext }} className="leading-relaxed mb-6">
-              We don&rsquo;t sell it. We don&rsquo;t share it. We don&rsquo;t train AI models on it. Kids&rsquo; data is handled with COPPA-friendly defaults, encrypted at rest, and deletable in 30 days on request.
+            <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
+              You are handing over the names, ages and whereabouts of children and the
+              contact details of every family in your club. That deserves more than a
+              privacy policy nobody reads.
             </p>
-            <div className="flex gap-5 text-sm">
-              <Link href="/privacy" style={{ color: forest }} className="font-semibold hover:underline">Privacy policy →</Link>
-              <Link href="/terms" style={{ color: forest }} className="font-semibold hover:underline">Terms →</Link>
-            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {['US data centers', 'Encrypted at rest', 'GDPR / CCPA ready', 'COPPA-friendly', 'No ad tracking', 'Zero data resale'].map(label => (
-              <div
-                key={label}
-                style={{ backgroundColor: card, borderColor: border }}
-                className="rounded-2xl p-4 border text-center"
-              >
-                <p style={{ color: ink }} className="text-sm font-semibold">{label}</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { t: 'Isolated by club', d: 'Separation is enforced in the database itself, not by application code that can be bypassed.' },
+              { t: 'Scoped to the role', d: 'A parent reaches their own child. A coach reaches their own squad. Enforced per request.' },
+              { t: 'Never sold on', d: 'No advertising, no data brokering, no third party gets your families. That is not the business model.' },
+              { t: 'Yours to take', d: 'Export your roster and schedule whenever you want, and delete the account permanently if you leave.' },
+            ].map((x) => (
+              <div key={x.t} style={{ backgroundColor: cream, borderColor: border }} className="rounded-3xl border p-7">
+                <h3 style={{ color: ink }} className="font-semibold text-[16px] tracking-[-0.01em] mb-3">{x.t}</h3>
+                <p style={{ color: subtext }} className="text-[14px] leading-relaxed">{x.d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Founder */}
-      <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
-        <div className="max-w-5xl mx-auto px-6 py-24">
-          <div className="grid md:grid-cols-[auto_1fr] gap-12 md:gap-16 items-center">
-            {/* Stacked tilted photos */}
-            <div className="relative w-[320px] h-[380px] md:w-[360px] md:h-[420px] mx-auto md:mx-0 shrink-0 group">
-              {/* Back card — soccer (tilted left) */}
-              <div
-                style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-                className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
-              >
-                <Image
-                  src="/jozo-soccer.jpg"
-                  alt="Jozo Cancar playing D1 soccer at Florida Atlantic"
-                  width={210}
-                  height={280}
-                  className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
-                />
-              </div>
-              {/* Front card — suit (tilted right, on top) */}
-              <div
-                style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-                className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
-              >
-                <Image
-                  src="/jozo.jpg"
-                  alt="Jozo Cancar, founder of OffPitchOS"
-                  width={210}
-                  height={280}
-                  priority
-                  className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
-                />
-              </div>
+      {/* ── Founder ─────────────────────────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 py-24 md:py-32">
+        <div className="grid md:grid-cols-[auto_1fr] gap-12 md:gap-16 items-center">
+          {/* Stacked tilted photos */}
+          <div className="relative w-[320px] h-[380px] md:w-[360px] md:h-[420px] mx-auto md:mx-0 shrink-0 group">
+            <div
+              style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+              className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
+            >
+              <Image
+                src="/jozo-soccer.jpg"
+                alt="Jozo Cancar playing Division I soccer at Florida Atlantic"
+                width={210}
+                height={280}
+                className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
+              />
             </div>
+            <div
+              style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+              className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
+            >
+              <Image
+                src="/jozo.jpg"
+                alt="Jozo Cancar, founder of OffPitchOS"
+                width={210}
+                height={280}
+                priority
+                className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
+              />
+            </div>
+          </div>
 
-            <div className="text-center md:text-left">
-              <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-                Built by the person who needed it
+          <div className="text-center md:text-left">
+            <SectionLabel n="07">Who is behind it</SectionLabel>
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] mt-4 mb-6 leading-[1.05]">
+              Built by someone who
+              <br className="hidden md:block" /> lived the problem.
+            </h2>
+            <p style={{ color: subtext }} className="text-[17px] leading-relaxed">
+              I am Jozo — a former Division I player at Florida Atlantic. Years inside real
+              clubs, as a player, on staff and around directors, showed me exactly where the
+              existing tools give up: coaches dropping out the night before, families lost in
+              group chats, and a director opening six apps to answer one question.
+            </p>
+            <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-4">
+              OffPitchOS is what those systems should have been from the start. It is built
+              for soccer only, and it is built by people who have stood on the touchline.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Closing CTA ─────────────────────────────────────────────────── */}
+      <section className="px-6 pb-24 md:pb-32">
+        <div
+          style={{ backgroundColor: ink }}
+          className="relative max-w-6xl mx-auto rounded-[32px] overflow-hidden px-6 py-20 md:py-28 text-center"
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse 55% 50% at 50% 30%, rgba(250,247,242,0.13), transparent 70%)' }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.35]"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(250,247,242,0.22) 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+              maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
+            }}
+          />
+          <div className="relative max-w-2xl mx-auto">
+            <h2 style={{ color: cream }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05]">
+              See it run your club.
+            </h2>
+            <p style={{ color: '#B7C0BA' }} className="text-[17px] leading-relaxed mt-5">
+              Fifteen minutes, your actual season, your actual roster. If it does not save
+              your director a night a week, do not buy it.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-3 flex-wrap">
+              <a
+                href={DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ backgroundColor: cream, color: ink }}
+                className="font-semibold px-7 py-4 rounded-full hover:opacity-90 transition-opacity text-base"
+              >
+                Book a demo →
+              </a>
+              <Link
+                href={signedIn ? '/dashboard' : '/signup'}
+                style={{ color: cream, borderColor: 'rgba(250,247,242,0.28)' }}
+                className="font-semibold px-7 py-4 rounded-full border hover:bg-[rgba(250,247,242,0.08)] transition-colors text-base"
+              >
+                {signedIn ? 'Go to dashboard' : 'Start free'}
+              </Link>
+            </div>
+            <p style={{ color: '#8C9690' }} className="text-[13px] mt-8">
+              Soccer only · No setup fee · Your data stays yours
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <footer style={{ backgroundColor: cream, borderColor: border }} className="border-t">
+        <div className="max-w-6xl mx-auto px-6 py-14">
+          <div className="flex flex-wrap items-start justify-between gap-10">
+            <div className="max-w-xs">
+              <span style={{ color: ink }}>
+                <Wordmark size="sm" />
               </span>
-              <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] mt-3 mb-5 leading-[1.1]">
-                Hi, I&rsquo;m Jozo.
-              </h2>
-              <p style={{ color: subtext }} className="text-base md:text-lg leading-relaxed">
-                Former D1 soccer player at Florida Atlantic. Years inside real clubs &mdash; as a player, on staff, around directors &mdash; showed me exactly where today&rsquo;s tools break down: coaches dropping out last minute, parents lost in group texts, directors logging into six apps to answer one question. OffPitchOS is what those systems should have been from the start.
+              <p style={{ color: subtext }} className="text-[14px] leading-relaxed mt-4">
+                The operating system for soccer clubs, academies and college programs.
               </p>
             </div>
+            <div className="flex gap-14 text-[14px]">
+              <div>
+                <p style={{ color: ink }} className="font-semibold mb-3">Product</p>
+                <ul className="space-y-2.5" style={{ color: subtext }}>
+                  <li><Link href="/pricing" className="hover:text-black transition-colors">Pricing</Link></li>
+                  <li><a href={DEMO_URL} target="_blank" rel="noopener noreferrer" className="hover:text-black transition-colors">Book a demo</a></li>
+                  <li><Link href="/login" className="hover:text-black transition-colors">Sign in</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p style={{ color: ink }} className="font-semibold mb-3">Company</p>
+                <ul className="space-y-2.5" style={{ color: subtext }}>
+                  <li><a href="mailto:hello@offpitchos.com" className="hover:text-black transition-colors">Contact</a></li>
+                  <li><Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link></li>
+                  <li><Link href="/terms" className="hover:text-black transition-colors">Terms</Link></li>
+                </ul>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{ backgroundColor: forest }} className="relative overflow-hidden">
-        {/* Radial spotlight behind heading */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse 55% 50% at 50% 35%, rgba(250, 247, 242, 0.14), transparent 70%)',
-          }}
-        />
-        {/* Subtle dotted texture */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle, rgba(250, 247, 242, 0.28) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-            opacity: 0.12,
-            maskImage:
-              'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
-            WebkitMaskImage:
-              'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 80%)',
-          }}
-        />
-
-        <div className="relative max-w-3xl mx-auto px-6 py-28 text-center">
-          {/* Live pill */}
-          <div
-            className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border"
-            style={{
-              backgroundColor: 'rgba(250, 247, 242, 0.08)',
-              color: cream,
-              borderColor: 'rgba(250, 247, 242, 0.18)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <span className="relative flex size-2">
-              <span className="absolute inset-0 rounded-full bg-emerald-300 opacity-60 animate-ping" />
-              <span className="relative size-2 rounded-full bg-emerald-300" />
-            </span>
-            Founding club spots — limited
-          </div>
-
-          <h2
-            style={{ color: cream }}
-            className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-[-0.025em] mb-6"
-          >
-            Ready to stop firefighting?
-          </h2>
-          <p
-            style={{ color: 'rgba(250, 247, 242, 0.72)' }}
-            className="text-lg md:text-xl mb-10 max-w-xl mx-auto"
-          >
-            Set up your club in under five minutes. Free while we grow with you.
-          </p>
-
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Link
-              href="/signup"
-              style={{
-                backgroundColor: cream,
-                color: forest,
-                boxShadow:
-                  '0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08)',
-              }}
-              className="font-semibold px-8 py-4 rounded-full hover:-translate-y-0.5 hover:shadow-2xl transition-all duration-200 text-base"
-            >
-              Start free →
-            </Link>
-            <a
-              href="https://calendly.com/jozo-cancar27/offpitchos-demo"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: cream, borderColor: 'rgba(250, 247, 242, 0.28)' }}
-              className="border font-semibold px-8 py-4 rounded-full hover:bg-[rgba(250,247,242,0.12)] hover:border-[rgba(250,247,242,0.45)] transition-all duration-200 text-base"
-            >
-              Book a demo
-            </a>
-          </div>
-
-          <p
-            className="mt-8 text-xs tracking-wide"
-            style={{ color: 'rgba(250, 247, 242, 0.5)' }}
-          >
-            No credit card · 5-minute setup · Cancel anytime
-          </p>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ backgroundColor: cream, borderColor: border }} className="border-t">
-        <div className="max-w-6xl mx-auto px-6 py-12 flex flex-wrap items-center justify-between gap-4 text-sm">
-          <div style={{ color: subtext }} className="flex items-center gap-3">
-            <span style={{ color: ink }}>
-              <Wordmark size="sm" />
-            </span>
-            <span>© {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex gap-6" style={{ color: subtext }}>
-            <Link href="/privacy" className="hover:text-black">Privacy</Link>
-            <Link href="/terms" className="hover:text-black">Terms</Link>
-            <a href="mailto:hello@offpitchos.com" className="hover:text-black">Contact</a>
-            <Link href="/login" className="hover:text-black">Sign in</Link>
+          <div style={{ borderColor: border, color: subtext }} className="border-t mt-12 pt-7 text-[13px]">
+            © {new Date().getFullYear()} OffPitchOS
           </div>
         </div>
       </footer>
     </main>
+  )
+}
+
+/** Small numbered eyebrow used to give the page a consistent spine. */
+function SectionLabel({ n, children, center }: { n: string; children: React.ReactNode; center?: boolean }) {
+  return (
+    <div className={`flex items-center gap-3 ${center ? 'justify-center' : ''}`}>
+      <span
+        style={{ color: forest, borderColor: `${forest}33`, backgroundColor: '#E8F1EB' }}
+        className="text-[10px] font-semibold tracking-[0.1em] border rounded-full w-7 h-7 flex items-center justify-center"
+      >
+        {n}
+      </span>
+      <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+        {children}
+      </span>
+    </div>
+  )
+}
+
+/** Alternating text/mockup row used for the capability section. */
+function Feature({
+  label, title, body, mockup, reverse,
+}: {
+  label: string; title: string; body: string; mockup: React.ReactNode; reverse?: boolean
+}) {
+  return (
+    <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
+      <div className={reverse ? 'md:order-2' : ''}>
+        <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+          {label}
+        </span>
+        <h3 style={{ color: ink }} className="text-2xl md:text-4xl font-semibold tracking-[-0.025em] mt-3 mb-5 leading-[1.08]">
+          {title}
+        </h3>
+        <p style={{ color: subtext }} className="text-[17px] leading-relaxed">{body}</p>
+      </div>
+      <div className={reverse ? 'md:order-1' : ''}>{mockup}</div>
+    </div>
   )
 }
 

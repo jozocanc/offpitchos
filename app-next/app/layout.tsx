@@ -6,10 +6,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "OffPitchOS",
+    default: "OffPitchOS — The operating system for soccer clubs",
     template: "%s | OffPitchOS",
   },
-  description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
+  description: "The operating system for serious soccer clubs, academies and college programs. Scheduling, communication, coverage and tactics in one system.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://offpitchos.com"),
   manifest: "/manifest.json",
   appleWebApp: {
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
     title: "OffPitchOS",
   },
   openGraph: {
-    title: "OffPitchOS",
-    description: "The AI-driven operating system for soccer clubs. Built by directors, for directors.",
+    title: "OffPitchOS — The operating system for soccer clubs",
+    description: "The operating system for serious soccer clubs, academies and college programs. Scheduling, communication, coverage and tactics in one system.",
     siteName: "OffPitchOS",
   },
 };
