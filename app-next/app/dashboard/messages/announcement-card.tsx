@@ -7,6 +7,7 @@ import { togglePin, deleteAnnouncement, markAnnouncementRead, respondToPoll } fr
 import ReplyThread from './reply-thread'
 import { useToast } from '@/components/toast'
 import { isStaff } from '@/lib/constants'
+import { ageGroupLabel } from '@/lib/team-label'
 
 interface PollKid {
   playerId: string
@@ -138,7 +139,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
             )}
             {team ? (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
-                {team.age_group ?? team.name}
+                {ageGroupLabel(team.age_group) ?? team.name}
               </span>
             ) : (
               <span className="text-xs font-bold bg-white/10 text-white px-2 py-0.5 rounded-full">

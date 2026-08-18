@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
 import { formatShortDate, formatTime as fmtTime } from '@/lib/format-datetime'
 import { getClubTimezoneById } from '@/lib/club-timezone-server'
+import { teamLabel } from '@/lib/team-label'
 
 export const dynamic = 'force-dynamic'
 // Public pages should never get cached at the framework level — schedule
@@ -73,7 +74,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const data = await loadShare(token)
   if (!data) return { title: 'Team' }
   return {
-    title: `${data.team.team_name} (${data.team.age_group}) — ${data.clubName}`,
+    title: `${teamLabel(data.team.team_name, data.team.age_group)} — ${data.clubName}`,
     description: `${data.team.team_name} schedule and roster on OffPitchOS.`,
   }
 }
@@ -112,7 +113,9 @@ export default async function PublicTeamPage({ params }: { params: Promise<{ tok
           <h1 className="text-4xl md:text-5xl font-black tracking-tight mt-2">
             {team.team_name}
           </h1>
-          <p className="text-green text-lg font-bold mt-1">{team.age_group}</p>
+          {ageGroupLabel(team.age_group) && (
+            <p className="text-green text-lg font-bold mt-1">{ageGroupLabel(team.age_group)}</p>
+          )}
           <p className="text-gray text-xs mt-3">
             Live page · {roster.length} player{roster.length === 1 ? '' : 's'} · {upcoming.length} upcoming event{upcoming.length === 1 ? '' : 's'}
           </p>

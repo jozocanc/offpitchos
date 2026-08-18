@@ -5,6 +5,7 @@ import { useClubTimezone } from '@/components/club-timezone'
 import { useState } from 'react'
 import { updatePlayerSize, requestMissingSizes } from './actions'
 import { useToast } from '@/components/toast'
+import { ageGroupLabel } from '@/lib/team-label'
 
 const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
 const SHORTS_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
@@ -274,7 +275,9 @@ export default function GearClient({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white">{team.teamName}</h3>
-                  <span className="text-xs bg-green/10 text-green px-2 py-0.5 rounded">{team.ageGroup}</span>
+                  {ageGroupLabel(team.ageGroup) && (
+                    <span className="text-xs bg-green/10 text-green px-2 py-0.5 rounded">{ageGroupLabel(team.ageGroup)}</span>
+                  )}
                   {isComplete && (
                     <span className="text-xs bg-green/15 text-green px-2 py-0.5 rounded font-semibold">✓ Complete</span>
                   )}

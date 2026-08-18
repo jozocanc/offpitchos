@@ -5,6 +5,7 @@ import { createAnnouncement } from './actions'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
 import { isStaff } from '@/lib/constants'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -112,7 +113,7 @@ export default function NewAnnouncementModal({
         >
           {isDoc && <option value="">All Teams</option>}
           {teams.map(t => (
-            <option key={t.id} value={t.id}>{t.name} ({t.age_group})</option>
+            <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
           ))}
         </select>
 

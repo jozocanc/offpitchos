@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { createCamp } from './actions'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -137,7 +138,7 @@ export default function CreateCampModal({
           <option value="">Club-wide (no specific team)</option>
           {teams.map(t => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.age_group})
+              {teamLabel(t.name, t.age_group)}
             </option>
           ))}
         </select>

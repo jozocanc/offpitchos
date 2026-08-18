@@ -7,6 +7,7 @@ import FeedbackForm from './feedback-form'
 import DevelopmentChart from './development-chart'
 import { submitPlayerSize } from './actions'
 import { useToast } from '@/components/toast'
+import { teamLabel } from '@/lib/team-label'
 
 const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
 
@@ -156,7 +157,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
               {player.jersey_number && <span className="text-green ml-2">#{player.jersey_number}</span>}
             </h2>
             <div className="flex items-center gap-3 mt-2 text-sm text-gray">
-              {team && <span>{team.name} ({team.age_group})</span>}
+              {team && <span>{teamLabel(team.name, team.age_group)}</span>}
               {player.position && <span>· {player.position}</span>}
             </div>
           </div>

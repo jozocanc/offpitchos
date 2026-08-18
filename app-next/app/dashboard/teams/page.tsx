@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AddTeamForm from './add-team-form'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate } from '@/lib/format-datetime'
+import { ageGroupLabel } from '@/lib/team-label'
 
 export const metadata: Metadata = { title: 'Teams' }
 
@@ -211,9 +212,11 @@ function TeamCard({ team, timezone }: { team: Team; timezone: string }) {
                 ⚠ {issueCount}
               </span>
             )}
-            <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
-              {team.age_group}
-            </span>
+            {ageGroupLabel(team.age_group) && (
+              <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
+                {ageGroupLabel(team.age_group)}
+              </span>
+            )}
           </div>
         </div>
 

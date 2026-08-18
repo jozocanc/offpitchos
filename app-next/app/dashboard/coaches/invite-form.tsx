@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { inviteCoach } from './actions'
 import { useToast } from '@/components/toast'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -96,7 +97,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
               <option value="">No specific team</option>
               {teams.map(team => (
                 <option key={team.id} value={team.id}>
-                  {team.name} ({team.age_group})
+                  {teamLabel(team.name, team.age_group)}
                 </option>
               ))}
             </select>

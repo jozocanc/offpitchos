@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
   AreaChart, Area,
 } from 'recharts'
+import { ageGroupLabel } from '@/lib/team-label'
 
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
@@ -221,7 +222,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                 return (
                   <tr key={team.name} className="border-b border-white/5 last:border-0">
                     <td className="px-5 py-3 text-white font-medium">{team.name}</td>
-                    <td className="px-5 py-3 text-gray">{team.ageGroup}</td>
+                    <td className="px-5 py-3 text-gray">{ageGroupLabel(team.ageGroup) ?? ''}</td>
                     <td className="px-5 py-3 text-white">{team.players}</td>
                     <td className="px-5 py-3 text-white">{team.eventsLast30}</td>
                     <td className="px-5 py-3 relative">

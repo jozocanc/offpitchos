@@ -6,6 +6,7 @@ import { formatShortDate, formatTime } from '@/lib/format-datetime'
 import RequestCard from './request-card'
 import AssignModal from './assign-modal'
 import CoverageActionsInline from '../schedule/coverage-actions-inline'
+import { ageGroupLabel } from '@/lib/team-label'
 
 // The shape returned by `getCoverageData` is wide and joined; using `any`
 // at the boundary matches the rest of this page and avoids pinning the
@@ -222,9 +223,9 @@ function CoachRequestCard({
   return (
     <div className={`bg-dark-secondary rounded-xl p-4 border ${border} transition-colors`}>
       <div className="flex items-center gap-2 mb-1 flex-wrap">
-        {team && (
+        {team && ageGroupLabel(team.age_group) && (
           <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
-            {team.age_group}
+            {ageGroupLabel(team.age_group)}
           </span>
         )}
         {isEscalated && (

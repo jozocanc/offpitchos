@@ -14,6 +14,7 @@ import InviteCodeCard from './invite-code-card'
 import PublicShareCard from './public-share-card'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
+import { ageGroupLabel } from '@/lib/team-label'
 
 interface Member {
   profile_id: string
@@ -185,9 +186,11 @@ export default async function TeamDetailPage({
         </Link>
         <div className="flex items-center gap-3 mt-1">
           <h1 className="text-3xl font-black tracking-tight">{team.name}</h1>
-          <span className="text-sm font-bold bg-green/10 text-green px-3 py-1 rounded-full">
-            {team.age_group}
-          </span>
+          {ageGroupLabel(team.age_group) && (
+            <span className="text-sm font-bold bg-green/10 text-green px-3 py-1 rounded-full">
+              {ageGroupLabel(team.age_group)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4 mt-1">
           <p className="text-gray text-sm">
