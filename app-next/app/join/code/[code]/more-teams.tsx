@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/toast'
+import { ageGroupLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -62,7 +63,9 @@ export default function MoreTeams({ clubId, joinedTeamId }: { clubId: string; jo
           >
             <div>
               <p className="font-medium text-sm">{team.name}</p>
-              <p className="text-xs text-gray">{team.age_group}</p>
+              {ageGroupLabel(team.age_group) && (
+                <p className="text-xs text-gray">{ageGroupLabel(team.age_group)}</p>
+              )}
             </div>
             {joined.has(team.id) ? (
               <span className="text-xs font-bold text-green">Joined</span>

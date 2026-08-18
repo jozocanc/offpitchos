@@ -9,6 +9,7 @@ import ConflictBanner from './conflict-banner'
 import SessionPlan from './session-plan'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -237,7 +238,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-4"
             >
               {teams.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.age_group})</option>
+                <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
               ))}
             </select>
           </>

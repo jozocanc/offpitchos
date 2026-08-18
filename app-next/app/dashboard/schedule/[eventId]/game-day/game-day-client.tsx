@@ -8,6 +8,7 @@ import { markAttendance } from '../../attendance-actions'
 import { addFeedback } from '../../../players/[id]/actions'
 import EventPhotosModal from '../../event-photos-modal'
 import { useToast } from '@/components/toast'
+import { teamLabel } from '@/lib/team-label'
 
 interface Player {
   id: string
@@ -100,7 +101,7 @@ export default function GameDayClient({
           </div>
           <h1 className="text-2xl font-black text-white">{eventTitle}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray mt-1">
-            <span>{teamName} · {ageGroup}</span>
+            <span>{teamLabel(teamName, ageGroup)}</span>
             <span>·</span>
             <span>{formatShortDate(start, timezone)}</span>
             <span>·</span>

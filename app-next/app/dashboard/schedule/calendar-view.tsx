@@ -7,6 +7,7 @@ import {
   addDaysToKey, dayKey, formatDayKeyWeekday, formatMonthDay,
   formatMonthDayYear, mondayOfKey, zonedParts,
 } from '@/lib/format-datetime'
+import { teamLabel } from '@/lib/team-label'
 
 interface Event {
   id: string
@@ -115,7 +116,7 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
                             top: `${(zonedParts(event.start_time, timezone).minute / 60) * 100}%`,
                             height: `${Math.max(22, getEventDurationPercent(event) * HOUR_ROW_PX)}px`,
                           }}
-                          title={`${event.title} — ${event.teams?.[0]?.age_group}`}
+                          title={teamLabel(event.title, event.teams?.[0]?.age_group)}
                         >
                           {event.title}
                         </button>

@@ -14,6 +14,7 @@ import { getEffectiveRole } from '@/lib/admin-role'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime } from '@/lib/format-datetime'
 import { isMember } from '@/lib/constants'
+import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -199,7 +200,7 @@ async function DashboardBody({
                   <p className="text-gray text-xs mt-0.5 capitalize">{tm.role}</p>
                 </div>
                 <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
-                  {tm.teams.age_group}
+                  {ageGroupLabel(tm.teams.age_group) ?? 'Team'}
                 </span>
               </Link>
             ))}
@@ -244,7 +245,7 @@ async function DashboardBody({
                     </div>
                     <p className="text-gray text-xs mt-0.5">
                       {timeStr}
-                      {team && <span> &middot; {team.name} ({team.age_group})</span>}
+                      {team && <span> &middot; {teamLabel(team.name, team.age_group)}</span>}
                     </p>
                   </div>
                   <span className="text-xs font-medium bg-white/5 text-gray px-2 py-1 rounded-full shrink-0 capitalize">

@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import AcceptCodeButton from './accept-button'
 import Wordmark from '@/components/wordmark'
+import { ageGroupLabel } from '@/lib/team-label'
 
 export default async function JoinByCodePage({
   params,
@@ -88,7 +89,9 @@ export default async function JoinByCodePage({
               <span className="text-gray text-sm">Team</span>
               <span className="font-semibold">
                 {team.teamName}
-                <span className="text-gray text-xs ml-1">({team.ageGroup})</span>
+                {ageGroupLabel(team.ageGroup) && (
+                  <span className="text-gray text-xs ml-1">({ageGroupLabel(team.ageGroup)})</span>
+                )}
               </span>
             </div>
             <div className="flex items-center justify-between">

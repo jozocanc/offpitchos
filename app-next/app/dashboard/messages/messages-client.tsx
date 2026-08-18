@@ -5,6 +5,7 @@ import { ROLES } from '@/lib/constants'
 import AnnouncementCard from './announcement-card'
 import NewAnnouncementModal from './new-announcement-modal'
 import DMClient from './dm-client'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -104,7 +105,7 @@ export default function MessagesClient({
           <option value="">All</option>
           <option value="club-wide">Club-Wide Only</option>
           {teams.map(t => (
-            <option key={t.id} value={t.id}>{t.name} ({t.age_group})</option>
+            <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
           ))}
         </select>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { EVENT_TYPES, EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
+import { teamLabel } from '@/lib/team-label'
 
 interface Team {
   id: string
@@ -26,7 +27,7 @@ export default function Filters({ teams, selectedTeam, selectedType, onTeamChang
       >
         <option value="">All Teams</option>
         {teams.map(t => (
-          <option key={t.id} value={t.id}>{t.name} ({t.age_group})</option>
+          <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
         ))}
       </select>
 

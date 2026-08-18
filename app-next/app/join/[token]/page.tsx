@@ -4,6 +4,7 @@ import AcceptButton from './accept-button'
 import Wordmark from '@/components/wordmark'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 import { getClubTimezoneById } from '@/lib/club-timezone-server'
+import { ageGroupLabel } from '@/lib/team-label'
 
 interface InviteData {
   id: string
@@ -98,7 +99,9 @@ export default async function JoinPage({
                 <span className="text-gray text-sm">Team</span>
                 <span className="font-semibold">
                   {invite.teams.name}
-                  <span className="text-gray text-xs ml-1">({invite.teams.age_group})</span>
+                  {ageGroupLabel(invite.teams.age_group) && (
+                    <span className="text-gray text-xs ml-1">({ageGroupLabel(invite.teams.age_group)})</span>
+                  )}
                 </span>
               </div>
             )}
