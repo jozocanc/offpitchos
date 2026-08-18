@@ -19,8 +19,9 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
   const teamName = formData.get('teamName') as string
   const ageGroup = formData.get('ageGroup') as string
 
-  if (!clubName?.trim() || !teamName?.trim() || !ageGroup) {
-    return { ok: false, error: 'All fields are required' }
+  // Age group is optional — a college program or senior side has none.
+  if (!clubName?.trim() || !teamName?.trim()) {
+    return { ok: false, error: 'Club name and team name are required' }
   }
 
   // 1. Create the club
@@ -35,7 +36,7 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
   // 2. Create the first team
   const { error: teamError } = await supabase
     .from('teams')
-    .insert({ name: teamName.trim(), age_group: ageGroup, club_id: club.id })
+    .insert({ name: teamName.trim(), age_group: ageGroup ?? '', club_id: club.id })
 
   if (teamError) return { ok: false, error: `Couldn't create your first team: ${teamError.message}` }
 

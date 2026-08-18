@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { AGE_GROUPS } from '@/lib/constants'
+import { AGE_GROUPS, NO_AGE_GROUP, NO_AGE_GROUP_LABEL } from '@/lib/constants'
 import { addTeam } from './actions'
 import { useToast } from '@/components/toast'
 
@@ -9,7 +9,7 @@ export default function AddTeamForm() {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [teamName, setTeamName] = useState('')
-  const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[0])
+  const [ageGroup, setAgeGroup] = useState<string>(NO_AGE_GROUP)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -33,7 +33,7 @@ export default function AddTeamForm() {
           return
         }
         setTeamName('')
-        setAgeGroup(String(AGE_GROUPS[0]))
+        setAgeGroup(NO_AGE_GROUP)
         setOpen(false)
         toast(`${addedName} added`, 'success')
       } catch (err) {
@@ -83,6 +83,7 @@ export default function AddTeamForm() {
               onChange={e => setAgeGroup(e.target.value)}
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-2"
             >
+              <option value={NO_AGE_GROUP}>{NO_AGE_GROUP_LABEL}</option>
               {AGE_GROUPS.map(ag => (
                 <option key={ag} value={ag}>{ag}</option>
               ))}

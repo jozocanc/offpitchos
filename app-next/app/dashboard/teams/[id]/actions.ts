@@ -86,7 +86,7 @@ async function _updateTeam(teamId: string, name: string, ageGroup: string) {
 
   const { error } = await supabase
     .from('teams')
-    .update({ name: name.trim(), age_group: ageGroup })
+    .update({ name: name.trim(), age_group: ageGroup ?? '' })
     .eq('id', teamId)
     .eq('club_id', profile.club_id)
 

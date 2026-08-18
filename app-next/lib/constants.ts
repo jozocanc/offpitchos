@@ -25,12 +25,22 @@ export function isMember(role: string | null | undefined): boolean {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
+// The full range a club might field. team-actions.tsx used to carry its own
+// divergent copy of this (U6-U19 + Adult) while this list ran U8-U19, so the
+// create and edit forms offered different options for the same field.
 export const AGE_GROUPS = [
-  "U8", "U9", "U10", "U11", "U12", "U13",
-  "U14", "U15", "U16", "U17", "U18", "U19",
+  "U6", "U7", "U8", "U9", "U10", "U11", "U12", "U13",
+  "U14", "U15", "U16", "U17", "U18", "U19", "Adult",
 ] as const;
 
 export type AgeGroup = (typeof AGE_GROUPS)[number];
+
+// Not every team has one. A college program, a senior side or a club's first
+// team is just its name, and there was previously no way to say so — the
+// dropdown offered youth brackets only, so any such team got a wrong label.
+// Stored as an empty string because teams.age_group is NOT NULL.
+export const NO_AGE_GROUP = "";
+export const NO_AGE_GROUP_LABEL = "No age group";
 
 export const EVENT_TYPES = [
   'practice', 'game', 'tournament', 'camp', 'tryout', 'meeting', 'custom',

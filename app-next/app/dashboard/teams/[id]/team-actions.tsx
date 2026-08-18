@@ -3,8 +3,9 @@
 import { useState, useTransition } from 'react'
 import { updateTeam, deleteTeam } from './actions'
 import { useToast } from '@/components/toast'
+import { AGE_GROUPS, NO_AGE_GROUP, NO_AGE_GROUP_LABEL } from '@/lib/constants'
 
-const AGE_GROUPS = ['U6', 'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18', 'U19', 'Adult']
+
 
 interface TeamActionsProps {
   teamId: string
@@ -50,6 +51,7 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
           onChange={(e) => setDraftAge(e.target.value)}
           className="bg-dark rounded-lg px-3 py-1.5 border border-green/40 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green"
         >
+          <option value={NO_AGE_GROUP}>{NO_AGE_GROUP_LABEL}</option>
           {AGE_GROUPS.map(ag => (
             <option key={ag} value={ag}>{ag}</option>
           ))}

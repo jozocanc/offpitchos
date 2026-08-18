@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AGE_GROUPS } from '@/lib/constants'
+import { AGE_GROUPS, NO_AGE_GROUP, NO_AGE_GROUP_LABEL } from '@/lib/constants'
 import { completeOnboarding } from './actions'
 import Wordmark from '@/components/wordmark'
 import ImportWizard from '@/app/dashboard/roster-import/import-wizard'
@@ -12,7 +12,7 @@ export default function OnboardingWizard() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [clubName, setClubName] = useState('')
   const [teamName, setTeamName] = useState('')
-  const [ageGroup, setAgeGroup] = useState<string>(AGE_GROUPS[0])
+  const [ageGroup, setAgeGroup] = useState<string>(NO_AGE_GROUP)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -144,6 +144,7 @@ export default function OnboardingWizard() {
                 onChange={e => setAgeGroup(e.target.value)}
                 className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none"
               >
+                <option value={NO_AGE_GROUP}>{NO_AGE_GROUP_LABEL}</option>
                 {AGE_GROUPS.map(ag => (
                   <option key={ag} value={ag}>{ag}</option>
                 ))}
