@@ -368,15 +368,37 @@ export default async function PricingPage() {
         style={{ backgroundColor: cream, borderColor: border }}
         className="border-t"
       >
-        <div className="max-w-6xl mx-auto px-6 py-10 flex items-center justify-between flex-wrap gap-4">
-          <span style={{ color: ink }}>
-            <Wordmark size="sm" />
-          </span>
-          <div className="flex items-center gap-5 text-sm" style={{ color: subtext }}>
-            <Link href="/" className="hover:text-black transition-colors">Home</Link>
-            <Link href="/pricing" className="hover:text-black transition-colors">Pricing</Link>
-            <Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-black transition-colors">Terms</Link>
+        <div className="max-w-6xl mx-auto px-6 py-14">
+          <div className="flex flex-wrap items-start justify-between gap-10">
+            <div className="max-w-xs">
+              <span style={{ color: ink }}>
+                <Wordmark size="sm" />
+              </span>
+              <p style={{ color: subtext }} className="text-[14px] leading-relaxed mt-4">
+                The operating system for soccer clubs, academies and college programs.
+              </p>
+            </div>
+            <div className="flex gap-10 sm:gap-14 text-[14px]">
+              <div>
+                <p style={{ color: ink }} className="font-semibold mb-3">Product</p>
+                <ul className="space-y-2.5" style={{ color: subtext }}>
+                  <li><Link href="/" className="hover:text-black transition-colors">Home</Link></li>
+                  <li><Link href="/pricing" className="hover:text-black transition-colors">Pricing</Link></li>
+                  <li><Link href="/login" className="hover:text-black transition-colors">Sign in</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p style={{ color: ink }} className="font-semibold mb-3">Company</p>
+                <ul className="space-y-2.5" style={{ color: subtext }}>
+                  <li><a href="mailto:hello@offpitchos.com" className="hover:text-black transition-colors">Contact</a></li>
+                  <li><Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link></li>
+                  <li><Link href="/terms" className="hover:text-black transition-colors">Terms</Link></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div style={{ borderColor: border, color: subtext }} className="border-t mt-12 pt-7 text-[13px]">
+            © {new Date().getFullYear()} OffPitchOS
           </div>
         </div>
       </footer>

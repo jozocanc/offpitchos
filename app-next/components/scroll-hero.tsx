@@ -15,9 +15,9 @@ export default function ScrollHero({ signedIn }: { signedIn: boolean }) {
             <span className="sm:hidden">Clubs · Academies · College</span>
             <span className="hidden sm:inline">For clubs, academies and college programs</span>
           </span>
-          <h1 className="text-[2.75rem] leading-[1.02] sm:text-6xl md:text-7xl font-semibold tracking-[-0.038em] text-[#0F1510]">
+          <h1 className="text-[2.15rem] leading-[1.05] sm:text-6xl sm:leading-[1.02] md:text-7xl font-semibold tracking-[-0.035em] sm:tracking-[-0.038em] text-[#0F1510] text-balance">
             The operating system
-            <br />
+            <br className="hidden sm:block" />{" "}
             for serious soccer clubs.
           </h1>
           <p className="mt-7 text-lg md:text-xl text-[#5C6660] max-w-2xl mx-auto leading-relaxed">

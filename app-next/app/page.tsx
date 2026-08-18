@@ -452,7 +452,7 @@ export default async function Home() {
                 The operating system for soccer clubs, academies and college programs.
               </p>
             </div>
-            <div className="flex gap-14 text-[14px]">
+            <div className="flex gap-10 sm:gap-14 text-[14px]">
               <div>
                 <p style={{ color: ink }} className="font-semibold mb-3">Product</p>
                 <ul className="space-y-2.5" style={{ color: subtext }}>
