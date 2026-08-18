@@ -99,12 +99,10 @@ export default async function Home() {
 
       {/* ── The week a club actually has ────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
-        <div className="max-w-2xl mb-14">
+        <div className="max-w-3xl mb-14">
           <SectionLabel n="01">The problem</SectionLabel>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
-            A club does not fail on the pitch.
-            <br />
-            It fails on Sunday night.
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
+            A club does not fail on the pitch. It fails on Sunday night.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
             A coach pulls out. A field floods. A fixture moves. Every one of those is
@@ -143,7 +141,7 @@ export default async function Home() {
       <section className="max-w-5xl mx-auto px-6 pb-24 md:pb-32">
         <div className="text-center mb-10">
           <SectionLabel n="02" center>See it work</SectionLabel>
-          <h2 style={{ color: ink }} className="mt-4 text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05]">
+          <h2 style={{ color: ink }} className="mt-4 text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05]">
             One change. Everyone notified.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5 max-w-xl mx-auto">
@@ -170,9 +168,9 @@ export default async function Home() {
 
       {/* ── Capabilities ────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-3xl mb-16">
           <SectionLabel n="03">What it does</SectionLabel>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Built to react, not just record.
           </h2>
         </div>
@@ -203,9 +201,9 @@ export default async function Home() {
       {/* ── Roles ───────────────────────────────────────────────────────── */}
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
         <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-16">
             <SectionLabel n="04" center>Every role</SectionLabel>
-            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
               One system. Four points of view.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
@@ -240,9 +238,9 @@ export default async function Home() {
 
       {/* ── Comparison ──────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-        <div className="max-w-2xl mb-14">
+        <div className="max-w-3xl mb-14">
           <SectionLabel n="05">The alternative</SectionLabel>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Four tools that have never met.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
@@ -309,9 +307,9 @@ export default async function Home() {
       {/* ── Trust / data ────────────────────────────────────────────────── */}
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
         <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <div className="max-w-2xl mb-14">
+          <div className="max-w-3xl mb-14">
             <SectionLabel n="06">Your data</SectionLabel>
-            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4">
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
               A club roster is not a mailing list.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
@@ -370,7 +368,7 @@ export default async function Home() {
 
           <div className="text-center md:text-left">
             <SectionLabel n="07">Who is behind it</SectionLabel>
-            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] mt-4 mb-6 leading-[1.05]">
+            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance mt-4 mb-6 leading-[1.05]">
               Built by someone who
               <br className="hidden md:block" /> lived the problem.
             </h2>
@@ -410,7 +408,7 @@ export default async function Home() {
             }}
           />
           <div className="relative max-w-2xl mx-auto">
-            <h2 style={{ color: cream }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05]">
+            <h2 style={{ color: cream }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05]">
               See it run your club.
             </h2>
             <p style={{ color: '#B7C0BA' }} className="text-[17px] leading-relaxed mt-5">
@@ -511,7 +509,7 @@ function Feature({
         <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
           {label}
         </span>
-        <h3 style={{ color: ink }} className="text-2xl md:text-4xl font-semibold tracking-[-0.025em] mt-3 mb-5 leading-[1.08]">
+        <h3 style={{ color: ink }} className="text-2xl md:text-4xl font-semibold tracking-[-0.025em] text-balance mt-3 mb-5 leading-[1.08]">
           {title}
         </h3>
         <p style={{ color: subtext }} className="text-[17px] leading-relaxed">{body}</p>
