@@ -41,10 +41,10 @@ export default function ScrollHero({ signedIn }: { signedIn: boolean }) {
             </Link>
           </div>
           <p className="text-[13px] mt-8 text-[#5C6660] px-2 max-w-lg mx-auto leading-relaxed">
-            <span className="sm:hidden">15-minute call · Soccer only · Built by a former D1 player</span>
+            <span className="sm:hidden">15-minute call · Soccer only · Built by a D1 player and a college coach</span>
             <span className="hidden sm:inline">
-              15-minute call · Soccer only · Built by a former Division I player · Replaces
-              SportsEngine, TeamSnap, GroupMe and the spreadsheet
+              15-minute call · Soccer only · Built by a Division I player and a college
+              coach · Replaces SportsEngine, TeamSnap, GroupMe and the spreadsheet
             </span>
           </p>
         </div>

@@ -334,57 +334,53 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Founder ─────────────────────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-6 py-24 md:py-32">
-        <div className="grid md:grid-cols-[auto_1fr] gap-12 md:gap-16 items-center">
-          {/* Stacked tilted photos */}
-          <div className="relative w-[320px] h-[380px] md:w-[360px] md:h-[420px] mx-auto md:mx-0 shrink-0 group">
-            <div
-              style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-              className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
-            >
-              <Image
-                src="/jozo-soccer.jpg"
-                alt="Jozo Cancar playing Division I soccer at Florida Atlantic"
-                width={210}
-                height={280}
-                className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
-              />
-            </div>
-            <div
-              style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-              className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
-            >
-              <Image
-                src="/jozo.jpg"
-                alt="Jozo Cancar, founder of OffPitchOS"
-                width={210}
-                height={280}
-                priority
-                className="block w-[180px] h-[240px] md:w-[210px] md:h-[280px] object-cover"
-              />
-            </div>
-          </div>
+      {/* ── Founders ────────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
+        <div className="max-w-3xl mb-16">
+          <SectionLabel n="07">Who is behind it</SectionLabel>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4 text-balance">
+            Two founders, both still on the touchline.
+          </h2>
+          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
+            OffPitchOS is not built by people who read about the problem. It is built by
+            two who played the game and now work inside a program, which is why it is
+            soccer only and why it argues with the way the existing tools behave.
+          </p>
+        </div>
 
-          <div className="text-center md:text-left">
-            <SectionLabel n="07">Who is behind it</SectionLabel>
-            <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance mt-4 mb-6 leading-[1.05]">
-              Built by someone who
-              <br className="hidden md:block" /> lived the problem.
-            </h2>
-            <p style={{ color: subtext }} className="text-[17px] leading-relaxed">
-              I am Jozo — a former Division I player at Florida Atlantic. Years inside real
-              clubs, as a player, on staff and around directors, showed me exactly where the
-              existing tools give up: coaches dropping out the night before, families lost in
-              group chats, and a director opening six apps to answer one question.
-            </p>
-            <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-4">
-              OffPitchOS is what those systems should have been from the start. It is built
-              for soccer only, and it is built by people who have stood on the touchline.
-            </p>
-          </div>
+        <div className="grid md:grid-cols-2 gap-14 md:gap-16">
+          <Founder
+            name="Jozo Cancar"
+            role="Co-founder · Builds the product"
+            actionSrc="/jozo-soccer.jpg"
+            actionAlt="Jozo Cancar playing Division I soccer at Florida Atlantic"
+            portraitSrc="/jozo.jpg"
+            portraitAlt="Jozo Cancar, co-founder of OffPitchOS"
+            priority
+          >
+            Played Division I at Florida Atlantic. Years around real clubs, as a player and
+            on staff, showed me where the existing tools give up: coaches dropping out the
+            night before, families lost in group chats, a director opening six apps to
+            answer one question. I build the thing that should have existed already.
+          </Founder>
+
+          <Founder
+            name="Rob Tomlin"
+            role="Co-founder · Assistant coach, FAU men's soccer"
+            actionSrc="/rob-playing.jpg"
+            actionAlt="Rob Tomlin playing college soccer for Palm Beach Atlantic"
+            portraitSrc="/rob.jpg"
+            portraitAlt="Rob Tomlin, co-founder of OffPitchOS"
+          >
+            Played college soccer at Palm Beach Atlantic and now coaches at Florida
+            Atlantic. Rob has been in this since day one, and the sharpest ideas in the
+            product are his: that the software should react to chaos on its own rather
+            than wait to be told, and that a club&rsquo;s whole week is really decided on a
+            Sunday night.
+          </Founder>
         </div>
       </section>
+
 
       {/* ── Closing CTA ─────────────────────────────────────────────────── */}
       <section className="px-6 pb-24 md:pb-32">
@@ -493,6 +489,65 @@ function SectionLabel({ n, children, center }: { n: string; children: React.Reac
       <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
         {children}
       </span>
+    </div>
+  )
+}
+
+/**
+ * One founder: a tilted pair of photos (on the pitch behind, portrait in front)
+ * above their name and story. Both founders get the identical treatment, which
+ * is the point — neither of them joined the other's project.
+ */
+function Founder({
+  name, role, actionSrc, actionAlt, portraitSrc, portraitAlt, priority, children,
+}: {
+  name: string; role: string
+  actionSrc: string; actionAlt: string
+  portraitSrc: string; portraitAlt: string
+  priority?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="relative w-[280px] h-[320px] sm:w-[320px] sm:h-[350px] mx-auto md:mx-0 shrink-0 group mb-8">
+        {/* Behind: on the pitch */}
+        <div
+          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+          className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
+        >
+          <Image
+            src={actionSrc}
+            alt={actionAlt}
+            width={190}
+            height={250}
+            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
+          />
+        </div>
+        {/* In front: portrait */}
+        <div
+          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
+          className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
+        >
+          <Image
+            src={portraitSrc}
+            alt={portraitAlt}
+            width={190}
+            height={250}
+            priority={priority}
+            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
+          />
+        </div>
+      </div>
+
+      <h3 style={{ color: ink }} className="text-2xl md:text-3xl font-semibold tracking-[-0.025em]">
+        {name}
+      </h3>
+      <p style={{ color: forest }} className="text-[13px] font-semibold mt-1.5 mb-4">
+        {role}
+      </p>
+      <p style={{ color: subtext }} className="text-[16px] leading-relaxed">
+        {children}
+      </p>
     </div>
   )
 }
