@@ -127,7 +127,9 @@ export default async function JoinPage({
                 <span className="font-semibold">{invite.clubs.name}</span>
               </div>
             )}
-            {invite.teams && (
+            {/* A college program is one squad, so the club and the team carry
+                the same name and the card printed it twice. */}
+            {invite.teams && invite.teams.name !== invite.clubs?.name && (
               <div className="flex items-center justify-between">
                 <span className="text-gray text-sm">Team</span>
                 <span className="font-semibold">
