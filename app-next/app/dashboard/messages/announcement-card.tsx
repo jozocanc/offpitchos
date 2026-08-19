@@ -222,7 +222,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
                   {unanswered} not answered
                 </span>
                 <span className="text-gray py-1 ml-auto">
-                  {tally.yes + tally.no + tally.maybe} of {tally.totalKids} kids
+                  {tally.yes + tally.no + tally.maybe} of {tally.totalKids} players
                 </span>
               </div>
             </div>
@@ -267,7 +267,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
           {/* Parents with no kids on this team (e.g., club-wide announcement, wrong team) */}
           {isParent && kids.length === 0 && (
             <p className="text-xs text-gray italic">
-              No kids linked for this announcement.
+              No players linked for this announcement.
             </p>
           )}
         </div>

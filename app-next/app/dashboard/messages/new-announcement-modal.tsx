@@ -163,7 +163,7 @@ export default function NewAnnouncementModal({
             <span className="text-sm">
               <span className="font-medium text-white">Ask for a response</span>
               <span className="block text-xs text-gray mt-0.5">
-                Parents see Yes / No / Maybe buttons for each of their kids. You see the tally.
+                Yes / No / Maybe buttons appear for each player. You see the tally.
               </span>
             </span>
           </label>
