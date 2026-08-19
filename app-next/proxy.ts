@@ -9,6 +9,28 @@ const publicExact = new Set(['/'])
 // Team/camp invite links bypass the gate since the prospect has been invited.
 const gatedPrefixes = ['/login', '/signup', '/forgot-password']
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// An invite link IS a credential. Asking an invited coach for the early-access
+// code as well puts a wall in front of the one person we want through it. The
+// token is validated, not merely present, so `?invite=anything` cannot open
+// public signup.
+async function hasValidInvite(
+  supabase: ReturnType<typeof createServerClient>,
+  params: URLSearchParams
+): Promise<boolean> {
+  const token = params.get('invite')
+  if (!token || !UUID.test(token)) return false
+
+  const { data } = await supabase
+    .rpc('get_invite_by_token', { invite_token: token })
+    .single()
+
+  const invite = data as { status?: string; expires_at?: string | null } | null
+  if (!invite || invite.status !== 'pending') return false
+  return !invite.expires_at || new Date(invite.expires_at) > new Date()
+}
+
 function isAccessCookieValid(cookie: string | undefined): boolean {
   if (!cookie) return false
   const parts = cookie.split(':')
@@ -60,7 +82,10 @@ export async function proxy(request: NextRequest) {
   const needsGate = accessConfigured && gatedPrefixes.some(p => pathname.startsWith(p))
   if (needsGate) {
     const accessCookie = request.cookies.get('offpitchos_access')?.value
-    if (!isAccessCookieValid(accessCookie)) {
+    const allowed =
+      isAccessCookieValid(accessCookie) ||
+      (await hasValidInvite(supabase, request.nextUrl.searchParams))
+    if (!allowed) {
       const url = request.nextUrl.clone()
       url.pathname = '/access'
       url.searchParams.set('next', pathname + request.nextUrl.search)
