@@ -194,7 +194,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <Stat label="Events" value={latest.stats.events.total} sub={`${latest.stats.events.cancelled} cancelled`} />
               <Stat label="Attendance" value={`${latest.stats.attendance.rate}%`} sub={`${latest.stats.attendance.presentRecords} of ${latest.stats.attendance.totalRecords}`} />
-              <Stat label="RSVP Rate" value={`${latest.stats.responseGap.rsvpResponseRate}%`} sub="parents responded" />
+              <Stat label="RSVP Rate" value={`${latest.stats.responseGap.rsvpResponseRate}%`} sub="responded" />
               <Stat label="Coming Up" value={latest.stats.upcomingEvents.length} sub="events next week" />
             </div>
           )}

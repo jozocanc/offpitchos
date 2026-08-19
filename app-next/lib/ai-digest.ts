@@ -74,6 +74,15 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   const weekStart = startOfWeek(new Date(anchor.getTime() - 7 * 24 * 60 * 60 * 1000))
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
 
+  // "Coming up" has to mean the future, whenever the digest is generated.
+  // The window was anchored to weekEnd, which is right for the Sunday-night
+  // send this was written for — but there is no cron, so in practice a DOC
+  // clicks Generate mid-week and weekEnd is already days in the past. That
+  // listed Monday's session under "Coming up" on a Wednesday. Anchoring to
+  // whichever is later keeps the Sunday behaviour identical and stops the
+  // on-demand case advertising sessions that already happened.
+  const upcomingFrom = new Date(Math.max(weekEnd.getTime(), anchor.getTime()))
+
   const [{ data: club }, { data: events }, { data: teams }, { data: upcoming }, { data: rsvps }] = await Promise.all([
     service.from('clubs').select('name').eq('id', clubId).single(),
     service.from('events')
@@ -86,8 +95,8 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
       .select('id, title, start_time, teams(name)')
       .eq('club_id', clubId)
       .eq('status', 'scheduled')
-      .gte('start_time', weekEnd.toISOString())
-      .lte('start_time', new Date(weekEnd.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString())
+      .gte('start_time', upcomingFrom.toISOString())
+      .lte('start_time', new Date(upcomingFrom.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString())
       .order('start_time', { ascending: true })
       .limit(8),
     service.from('event_rsvps')
@@ -225,7 +234,7 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   }
 }
 
-const DIGEST_SYSTEM = `You are Pep AI, the OffPitchOS club assistant. Write a Sunday-night weekly digest that a parent or DOC can skim in under 30 seconds.
+const DIGEST_SYSTEM = `You are Pep AI, the OffPitchOS club assistant. Write a weekly digest that anyone in the club can skim in under 30 seconds.
 
 Tone: warm, direct, slightly proud — like a great club president would email.
 Style: markdown. Short sections. Real names. Specific numbers.
