@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
 import { formatShortDate, formatTime as fmtTime } from '@/lib/format-datetime'
 import { getClubTimezoneById } from '@/lib/club-timezone-server'
-import { teamLabel } from '@/lib/team-label'
+import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 
 export const dynamic = 'force-dynamic'
 // Public pages should never get cached at the framework level — schedule
