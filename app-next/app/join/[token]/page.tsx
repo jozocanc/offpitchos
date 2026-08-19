@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import AcceptButton from './accept-button'
 import Wordmark from '@/components/wordmark'
@@ -26,12 +27,33 @@ export default async function JoinPage({
 
   const supabase = await createClient()
 
-  // Look up invite via secure RPC
-  const { data: inviteRaw } = await supabase
-    .rpc('get_invite_by_token', { invite_token: token })
-    .single()
+  // Read the invite server-side rather than through get_invite_by_token. The
+  // RPC returns ids only, so the card rendered "You've been invited / Role:
+  // Coach" with no club and no team — an anonymous ask for an account, which
+  // is exactly what a phishing link looks like. The RPC also filters to
+  // pending-and-unexpired, so a used or revoked link fell through to "does not
+  // exist" and the accepted/revoked/expired copy below could never render.
+  let invite: InviteData | null = null
+  try {
+    const service = createServiceClient()
+    const { data } = await service
+      .from('invites')
+      .select('id, club_id, team_id, role, status, expires_at, clubs(name), teams(name, age_group)')
+      .eq('token', token)
+      .single()
 
-  const invite = inviteRaw as InviteData | null
+    if (data) {
+      const club = Array.isArray(data.clubs) ? data.clubs[0] : data.clubs
+      const team = Array.isArray(data.teams) ? data.teams[0] : data.teams
+      invite = {
+        ...data,
+        clubs: (club as { name: string } | null) ?? null,
+        teams: (team as { name: string; age_group: string } | null) ?? null,
+      } as InviteData
+    }
+  } catch {
+    // Malformed token (the column is uuid) — invite stays null, page says so.
+  }
   // Public page: no session, so the club is resolved from the invite itself.
   const timezone = await getClubTimezoneById(invite?.club_id)
 
