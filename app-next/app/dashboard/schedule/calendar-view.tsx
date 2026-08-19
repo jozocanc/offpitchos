@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { EVENT_TYPE_LABELS, type EventType } from '@/lib/constants'
 import { useClubTimezone } from '@/components/club-timezone'
 import {
@@ -52,6 +52,31 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
 
   const weekLabel = `${formatMonthDay(`${days[0]}T00:00:00Z`, 'UTC')} – ${formatMonthDayYear(`${days[6]}T00:00:00Z`, 'UTC')}`
 
+  // Scheduled load for the week on screen. Cancelled events do not count,
+  // because the question this answers is "how much are we actually asking of
+  // them", and a session that was called off asks nothing. Days are matched on
+  // the club's own zone key rather than a Date comparison, for the same reason
+  // the grid does: getDay() resolves against the runtime zone, which is UTC on
+  // the server and local in the browser.
+  const weekLoad = useMemo(() => {
+    const inWeek = new Set(days)
+    let ms = 0
+    let sessions = 0
+    for (const e of events) {
+      if (e.status === 'cancelled') continue
+      if (!inWeek.has(dayKey(new Date(e.start_time), timezone))) continue
+      const duration = new Date(e.end_time).getTime() - new Date(e.start_time).getTime()
+      if (duration <= 0) continue
+      ms += duration
+      sessions++
+    }
+    return { hours: ms / 3_600_000, sessions }
+  }, [events, days, timezone])
+
+  const hoursLabel = weekLoad.hours % 1 === 0
+    ? String(weekLoad.hours)
+    : weekLoad.hours.toFixed(1)
+
   return (
     <div>
       {/* Week navigation */}
@@ -64,6 +89,14 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
           <button onClick={nextWeek} className="text-gray hover:text-white transition-colors text-sm font-bold px-2 py-1">
             &gt;
           </button>
+          {weekLoad.sessions > 0 && (
+            <span
+              title={`${hoursLabel} scheduled hours across ${weekLoad.sessions} session${weekLoad.sessions === 1 ? '' : 's'} this week. Cancelled events are not counted.`}
+              className="ml-1 text-xs font-bold bg-green/10 text-green px-2.5 py-1 rounded-full whitespace-nowrap"
+            >
+              {hoursLabel} hrs · {weekLoad.sessions} session{weekLoad.sessions === 1 ? '' : 's'}
+            </span>
+          )}
         </div>
         <button onClick={goToday} className="text-green text-sm font-bold hover:opacity-80 transition-opacity">
           Today
