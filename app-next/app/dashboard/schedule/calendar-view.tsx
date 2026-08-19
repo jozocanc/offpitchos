@@ -25,6 +25,9 @@ interface CalendarViewProps {
   events: Event[]
   onEdit: (eventId: string) => void
   onAddAtDate: (date: string) => void
+  /** Whether already-finished events are loaded. They are fetched lazily, so
+   *  without them a week in progress only holds the part that is still to come. */
+  includesPast?: boolean
 }
 
 // Hour-row height in px. Kept compact so the full 6am-8pm week grid fits
@@ -32,7 +35,7 @@ interface CalendarViewProps {
 // same value so they stay proportional if it changes.
 const HOUR_ROW_PX = 30
 
-export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarViewProps) {
+export default function CalendarView({ events, onEdit, onAddAtDate, includesPast = false }: CalendarViewProps) {
   const timezone = useClubTimezone()
   // The whole grid works in "YYYY-MM-DD" key space rather than Date objects.
   // getDay()/getDate()/getHours() all resolve against the RUNTIME's zone, which
@@ -77,6 +80,11 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
     ? String(weekLoad.hours)
     : weekLoad.hours.toFixed(1)
 
+  // Past events load on demand, so mid-week the total covers only what is left
+  // unless they have been pulled in. Say "remaining" rather than quietly
+  // reporting a number lower than the week really is.
+  const isPartialWeek = !includesPast && days.some(d => d < todayKey)
+
   return (
     <div>
       {/* Week navigation */}
@@ -91,10 +99,10 @@ export default function CalendarView({ events, onEdit, onAddAtDate }: CalendarVi
           </button>
           {weekLoad.sessions > 0 && (
             <span
-              title={`${hoursLabel} scheduled hours across ${weekLoad.sessions} session${weekLoad.sessions === 1 ? '' : 's'} this week. Cancelled events are not counted.`}
+              title={`${hoursLabel} scheduled hours across ${weekLoad.sessions} session${weekLoad.sessions === 1 ? '' : 's'}${isPartialWeek ? ' still to come this week. Turn on Show Past to count the whole week.' : ' this week.'} Cancelled events are not counted.`}
               className="ml-1 text-xs font-bold bg-green/10 text-green px-2.5 py-1 rounded-full whitespace-nowrap"
             >
-              {hoursLabel} hrs · {weekLoad.sessions} session{weekLoad.sessions === 1 ? '' : 's'}
+              {hoursLabel} hrs{isPartialWeek ? ' left' : ''} · {weekLoad.sessions} session{weekLoad.sessions === 1 ? '' : 's'}
             </span>
           )}
         </div>

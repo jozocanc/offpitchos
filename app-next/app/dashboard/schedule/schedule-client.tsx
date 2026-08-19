@@ -292,6 +292,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           events={filtered}
           onEdit={handleEdit}
           onAddAtDate={handleAddAtDate}
+          includesPast={showPast}
         />
       )}
 
