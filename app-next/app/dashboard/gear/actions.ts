@@ -32,7 +32,7 @@ interface TeamGearSummary {
   jerseyBreakdown: Record<string, number>
   shortsBreakdown: Record<string, number>
   missingCount: number
-  players: { id: string; firstName: string; lastName: string; jerseySize: string | null; shortsSize: string | null }[]
+  players: { id: string; firstName: string; lastName: string; jerseySize: string | null; shortsSize: string | null; collectToken: string }[]
 }
 
 export interface GearData {
@@ -41,6 +41,12 @@ export interface GearData {
   lastRequestedAt: string | null
   lastRequestedParentCount: number
   respondedSinceRequest: number
+  /**
+   * Players with a linked parent account. At a college program this is 0, and
+   * the parent fan-out is then a button that provably notifies nobody, so the
+   * UI leads with the per-player links instead.
+   */
+  playersWithParents: number
 }
 
 export async function getGearData(): Promise<GearData> {
@@ -54,7 +60,7 @@ export async function getGearData(): Promise<GearData> {
 
   const { data: players } = await supabase
     .from('players')
-    .select('id, first_name, last_name, team_id, jersey_size, shorts_size')
+    .select('id, first_name, last_name, team_id, jersey_size, shorts_size, collect_token, parent_id')
     .eq('club_id', profile.club_id)
 
   const teamSummaries: TeamGearSummary[] = (teams ?? []).map(team => {
@@ -90,6 +96,7 @@ export async function getGearData(): Promise<GearData> {
         lastName: p.last_name,
         jerseySize: p.jersey_size,
         shortsSize: p.shorts_size,
+        collectToken: p.collect_token,
       })),
     }
   })
@@ -126,6 +133,7 @@ export async function getGearData(): Promise<GearData> {
     lastRequestedAt,
     lastRequestedParentCount,
     respondedSinceRequest,
+    playersWithParents: (players ?? []).filter(p => p.parent_id).length,
   }
 }
 

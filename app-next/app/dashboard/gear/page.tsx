@@ -17,7 +17,7 @@ export default async function GearPage() {
   const role = await getEffectiveRole(prof?.role ?? 'parent')
   if (role !== 'doc') redirect('/dashboard')
 
-  const { teams, userRole, lastRequestedAt, lastRequestedParentCount, respondedSinceRequest } = await getGearData()
+  const { teams, userRole, lastRequestedAt, lastRequestedParentCount, respondedSinceRequest, playersWithParents } = await getGearData()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -32,6 +32,7 @@ export default async function GearPage() {
         lastRequestedAt={lastRequestedAt}
         lastRequestedParentCount={lastRequestedParentCount}
         respondedSinceRequest={respondedSinceRequest}
+        playersWithParents={playersWithParents}
       />
     </div>
   )

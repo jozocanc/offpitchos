@@ -16,6 +16,7 @@ interface Player {
   lastName: string
   jerseySize: string | null
   shortsSize: string | null
+  collectToken: string
 }
 
 interface TeamGearSummary {
@@ -48,19 +49,23 @@ export default function GearClient({
   lastRequestedAt,
   lastRequestedParentCount,
   respondedSinceRequest,
+  playersWithParents,
 }: {
   teams: TeamGearSummary[]
   userRole: string
   lastRequestedAt: string | null
   lastRequestedParentCount: number
   respondedSinceRequest: number
+  playersWithParents: number
 }) {
   const timezone = useClubTimezone()
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
   const [requesting, setRequesting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copiedLinks, setCopiedLinks] = useState(false)
   const { toast } = useToast()
   const isDoc = userRole === 'doc'
+  const hasParents = playersWithParents > 0
 
   // Club-wide totals
   const totalPlayers = teams.reduce((sum, t) => sum + t.playerCount, 0)
@@ -112,6 +117,38 @@ export default function GearClient({
     }
   }
 
+  // Every player gets their own link because the token IS the credential.
+  // Staff here run on a WhatsApp group, and we hold no player emails, so the
+  // realistic delivery is paste-into-chat rather than a mail fan-out.
+  async function handleCopyPlayerLinks() {
+    const origin = window.location.origin
+    const lines: string[] = []
+
+    for (const team of teams) {
+      const needed = team.players.filter(p => !p.jerseySize || !p.shortsSize)
+      if (needed.length === 0) continue
+      if (teams.length > 1) lines.push(team.teamName)
+      for (const p of needed) {
+        lines.push(`${p.firstName} ${p.lastName}: ${origin}/collect/${p.collectToken}`)
+      }
+      lines.push('')
+    }
+
+    if (lines.length === 0) {
+      toast('Every player has already submitted', 'success')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(lines.join('\n').trim())
+      setCopiedLinks(true)
+      setTimeout(() => setCopiedLinks(false), 2000)
+      toast('Links copied · send each player their own', 'success')
+    } catch {
+      toast('Copy failed — try again', 'error')
+    }
+  }
+
   function handleCopyOrder() {
     const lines: string[] = []
     const today = formatMonthDayYear(new Date(), timezone)
@@ -159,10 +196,27 @@ export default function GearClient({
         <div className="mb-6">
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={handleCopyPlayerLinks}
+              disabled={totalMissing === 0}
+              className={`${hasParents ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10' : 'bg-green text-dark hover:opacity-90'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
+              title="Copy one private link per player to send them directly"
+            >
+              {copiedLinks ? '✓ Copied' : '🔗 Copy player links'}
+              {totalMissing > 0 && (
+                <span className={`${hasParents ? 'bg-white/10 text-white' : 'bg-dark/20 text-dark'} px-1.5 py-0.5 rounded text-[10px] font-bold`}>{totalMissing}</span>
+              )}
+            </button>
+            <button
               onClick={handleRequestSizes}
-              disabled={requesting || totalMissing === 0}
-              className="bg-green text-dark font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-              title={totalMissing === 0 ? 'All sizes already submitted' : `Request sizes from parents with ${totalMissing} missing`}
+              disabled={requesting || totalMissing === 0 || !hasParents}
+              className={`${hasParents ? 'bg-green text-dark hover:opacity-90' : 'bg-white/5 text-white border border-white/10'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
+              title={
+                !hasParents
+                  ? 'No player has a linked parent account, so this would notify nobody. Send the player links instead.'
+                  : totalMissing === 0
+                    ? 'All sizes already submitted'
+                    : `Request sizes from parents with ${totalMissing} missing`
+              }
             >
               {requesting ? (
                 <>
