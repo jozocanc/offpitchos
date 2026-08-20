@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { appUrl } from "@/lib/app-url";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
     template: "%s | OffPitchOS",
   },
   description: "The operating system for serious soccer clubs, academies and college programs. Scheduling, communication, coverage and tactics in one system.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://offpitchos.com"),
+  metadataBase: new URL(appUrl()),
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

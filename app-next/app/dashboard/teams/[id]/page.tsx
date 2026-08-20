@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { appUrl } from '@/lib/app-url'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import GenerateInviteButton from './generate-invite-button'
@@ -164,7 +165,7 @@ export default async function TeamDetailPage({
     if (rate !== null && rate < 60) lowAttendanceCount += 1
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
 
   const isDOC = profile?.role === 'doc'
   const isParent = profile?.role === 'parent'

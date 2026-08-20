@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { appUrl } from '@/lib/app-url'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendCoachInviteEmail } from '@/lib/email'
@@ -57,7 +58,7 @@ export async function inviteCoach(
     .eq('id', profile.club_id)
     .single()
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
 
   revalidatePath('/dashboard/coaches')
 
@@ -131,7 +132,7 @@ export async function resendInvite(
       .eq('id', profile.club_id)
       .single()
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const baseUrl = appUrl()
     try {
       await sendCoachInviteEmail({
         to: invite.email,

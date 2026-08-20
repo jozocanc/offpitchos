@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { appUrl } from '@/lib/app-url'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
@@ -200,7 +201,7 @@ async function _createPlayerScopedInvite(
 
   revalidatePath(`/dashboard/teams/${teamId}`)
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
   return { url: `${baseUrl}/join/${invite.token}` }
 }
 
@@ -256,6 +257,6 @@ async function _createParentInviteReturningUrl(teamId: string): Promise<{ url: s
 
   revalidatePath(`/dashboard/teams/${teamId}`)
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
   return { url: `${baseUrl}/join/${invite.token}` }
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { appUrl } from '@/lib/app-url'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -31,7 +32,7 @@ export default async function SettingsPage() {
     .eq('id', profile?.club_id ?? '')
     .single()
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
 
   return (
     <div className="p-6 md:p-10 max-w-3xl mx-auto">

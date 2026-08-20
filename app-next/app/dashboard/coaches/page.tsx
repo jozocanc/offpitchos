@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { appUrl } from '@/lib/app-url'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import InviteCoachForm from './invite-form'
@@ -114,7 +115,7 @@ export default async function CoachesPage() {
     .eq('club_id', clubId)
     .order('age_group', { ascending: true })
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">

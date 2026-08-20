@@ -265,7 +265,9 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: 
           <div className="mb-3">
             <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">Preview as</p>
             <div className="flex gap-1">
-            {(['doc', 'coach', 'parent'] as const).map(role => (
+            {/* Player is its own preview: a college program has no parents at
+                all, so previewing as one showed a view nobody there will see. */}
+            {(['doc', 'coach', 'parent', 'player'] as const).map(role => (
               <button
                 key={role}
                 onClick={() => switchRole(role)}

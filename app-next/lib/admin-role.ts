@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers'
 import { ROLES, type Role } from '@/lib/constants'
 
-const VIEWABLE_ROLES: readonly string[] = [ROLES.DOC, ROLES.COACH, ROLES.PARENT]
+const VIEWABLE_ROLES: readonly string[] = [ROLES.DOC, ROLES.COACH, ROLES.PARENT, ROLES.PLAYER]
 
 /**
- * A DOC may preview the app as one of their own coaches or parents. Nobody
+ * A DOC may preview the app as one of their own coaches, parents or players.
+ * Nobody
  * else can. This is a strict downgrade — a DOC already outranks both roles, so
  * the switch never grants privilege, and every write is still checked by RLS
  * against the real JWT regardless of what this returns.
