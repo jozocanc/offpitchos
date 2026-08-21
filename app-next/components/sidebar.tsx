@@ -113,6 +113,14 @@ function MenuIcon() {
   )
 }
 
+function LoadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12h4l3-8 4 16 3-8h4" />
+    </svg>
+  )
+}
+
 function GearIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -181,6 +189,7 @@ const navItems: NavItem[] = [
   { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
   { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
   { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
+  { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
   { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'parent', 'player'] },
   { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
