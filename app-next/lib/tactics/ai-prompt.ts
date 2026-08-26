@@ -34,7 +34,9 @@ type Field = {
   orientation: 'horizontal'|'vertical'; half_field: boolean; style: 'schematic'|'realistic';
 }
 
-type DrillDoc = { field: Field; objects: BoardObject[] }
+type DrillCategory = 'rondo'|'build-up'|'pressing'|'finishing'|'warm-up'|'ssg'|'transition'|'other'
+
+type DrillDoc = { title: string; category: DrillCategory; field: Field; objects: BoardObject[] }
 
 IDs can be short strings like "p1", "c1", "a1" — the server regenerates them.
 
@@ -67,6 +69,12 @@ Respond with ONLY a valid JSON object matching the DrillDoc type.
 - No markdown code fences.
 - No prose before or after the JSON.
 - No comments inside the JSON.
+- "title" is the name a coach would write at the top of a session plan: 2–5 words,
+  title case, naming the drill itself — "4v2 Rondo with Neutrals", "Build-Up vs High
+  Press", "Defending a Wide 3v2". Describe the drill, never echo the coach's request
+  back. Never end a title with an ellipsis, and never emit "Untitled drill".
+- "category" is the single closest value from: rondo, build-up, pressing, finishing,
+  warm-up, ssg, transition, other. Reach for "other" only when nothing else fits.
 - Validate mentally: every object must have "id" and "type"; coordinates must be within field bounds; "color" fields on zones must be #rrggbb hex.
 - At most ONE labelled zone per area of the pitch. Do not stack two labelled zones over the same region — their labels render on top of each other and become unreadable. If a zone needs two ideas expressed, put them in one label or leave the second zone unlabelled.
 - GOALS: a goal is drawn with its mouth open toward the BOTTOM of the diagram and
@@ -101,6 +109,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: '5v2 Rondo', category: 'rondo',
       field: { width_m: 15, length_m: 20, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Zone marking the rondo square
@@ -131,6 +140,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: '4v2 Rondo with Bounce Players', category: 'rondo',
       field: { width_m: 20, length_m: 25, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Central rondo zone
@@ -164,6 +174,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: 'Playing Out From the Back', category: 'build-up',
       field: { width_m: 68, length_m: 52.5, units: 'm', orientation: 'horizontal', half_field: true, style: 'schematic' },
       objects: [
         // Build-up zone (own half)
@@ -207,6 +218,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: 'Midfield Press vs 4-4-2', category: 'pressing',
       field: { width_m: 68, length_m: 105, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Pressing trigger zone — opponent half
@@ -259,6 +271,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: 'Front Three High Press', category: 'pressing',
       field: { width_m: 68, length_m: 52.5, units: 'm', orientation: 'horizontal', half_field: true, style: 'schematic' },
       objects: [
         // High press zone
@@ -295,6 +308,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: 'Overlap and Cross', category: 'finishing',
       field: { width_m: 68, length_m: 52.5, units: 'm', orientation: 'horizontal', half_field: true, style: 'schematic' },
       objects: [
         // Full goal at the top (opponent goal)
@@ -334,6 +348,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: 'Three-Angle Finishing', category: 'finishing',
       field: { width_m: 68, length_m: 40, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Full goal
@@ -379,6 +394,7 @@ export const FEW_SHOT_MESSAGES: { role: 'user' | 'assistant'; content: string }[
   {
     role: 'assistant',
     content: JSON.stringify({
+      title: '4v4 with Goalkeepers', category: 'ssg',
       field: { width_m: 25, length_m: 35, units: 'm', orientation: 'horizontal', half_field: false, style: 'schematic' },
       objects: [
         // Mini-goals at each end

@@ -33,13 +33,22 @@ export interface GenerateDrillResult {
 const GENERATE_DRILL_TOOL: Anthropic.Tool = {
   name: 'generate_drill_doc',
   description:
-    'Emit a valid DrillDoc JSON object describing a soccer training drill. ' +
+    'Emit a valid DrillDoc JSON object describing a soccer training drill: a title, ' +
+    'a drill category, and the board itself (field + objects). ' +
     'All player coordinates must be within the field bounds. ' +
     'Respond using ONLY this tool — no prose.',
   input_schema: {
     type: 'object' as const,
-    required: ['field', 'objects'],
+    required: ['title', 'category', 'field', 'objects'],
     properties: {
+      title: {
+        type: 'string' as const,
+        description:
+          'Short name for the drill as a coach would write it on a session plan: ' +
+          '2-5 words, title case, e.g. "4v2 Rondo with Neutrals". Name the drill — ' +
+          "never echo the coach's request back, and never end with an ellipsis.",
+      },
+      category: { type: 'string' as const, enum: [...DRILL_CATEGORIES] },
       field: {
         type: 'object' as const,
         required: ['width_m', 'length_m', 'units', 'orientation', 'half_field', 'style'],
@@ -251,11 +260,13 @@ async function _generateDrillFromDescription(
     apiKey: process.env.ANTHROPIC_API_KEY,
   })
 
-  let rawOutput: unknown
+  // DrillDocSchema only covers { field, objects }; title and category ride along
+  // on the same tool output and are read off the raw record below.
+  let rawOutput: Record<string, unknown>
   let parseResult = null as ReturnType<typeof DrillDocSchema.safeParse> | null
 
   try {
-    rawOutput = await callClaude(client, userMessage)
+    rawOutput = (await callClaude(client, userMessage)) as Record<string, unknown>
     parseResult = DrillDocSchema.safeParse(rawOutput)
   } catch (err) {
     throw new Error(
@@ -268,14 +279,14 @@ async function _generateDrillFromDescription(
     const zodErrors = JSON.stringify(parseResult.error.issues.slice(0, 5))
     console.warn('[AI Tactics] First attempt validation failed, retrying.', zodErrors)
     try {
-      rawOutput = await callClaude(
+      rawOutput = (await callClaude(
         client,
         userMessage,
         `Your previous response failed schema validation with these errors: ${zodErrors}. ` +
           'Emit ONLY valid DrillDoc JSON via the generate_drill_doc tool. ' +
           'Ensure all zone colors are #rrggbb hex, all required fields are present, ' +
           'and all coordinates are within the declared field dimensions.',
-      )
+      )) as Record<string, unknown>
       parseResult = DrillDocSchema.safeParse(rawOutput)
     } catch (err) {
       throw new Error(
@@ -294,16 +305,25 @@ async function _generateDrillFromDescription(
 
   const doc = parseResult.data
 
-  // ── Derive a title from the description ─────────────────────────────────────
+  // ── Title from the model, falling back to the description ───────────────────
+  // The title used to be the first six words of the prompt plus an ellipsis, which
+  // is how the library filled up with rows called "Give me 3 training drills for…".
+  // The model now names the drill; the old truncation is kept only for the case
+  // where it returns no usable title.
+  const modelTitle = typeof rawOutput.title === 'string' ? rawOutput.title.trim() : ''
   const words = input.description.trim().split(/\s+/)
   const title =
-    words.length <= 6
-      ? input.description.trim()
-      : words.slice(0, 6).join(' ') + '…'
+    modelTitle.slice(0, 120) ||
+    (words.length <= 6 ? input.description.trim() : words.slice(0, 6).join(' ') + '…')
 
-  // ── Map drillType to category (or use 'other' as fallback) ──────────────────
-  const category =
-    input.drillType && input.drillType !== 'auto' ? input.drillType : 'other'
+  // ── Category: the coach's explicit choice wins over the model's guess ────────
+  const modelCategory =
+    typeof rawOutput.category === 'string' &&
+    (DRILL_CATEGORIES as readonly string[]).includes(rawOutput.category)
+      ? (rawOutput.category as DrillCategory)
+      : 'other'
+  const category: DrillCategory =
+    input.drillType && input.drillType !== 'auto' ? input.drillType : modelCategory
 
   // ── Insert drill row ────────────────────────────────────────────────────────
   const { data: inserted, error: insertError } = await supabase
