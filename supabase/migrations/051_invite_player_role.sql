@@ -4,6 +4,23 @@
 -- accept_invite_by_token (033) mapped every non-coach invite to profile role
 -- 'parent', so anyone accepting a player invite got profile.role = 'parent'
 -- while their team_members row said 'player'. Same function, one mapping fixed.
+--
+-- Also (same day): one head coach, everyone else is a coach or a player.
+--   * staff_title on profiles + invites: "Assistant Coach", "Goalkeeping Coach"...
+--     Every titled staff member is still role 'coach'; the title is a label only.
+--   * guard_profile_privilege: a signed-in user could previously UPDATE their
+--     own profiles.role to 'doc' (profiles_own_update has no column limits).
+--     DB policies key DOC power off clubs.created_by, but several server actions
+--     check profile.role = 'doc' and then use the service client, so the label
+--     was an escalation path. Now only the club creator can hold 'doc', coaches
+--     only arrive through an invite (SECURITY DEFINER RPC), and nobody edits
+--     their own title.
+
+alter table public.profiles add column if not exists staff_title text
+  check (staff_title is null or char_length(staff_title) between 1 and 40);
+alter table public.invites add column if not exists staff_title text
+  check (staff_title is null or char_length(staff_title) between 1 and 40);
+
 
 create or replace function public.accept_invite_by_token(
   p_token        uuid,
@@ -61,13 +78,15 @@ begin
   end if;
 
   -- 1. Profile for this club.
-  insert into public.profiles (user_id, club_id, role, display_name, onboarding_complete)
-  values (v_uid, v_invite.club_id, v_role, v_name, true)
+  insert into public.profiles (user_id, club_id, role, display_name, onboarding_complete, staff_title)
+  values (v_uid, v_invite.club_id, v_role, v_name, true,
+          case when v_role = 'coach' then coalesce(v_invite.staff_title, 'Assistant Coach') end)
   on conflict (user_id) do update
     set club_id             = excluded.club_id,
         role                = excluded.role,
         display_name        = excluded.display_name,
-        onboarding_complete = true
+        onboarding_complete = true,
+        staff_title         = excluded.staff_title
   returning id into v_profile_id;
 
   -- 2. Team membership, when the invite is scoped to a team.
@@ -117,3 +136,58 @@ update public.profiles p
      select 1 from public.team_members tm
       where tm.profile_id = p.id and tm.role <> 'player'
    );
+
+-- Existing coaches get the default title.
+update public.profiles set staff_title = 'Assistant Coach'
+ where role = 'coach' and staff_title is null;
+
+-- Privilege guard. SECURITY INVOKER on purpose: current_user is 'authenticated'
+-- for PostgREST calls, but the function owner inside SECURITY DEFINER RPCs
+-- (accept_invite_by_token) and 'service_role' for server-side admin writes,
+-- and both of those are trusted paths.
+create or replace function public.guard_profile_privilege()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if current_user <> 'authenticated' then
+    return new;
+  end if;
+
+  -- Ordinary edits (display name, onboarding flag) pass untouched.
+  if tg_op = 'UPDATE'
+     and new.role        is not distinct from old.role
+     and new.club_id     is not distinct from old.club_id
+     and new.staff_title is not distinct from old.staff_title then
+    return new;
+  end if;
+
+  if new.staff_title is not null
+     and (tg_op = 'INSERT' or new.staff_title is distinct from old.staff_title) then
+    raise exception 'Only the head coach can set a staff title' using errcode = '42501';
+  end if;
+
+  if new.role = 'doc' then
+    if new.club_id in (select public.get_doc_club_ids()) then
+      return new;
+    end if;
+    raise exception 'Only the person who created the team can be head coach' using errcode = '42501';
+  end if;
+
+  if new.role = 'coach' then
+    if tg_op = 'UPDATE' and old.role in ('coach', 'doc')
+       and new.club_id is not distinct from old.club_id then
+      return new;
+    end if;
+    raise exception 'Coaches join through an invite from the head coach' using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_privilege on public.profiles;
+create trigger profiles_guard_privilege
+  before insert or update on public.profiles
+  for each row execute function public.guard_profile_privilege();
