@@ -209,7 +209,9 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
   // team_members via the caller's client (the DOC has RLS write access
   // on team_members within their own club).
   const coachUserIds: string[] = []
-  for (const coach of DEMO_COACHES) {
+  // One of each title so the Staff page shows how titles work.
+  const DEMO_STAFF_TITLES = ['Assistant Coach', 'Goalkeeping Coach', 'Fitness Coach']
+  for (const [coachIndex, coach] of DEMO_COACHES.entries()) {
     const { data: created, error: authError } = await admin.auth.admin.createUser({
       email: namespacedEmail(coach.email),
       password: cryptoRandomPassword(),
@@ -231,6 +233,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
         role: 'coach',
         display_name: `${coach.firstName} ${coach.lastName}`,
         onboarding_complete: true,
+        staff_title: DEMO_STAFF_TITLES[coachIndex] ?? 'Assistant Coach',
       })
       .select('id')
       .single()
@@ -255,6 +258,8 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
   // player"). We capture ids so feedback, RSVPs and attendance can
   // reference them.
   const playerIds: { id: string; authId: string; firstName: string }[] = []
+  const timeZone = await getClubTimezoneById(clubId)
+  const todayKey = dayKey(new Date(), timeZone)
   for (let index = 0; index < DEMO_PLAYERS.length; index++) {
     const player = DEMO_PLAYERS[index]
     const fullName = `${player.firstName} ${player.lastName}`
@@ -303,6 +308,16 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
         last_name: player.lastName,
         jersey_number: player.jerseyNumber,
         position: player.position,
+        // Most of the squad has already sent sizes; a few are still to chase,
+        // so the Gear page shows both the order breakdown and the follow-up.
+        ...(index % 4 !== 3
+          ? {
+              jersey_size: ['AM', 'AL', 'AM', 'AS', 'AL', 'AXL'][index % 6],
+              shorts_size: ['AM', 'AM', 'AL', 'AS', 'AL', 'AL'][index % 6],
+              has_travel_id: true,
+              passport_expiry: index % 5 === 0 ? addDaysToKey(todayKey, 120) : null,
+            }
+          : {}),
       })
       .select('id')
       .single()
@@ -316,8 +331,6 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
   // times so feedback can be back-dated to the event day (otherwise
   // every feedback row gets created_at=now and the development chart
   // bucketByDay returns 1 day → no chart line).
-  const timeZone = await getClubTimezoneById(clubId)
-  const todayKey = dayKey(new Date(), timeZone)
   const pastEvents: { id: string; startIso: string }[] = []
   const upcomingEventIds: string[] = []
   for (const plan of DEMO_EVENTS) {

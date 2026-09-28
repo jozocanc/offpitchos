@@ -20,7 +20,8 @@ interface FiltersProps {
 export default function Filters({ teams, selectedTeam, selectedType, onTeamChange, onTypeChange }: FiltersProps) {
   return (
     <div className="flex flex-wrap gap-3">
-      <select
+      {/* A one-team program has nothing to filter by team. */}
+      {teams.length > 1 && <select
         value={selectedTeam ?? ''}
         onChange={e => onTeamChange(e.target.value || null)}
         className="bg-dark border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
@@ -29,7 +30,7 @@ export default function Filters({ teams, selectedTeam, selectedType, onTeamChang
         {teams.map(t => (
           <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
         ))}
-      </select>
+      </select>}
 
       <select
         value={selectedType ?? ''}
