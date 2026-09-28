@@ -339,7 +339,7 @@ function ClaimSelfModal({
               disabled={isPending || !selectedId}
               className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              {isPending ? 'Linking…' : "That's me"
+              {isPending ? 'Linking…' : "That's me"}
             </button>
           )}
         </div>
