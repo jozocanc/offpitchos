@@ -1,14 +1,15 @@
 'use client'
-import { formatMonthDayYear } from '@/lib/format-datetime'
+import { formatMonthDayYear, dayKey, addDaysToKey } from '@/lib/format-datetime'
 import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState } from 'react'
 import { updatePlayerSize, requestMissingSizes } from './actions'
 import { useToast } from '@/components/toast'
 import { ageGroupLabel } from '@/lib/team-label'
+import { GEAR_SIZES, gearSizeLabel } from '@/lib/constants'
 
-const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
-const SHORTS_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
+const JERSEY_SIZES: readonly string[] = GEAR_SIZES
+const SHORTS_SIZES: readonly string[] = GEAR_SIZES
 
 interface Player {
   id: string
@@ -17,6 +18,8 @@ interface Player {
   jerseySize: string | null
   shortsSize: string | null
   collectToken: string
+  hasTravelId: boolean | null
+  passportExpiry: string | null
 }
 
 interface TeamGearSummary {
@@ -101,7 +104,7 @@ export default function GearClient({
         // Every email failed. Push still went out, so the request is
         // logged and players may still see it on mobile.
         toast(
-          `Sizes requested, but emails didn't deliver. Push notifications went out — tap 'Request sizes' again in a few minutes to retry emails.`,
+          `Sizes requested, but emails didn't deliver. Push notifications went out. Tap 'Request sizes' again in a few minutes to retry emails.`,
           'error',
         )
       } else {
@@ -147,36 +150,36 @@ export default function GearClient({
       setTimeout(() => setCopiedLinks(false), 2000)
       toast('Links copied · send each player their own', 'success')
     } catch {
-      toast('Copy failed — try again', 'error')
+      toast('Copy failed, try again', 'error')
     }
   }
 
   function handleCopyOrder() {
     const lines: string[] = []
     const today = formatMonthDayYear(new Date(), timezone)
-    lines.push(`OffPitchOS club gear order — ${today}`)
+    lines.push(`OffPitchOS team gear order, ${today}`)
     lines.push('')
 
     const sortedSizes = Object.keys({ ...clubJerseys, ...clubShorts })
-    const order = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
+    const order: readonly string[] = GEAR_SIZES
     sortedSizes.sort((a, b) => order.indexOf(a) - order.indexOf(b))
 
     const jerseyTotal = Object.values(clubJerseys).reduce((s, n) => s + n, 0)
     lines.push(`JERSEYS (${jerseyTotal} total)`)
     for (const size of order) {
-      if (clubJerseys[size]) lines.push(`  ${size} × ${clubJerseys[size]}`)
+      if (clubJerseys[size]) lines.push(`  ${gearSizeLabel(size)} × ${clubJerseys[size]}`)
     }
     lines.push('')
 
     const shortsTotal = Object.values(clubShorts).reduce((s, n) => s + n, 0)
     lines.push(`SHORTS (${shortsTotal} total)`)
     for (const size of order) {
-      if (clubShorts[size]) lines.push(`  ${size} × ${clubShorts[size]}`)
+      if (clubShorts[size]) lines.push(`  ${gearSizeLabel(size)} × ${clubShorts[size]}`)
     }
 
     if (totalMissing > 0) {
       lines.push('')
-      lines.push(`⚠ ${totalMissing} player${totalMissing === 1 ? '' : 's'} still missing sizes — not included above.`)
+      lines.push(`⚠ ${totalMissing} player${totalMissing === 1 ? '' : 's'} still missing sizes, not included above.`)
     }
 
     const text = lines.join('\n')
@@ -187,7 +190,7 @@ export default function GearClient({
       setTimeout(() => setCopied(false), 2000)
       toast('Order copied to clipboard', 'success')
     } catch {
-      toast('Copy failed — try again', 'error')
+      toast('Copy failed, try again', 'error')
     }
   }
 
@@ -279,15 +282,15 @@ export default function GearClient({
         <div className="mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
             <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
-              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total Players</p>
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total players</p>
               <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{totalPlayers}</p>
             </div>
             <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
-              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Sizes Submitted</p>
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Sizes submitted</p>
               <p className="text-xl sm:text-2xl lg:text-3xl font-black text-green truncate tabular-nums">{totalPlayers - totalMissing}</p>
             </div>
             <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
-              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Missing Sizes</p>
+              <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Missing sizes</p>
               <p className={`text-xl sm:text-2xl lg:text-3xl font-black truncate tabular-nums ${totalMissing > 0 ? 'text-yellow-400' : 'text-white'}`}>{totalMissing}</p>
             </div>
           </div>
@@ -295,7 +298,7 @@ export default function GearClient({
           {/* Club-wide completion progress */}
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-5 mb-6">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray font-semibold">Club-wide Completion</p>
+              <p className="text-sm text-gray font-semibold">Program-wide completion</p>
               <p className={`text-sm font-bold ${completionPct === 100 ? 'text-green' : completionPct >= 75 ? 'text-white' : 'text-yellow-400'}`}>
                 {completionPct}%
               </p>
@@ -310,14 +313,14 @@ export default function GearClient({
 
           {/* Club-wide size breakdown */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <SizeBreakdownCard title="Jersey Sizes (Club)" breakdown={clubJerseys} />
-            <SizeBreakdownCard title="Shorts Sizes (Club)" breakdown={clubShorts} />
+            <SizeBreakdownCard title="Jersey sizes (all teams)" breakdown={clubJerseys} />
+            <SizeBreakdownCard title="Shorts sizes (all teams)" breakdown={clubShorts} />
           </div>
         </div>
       )}
 
       {/* Per-team breakdown */}
-      <h2 className="text-lg font-bold text-white mb-4">By Team</h2>
+      <h2 className="text-lg font-bold text-white mb-4">By team</h2>
       <div className="space-y-3">
         {teams.map(team => {
           const teamPct = team.playerCount > 0 ? Math.round(((team.playerCount - team.missingCount) / team.playerCount) * 100) : 0
@@ -370,9 +373,10 @@ export default function GearClient({
                 {/* Player list with sizes */}
                 {isDoc && (
                   <div className="space-y-2">
+                    <TravelReadinessSummary players={team.players} todayKey={dayKey(new Date(), timezone)} />
                     <p className="text-xs text-gray font-semibold uppercase tracking-wide mb-2">Players</p>
                     {team.players.map(player => (
-                      <PlayerSizeRow key={player.id} player={player} isDoc={isDoc} />
+                      <PlayerSizeRow key={player.id} player={player} isDoc={isDoc} todayKey={dayKey(new Date(), timezone)} />
                     ))}
                   </div>
                 )}
@@ -408,7 +412,7 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
                 title={isTop ? 'Most popular size' : undefined}
                 className={`text-xs rounded px-2 py-1 border ${isTop ? 'bg-green/15 border-green/30 text-white' : 'bg-white/5 border-white/10 text-white'}`}
               >
-                {size}: <span className="font-bold text-green">{count}</span>
+                {gearSizeLabel(size)}: <span className="font-bold text-green">{count}</span>
               </span>
             )
           })}
@@ -418,7 +422,71 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
   )
 }
 
-function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
+// Passports expiring within ~6 months are flagged: many countries refuse
+// entry inside that window, so "valid today" is not "valid for the trip".
+const PASSPORT_WARN_DAYS = 183
+
+function passportStatus(expiry: string | null, todayKey: string): 'none' | 'expired' | 'soon' | 'ok' {
+  if (!expiry) return 'none'
+  if (expiry < todayKey) return 'expired'
+  if (expiry < addDaysToKey(todayKey, PASSPORT_WARN_DAYS)) return 'soon'
+  return 'ok'
+}
+
+function formatExpiry(key: string): string {
+  // Date-only value: anchor at UTC noon and format in UTC so it never shifts a day.
+  return formatMonthDayYear(`${key}T12:00:00Z`, 'UTC')
+}
+
+function TravelReadinessSummary({ players, todayKey }: { players: Player[]; todayKey: string }) {
+  if (players.length === 0) return null
+  const withId = players.filter(p => p.hasTravelId === true).length
+  const noId = players.filter(p => p.hasTravelId === false).length
+  const passports = players.filter(p => p.passportExpiry).length
+  const flagged = players.filter(p => {
+    const st = passportStatus(p.passportExpiry, todayKey)
+    return st === 'expired' || st === 'soon'
+  }).length
+  return (
+    <div className="bg-dark rounded-lg p-3 mb-4">
+      <p className="text-xs text-gray font-semibold mb-1.5">Travel readiness</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span className="text-white"><span className="font-bold text-green">{withId}</span>/{players.length} confirmed travel ID</span>
+        {noId > 0 && <span className="text-red font-semibold">{noId} without ID</span>}
+        <span className="text-white">{passports} passport{passports === 1 ? '' : 's'} on file</span>
+        {flagged > 0 && <span className="text-yellow-500 font-semibold">{flagged} expired or expiring within 6 months</span>}
+      </div>
+    </div>
+  )
+}
+
+function TravelBadges({ player, todayKey }: { player: Player; todayKey: string }) {
+  const st = passportStatus(player.passportExpiry, todayKey)
+  return (
+    <span className="flex items-center gap-1 shrink-0">
+      {player.hasTravelId === true && (
+        <span title="Has a valid government photo ID for travel" className="text-[10px] font-semibold bg-green/10 text-green border border-green/20 rounded px-1.5 py-0.5">ID</span>
+      )}
+      {player.hasTravelId === false && (
+        <span title="Says they do not have a valid travel ID yet" className="text-[10px] font-semibold bg-red/10 text-red border border-red/20 rounded px-1.5 py-0.5">No ID</span>
+      )}
+      {st !== 'none' && player.passportExpiry && (
+        <span
+          title={`Passport expires ${formatExpiry(player.passportExpiry)}`}
+          className={`text-[10px] font-semibold rounded px-1.5 py-0.5 border ${
+            st === 'expired' ? 'bg-red/10 text-red border-red/20'
+              : st === 'soon' ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+                : 'bg-white/5 text-gray border-white/10'
+          }`}
+        >
+          {st === 'expired' ? 'Passport expired' : `Passport ${formatExpiry(player.passportExpiry)}`}
+        </span>
+      )}
+    </span>
+  )
+}
+
+function PlayerSizeRow({ player, isDoc, todayKey }: { player: Player; isDoc: boolean; todayKey: string }) {
   const { toast } = useToast()
   const [jerseySize, setJerseySize] = useState(player.jerseySize ?? '')
   const [shortsSize, setShortsSize] = useState(player.shortsSize ?? '')
@@ -437,14 +505,17 @@ function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
 
   return (
     <div className="flex items-center gap-3 bg-dark/50 rounded-lg px-3 py-2">
-      <span className="text-sm text-white flex-1">{player.firstName} {player.lastName}</span>
+      <span className="text-sm text-white flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+        <span>{player.firstName} {player.lastName}</span>
+        <TravelBadges player={player} todayKey={todayKey} />
+      </span>
       <select
         value={jerseySize}
         onChange={e => setJerseySize(e.target.value)}
         className="bg-dark border border-white/10 rounded px-2 py-1 text-xs text-white appearance-none"
       >
         <option value="">Jersey</option>
-        {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+        {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
       </select>
       <select
         value={shortsSize}
@@ -452,7 +523,7 @@ function PlayerSizeRow({ player, isDoc }: { player: Player; isDoc: boolean }) {
         className="bg-dark border border-white/10 rounded px-2 py-1 text-xs text-white appearance-none"
       >
         <option value="">Shorts</option>
-        {SHORTS_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+        {SHORTS_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
       </select>
       {hasChanges && (
         <button

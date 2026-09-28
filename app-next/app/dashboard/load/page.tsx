@@ -25,7 +25,7 @@ export default async function LoadPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Load</h1>
         <p className="text-sm text-gray mt-1">
-          GPS vest data, attached to the session it came from.
+          Import GPS vest data from Catapult, STATSports, Polar or any CSV export, attached to the session it came from.
         </p>
       </div>
 

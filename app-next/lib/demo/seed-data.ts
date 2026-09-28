@@ -92,6 +92,38 @@ export interface DemoEventPlan {
   startHour: number // local time, 24h
   startMinute: number
   durationMinutes: number
+  // Away fixtures: played at this address instead of the home venue.
+  awayAddress?: string
+  // Away-trip details (migration 052), relative to kickoff so the seeded
+  // trip always lines up with the seeded game.
+  travel?: DemoTravelPlan
+}
+
+export interface DemoTravelPlan {
+  departHoursBeforeStart: number
+  departLocation: string
+  mode: 'bus' | 'van' | 'flight' | 'cars'
+  // Hours after the final whistle the team is expected back.
+  returnHoursAfterEnd: number
+  hotel: string | null
+  notes: string
+}
+
+// Fictional, like DEMO_VENUE: nobody should be routed to a real campus.
+const DEMO_AWAY_TRAVEL: DemoTravelPlan = {
+  departHoursBeforeStart: 3,
+  departLocation: 'Riverbend College Field House, front lot',
+  mode: 'bus',
+  returnHoursAfterEnd: 15, // overnight, home early the next afternoon
+  hotel: 'Hampton Inn & Suites, Prairie Hill',
+  notes: [
+    'Bus loads 15 minutes before departure. Late = left behind.',
+    'Pre-game meal stop about 90 minutes into the drive (pre-ordered, dietary needs covered).',
+    'Dress code: travel polo, team joggers, team slides or trainers.',
+    'Bring: both kits, boots and flats, shin guards, student ID, water bottle, pillow.',
+    'Post-match: boxed dinner on the bus, then hotel check-in. Rooming list is posted in Messages.',
+    'Next morning: breakfast at the hotel, bus home after checkout.',
+  ].join('\n'),
 }
 
 // Two-week window: 7 days of past events (so attendance + feedback have
@@ -107,7 +139,8 @@ export const DEMO_EVENTS: DemoEventPlan[] = [
   // UPCOMING
   { type: 'practice', title: 'Training',                      daysFromNow: 1, startHour: 15, startMinute: 30, durationMinutes: 120 },
   { type: 'practice', title: 'Pre-travel Training',           daysFromNow: 3, startHour: 15, startMinute: 30, durationMinutes: 90 },
-  { type: 'game',     title: 'Away at Prairie State College', daysFromNow: 5, startHour: 19, startMinute: 0,  durationMinutes: 110 },
+  { type: 'game',     title: 'Away at Prairie State College', daysFromNow: 5, startHour: 19, startMinute: 0,  durationMinutes: 110,
+    awayAddress: '400 Campus Loop, Prairie Hill, TX 75840', travel: DEMO_AWAY_TRAVEL },
   { type: 'practice', title: 'Training',                      daysFromNow: 8, startHour: 15, startMinute: 30, durationMinutes: 120 },
 ]
 
@@ -115,22 +148,22 @@ export const DEMO_EVENTS: DemoEventPlan[] = [
 // pulled from common college-soccer note patterns. We pick at random per
 // player so the development chart shows a real-looking spread.
 export const DEMO_FEEDBACK_TEMPLATES: { category: 'technical' | 'tactical' | 'physical' | 'attitude' | 'general'; rating: number; notes: string }[] = [
-  { category: 'technical', rating: 5, notes: 'First touch was money tonight — every reception clean.' },
+  { category: 'technical', rating: 5, notes: 'First touch was money tonight, every reception clean.' },
   { category: 'technical', rating: 4, notes: 'Nice progress on weak-foot passing during rondos.' },
   { category: 'technical', rating: 3, notes: 'Decent ball striking but needs to lock the standing foot.' },
   { category: 'tactical',  rating: 5, notes: 'Read the press perfectly and kept switching the field.' },
-  { category: 'tactical',  rating: 4, notes: 'Good defensive cover — slid in to plug the gap on overloads.' },
+  { category: 'tactical',  rating: 4, notes: 'Good defensive cover: slid in to plug the gap on overloads.' },
   { category: 'tactical',  rating: 3, notes: 'Lost shape a couple times when we transitioned. Keep working on it.' },
-  { category: 'physical',  rating: 5, notes: 'Engine never stopped — lasted 90 minutes at full pace.' },
+  { category: 'physical',  rating: 5, notes: 'Engine never stopped. Lasted 90 minutes at full pace.' },
   { category: 'physical',  rating: 4, notes: 'Recovered well between sprints. Strong second half.' },
-  { category: 'attitude',  rating: 5, notes: 'Lifted the whole bench — set the tone before kickoff.' },
+  { category: 'attitude',  rating: 5, notes: 'Lifted the whole bench and set the tone before kickoff.' },
   { category: 'attitude',  rating: 4, notes: 'Coachable today, took the corrections without sulking.' },
   { category: 'general',   rating: 4, notes: 'Quietly one of the best performances of the night.' },
-  { category: 'general',   rating: 3, notes: 'Solid shift — nothing flashy but did the job.' },
+  { category: 'general',   rating: 3, notes: 'Solid shift. Nothing flashy but did the job.' },
 ]
 
 export const DEMO_ANNOUNCEMENT = {
   title: 'Away trip to Prairie State: travel check',
-  body: "Bus leaves the field house at 9:00 AM Friday. Bring your travel polo, both kits and your student ID. Tap below by Wednesday so we can lock the hotel rooming list and meal count.",
+  body: "Bus leaves the field house three hours before kickoff. Full itinerary is on the game in Schedule. Bring your travel polo, both kits and your student ID. Tap below by Wednesday so we can lock the hotel rooming list and meal count.",
   pollEnabled: true,
 }

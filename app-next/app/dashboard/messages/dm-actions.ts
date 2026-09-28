@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
+import { getViewerIdentity, isPlayerPreview, PREVIEW_WRITE_ERROR } from '@/lib/admin-role'
 
 const MAX_CONTENT = 2000
 
@@ -106,12 +107,31 @@ async function getMe() {
   return { userId: user.id, ...profile }
 }
 
+// Read-side identity. In "View as → Player" preview this is the club's sample
+// player (role 'player'), so the head coach sees that player's DM list. RLS
+// on direct_messages is participant-only, so the only thread the DOC's client
+// can read here is the one between the sample player and the DOC: nobody
+// else's private messages are exposed. Writes keep using getMe().
+async function getReadMe() {
+  const me = await getMe()
+  if (!me) return null
+  const viewer = await getViewerIdentity()
+  if (!viewer.isPreview || !viewer.previewPlayer || !viewer.profileId) return me
+  return {
+    ...me,
+    userId: viewer.userId,
+    id: viewer.profileId,
+    role: 'player',
+    display_name: `${viewer.previewPlayer.firstName} ${viewer.previewPlayer.lastName}`,
+  }
+}
+
 // ------------------------------------------------------------
 // Queries
 // ------------------------------------------------------------
 
 export async function getDMableUsers(): Promise<DMableUser[]> {
-  const me = await getMe()
+  const me = await getReadMe()
   if (!me) return []
   const ids = await getDMableUserIds(me.userId, me.role, me.club_id)
   if (ids.size === 0) return []
@@ -149,7 +169,7 @@ export async function getDMableUsers(): Promise<DMableUser[]> {
 }
 
 export async function getDMThreads(): Promise<DMThread[]> {
-  const me = await getMe()
+  const me = await getReadMe()
   if (!me) return []
 
   const supabase = await createClient()
@@ -198,7 +218,7 @@ export async function getDMThreads(): Promise<DMThread[]> {
 }
 
 export async function getThreadMessages(otherUserId: string): Promise<DMMessage[]> {
-  const me = await getMe()
+  const me = await getReadMe()
   if (!me) return []
   const supabase = await createClient()
   const { data } = await supabase
@@ -220,7 +240,7 @@ export async function getThreadMessages(otherUserId: string): Promise<DMMessage[
 }
 
 export async function getUnreadDMCount(): Promise<number> {
-  const me = await getMe()
+  const me = await getReadMe()
   if (!me) return 0
   const supabase = await createClient()
   const { count } = await supabase
@@ -236,6 +256,7 @@ export async function getUnreadDMCount(): Promise<number> {
 // ------------------------------------------------------------
 
 export async function sendDM(recipientUserId: string, content: string): Promise<{ error?: string }> {
+  if (await isPlayerPreview()) return { error: PREVIEW_WRITE_ERROR }
   const me = await getMe()
   if (!me) return { error: 'Not signed in' }
 
@@ -279,6 +300,8 @@ export async function sendDM(recipientUserId: string, content: string): Promise<
 }
 
 export async function markThreadRead(otherUserId: string): Promise<void> {
+  // Opening a thread in preview must not mark the head coach's own DMs read.
+  if (await isPlayerPreview()) return
   const me = await getMe()
   if (!me) return
   const supabase = await createClient()
@@ -292,6 +315,7 @@ export async function markThreadRead(otherUserId: string): Promise<void> {
 }
 
 export async function unsendDM(messageId: string): Promise<{ error?: string }> {
+  if (await isPlayerPreview()) return { error: PREVIEW_WRITE_ERROR }
   const supabase = await createClient()
   const { error } = await supabase
     .from('direct_messages')

@@ -495,7 +495,7 @@ export function SessionPlanPDF({ event, drills, timeZone = DEFAULT_TIMEZONE }: S
 
   return (
     <Document
-      title={`Session Plan — ${event.title}`}
+      title={`Session Plan: ${event.title}`}
       author="OffPitchOS"
       subject="Session Plan Export"
     >
@@ -626,7 +626,7 @@ export function BatchDrillPDF({ drills, timeZone = DEFAULT_TIMEZONE }: BatchDril
 
   return (
     <Document
-      title={`Drill Pack — ${drills.length} drill${drills.length === 1 ? '' : 's'}`}
+      title={`Drill Pack: ${drills.length} drill${drills.length === 1 ? '' : 's'}`}
       author="OffPitchOS"
       subject="Drill Pack Export"
     >
@@ -656,7 +656,7 @@ export function BatchDrillPDF({ drills, timeZone = DEFAULT_TIMEZONE }: BatchDril
           <Text style={[S.sectionLabel, { marginBottom: 10 }]}>Included drills</Text>
           {drills.map((d, i) => (
             <Text key={d.id} style={S.coverDrillListItem}>
-              {i + 1}. {d.title} — {categoryLabel(d.category)}
+              {i + 1}. {d.title} · {categoryLabel(d.category)}
             </Text>
           ))}
         </View>

@@ -104,3 +104,26 @@ export function roleLabel(role: string | null | undefined, staffTitle?: string |
   if (role === ROLES.PLAYER || role === ROLES.PARENT) return 'Player'
   return 'Member'
 }
+
+// Kit sizes. Stored values stay 'AS'/'YXS' etc. (existing rows use them);
+// only the order and display labels changed when the product went college:
+// adult sizes first, youth kept available after them.
+export const GEAR_SIZES = ['AS', 'AM', 'AL', 'AXL', 'AXXL', 'YXS', 'YS', 'YM', 'YL', 'YXL'] as const
+
+const GEAR_SIZE_LABELS: Record<string, string> = {
+  AS: 'S',
+  AM: 'M',
+  AL: 'L',
+  AXL: 'XL',
+  AXXL: 'XXL',
+  YXS: 'Youth XS',
+  YS: 'Youth S',
+  YM: 'Youth M',
+  YL: 'Youth L',
+  YXL: 'Youth XL',
+}
+
+export function gearSizeLabel(size: string | null | undefined): string {
+  if (!size) return ''
+  return GEAR_SIZE_LABELS[size] ?? size
+}

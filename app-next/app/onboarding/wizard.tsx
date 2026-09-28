@@ -18,7 +18,7 @@ export default function OnboardingWizard() {
 
   function handleNext() {
     if (!clubName.trim()) {
-      setError('Club name is required')
+      setError('Program name is required')
       return
     }
     setError(null)
@@ -70,7 +70,7 @@ export default function OnboardingWizard() {
         {/* Logo */}
         <div className="text-center mb-10">
           <Wordmark size="xl" />
-          <p className="text-gray text-sm mt-2">Let&apos;s set up your club</p>
+          <p className="text-gray text-sm mt-2">Let&apos;s set up your program</p>
         </div>
 
         {/* Step indicator */}
@@ -82,11 +82,11 @@ export default function OnboardingWizard() {
         <div className="bg-dark-secondary rounded-2xl p-8 shadow-lg">
           {step === 1 && (
             <div>
-              <h2 className="text-xl font-bold mb-1">Name your club</h2>
-              <p className="text-gray text-sm mb-6">This is the club you&apos;ll manage on OffPitchOS.</p>
+              <h2 className="text-xl font-bold mb-1">What&apos;s your program called?</h2>
+              <p className="text-gray text-sm mb-6">Your program's name, the way your players and staff know it.</p>
 
               <label className="block text-sm font-medium text-gray mb-2" htmlFor="clubName">
-                Club name
+                Program name
               </label>
               <input
                 id="clubName"
@@ -94,7 +94,7 @@ export default function OnboardingWizard() {
                 value={clubName}
                 onChange={e => setClubName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleNext()}
-                placeholder="e.g. Riverside FC"
+                placeholder="e.g. Tyler Junior College Men's Soccer"
                 className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors"
                 autoFocus
               />
@@ -120,7 +120,7 @@ export default function OnboardingWizard() {
               </button>
 
               <h2 className="text-xl font-bold mb-1">Create your first team</h2>
-              <p className="text-gray text-sm mb-6">You can add more teams later from the dashboard.</p>
+              <p className="text-gray text-sm mb-6">Most programs run one team. You can add a reserve or second team later.</p>
 
               <label className="block text-sm font-medium text-gray mb-2" htmlFor="teamName">
                 Team name
@@ -130,13 +130,13 @@ export default function OnboardingWizard() {
                 type="text"
                 value={teamName}
                 onChange={e => setTeamName(e.target.value)}
-                placeholder="e.g. U12 Boys Elite"
+                placeholder="e.g. Men's Varsity"
                 className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
                 autoFocus
               />
 
               <label className="block text-sm font-medium text-gray mb-2" htmlFor="ageGroup">
-                Age group
+                Age group <span className="text-gray/60 font-normal">(optional)</span>
               </label>
               <select
                 id="ageGroup"
@@ -157,7 +157,7 @@ export default function OnboardingWizard() {
                 disabled={isPending}
                 className="mt-6 w-full bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isPending ? 'Creating…' : 'Create Club'}
+                {isPending ? 'Creating…' : 'Create team'}
               </button>
             </div>
           )}

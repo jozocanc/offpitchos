@@ -100,7 +100,7 @@ export default async function JoinPage({
                 : 'This invite has expired.'}
             </p>
             <p className="text-gray text-sm mt-4">
-              Please ask your club administrator for a new invite link.
+              Please ask your head coach for a new invite link.
             </p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default async function JoinPage({
           <div className="mb-6 space-y-3">
             {invite.clubs && (
               <div className="flex items-center justify-between">
-                <span className="text-gray text-sm">Club</span>
+                <span className="text-gray text-sm">Program</span>
                 <span className="font-semibold">{invite.clubs.name}</span>
               </div>
             )}

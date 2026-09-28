@@ -1,4 +1,7 @@
 import { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { getCampsData } from './actions'
 import CampsClient from './camps-client'
 
@@ -7,6 +10,13 @@ export const metadata: Metadata = {
 }
 
 export default async function CampsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
+  const role = await getEffectiveRole(prof?.role ?? 'player')
+  if (role !== 'doc') redirect('/dashboard')
+
   const { camps, userRole, userProfileId, teams, venues } = await getCampsData()
 
   return (

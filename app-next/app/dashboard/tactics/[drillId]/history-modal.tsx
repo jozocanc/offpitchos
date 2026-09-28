@@ -88,7 +88,7 @@ export default function HistoryModal({ drillId, onClose, onRestore }: HistoryMod
   const handleRestore = useCallback(async (v: DrillVersion) => {
     const parsed = DrillDocSchema.safeParse({ field: v.field, objects: v.objects })
     if (!parsed.success) {
-      setError('Snapshot data is invalid — cannot restore.')
+      setError('This snapshot is damaged and can\'t be restored.')
       return
     }
     setRestoringId(v.id)

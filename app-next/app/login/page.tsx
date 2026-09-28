@@ -14,6 +14,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite')
+  const inviteCode = searchParams.get('code')
   const supabase = createClient()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -27,7 +28,7 @@ function LoginForm() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push(inviteToken ? `/join/${inviteToken}` : '/dashboard')
+      router.push(inviteToken ? `/join/${inviteToken}` : inviteCode ? `/join/code/${inviteCode}` : '/dashboard')
       router.refresh()
     }
   }
@@ -80,13 +81,13 @@ function LoginForm() {
             disabled={loading}
             className="w-full bg-green text-dark font-bold py-3 px-4 rounded-lg uppercase tracking-wider hover:shadow-[0_0_20px_rgba(0,255,135,0.4)] transition disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <p className="text-center text-gray text-sm mt-6">
           Don&apos;t have an account?{' '}
-          <a href={inviteToken ? `/signup?invite=${inviteToken}` : '/signup'} className="text-green hover:underline">Sign up</a>
+          <a href={inviteToken ? `/signup?invite=${inviteToken}` : inviteCode ? `/signup?code=${inviteCode}` : '/signup'} className="text-green hover:underline">Sign up</a>
         </p>
 
         <p className="text-center text-gray text-xs mt-6 flex justify-center gap-4">

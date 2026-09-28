@@ -16,10 +16,10 @@ export default async function OnboardingChecklist() {
     cta: string
     href: string
   }[] = [
-    { key: 'hasTeam',   title: 'Add your first team',               cta: 'Add team',      href: '/dashboard/teams' },
-    { key: 'hasCoach',  title: 'Invite your first coach',           cta: 'Invite coach',  href: '/dashboard/coaches' },
-    { key: 'hasPlayer', title: 'Invite your players',               cta: 'Pick a team',   href: '/dashboard/teams' },
-    { key: 'hasEvent',  title: 'Schedule your first event',         cta: 'Open schedule', href: '/dashboard/schedule' },
+    { key: 'hasTeam',   title: 'Create your team',                  cta: 'Add team',      href: '/dashboard/teams' },
+    { key: 'hasCoach',  title: 'Invite your assistant coaches',     cta: 'Invite staff',  href: '/dashboard/coaches' },
+    { key: 'hasPlayer', title: 'Add your players',                  cta: 'Open roster',   href: '/dashboard/teams' },
+    { key: 'hasEvent',  title: 'Schedule your first practice',      cta: 'Open schedule', href: '/dashboard/schedule' },
   ]
 
   const completedCount = steps.filter(s => state[s.key]).length
@@ -30,7 +30,7 @@ export default async function OnboardingChecklist() {
         <div>
           <h2 className="text-lg font-bold">Finish setting up your team</h2>
           <p className="text-gray text-xs mt-1">
-            {completedCount} of {steps.length} done — notifications work best once your players are in.
+            {completedCount} of {steps.length} done. Schedule changes and messages reach your players once they&apos;re on the roster.
           </p>
         </div>
         {state.allComplete && (

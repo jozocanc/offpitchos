@@ -1,7 +1,7 @@
 {
   "name": "OffPitchOS",
   "short_name": "OffPitchOS",
-  "description": "The calm club operating system",
+  "description": "The operating system for soccer teams",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#FAF7F2",

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity, assertNotPreview, isPlayerPreview, PREVIEW_WRITE_ERROR } from '@/lib/admin-role'
 import { isMember, isStaff } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
@@ -21,7 +21,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
 
   return { user, profile, supabase }
 }
@@ -87,7 +87,7 @@ async function _createAnnouncement(input: {
   const message = `${authorName} posted: ${input.title.trim()}`
 
   let recipientIds: string[] = []
-  let audienceLabel = 'Club-wide'
+  let audienceLabel = 'Program-wide'
 
   if (input.teamId) {
     const { data: members } = await service
@@ -140,7 +140,7 @@ async function _createAnnouncement(input: {
 
     await service.from('notifications').insert(notifications)
     await sendPushToProfiles(recipientIds, { title: 'OffPitchOS', message: `New: ${input.title}`, url: '/dashboard/messages', tag: 'announcement' })
-    const emailResult = await sendEmailToProfiles(recipientIds, `OffPitchOS — ${input.title}`, message, 'https://offpitchos.com/dashboard/messages')
+    const emailResult = await sendEmailToProfiles(recipientIds, `OffPitchOS: ${input.title}`, message, 'https://offpitchos.com/dashboard/messages')
     emailFailed = emailResult.failed.length
   }
 
@@ -196,6 +196,8 @@ export async function createReply(
 }
 
 async function _createReply(announcementId: string, body: string) {
+  // "View as → Player" preview must not post under the head coach's name.
+  await assertNotPreview()
   const { profile, supabase } = await getUserProfile()
 
   if (!body.trim()) throw new Error('Reply cannot be empty')
@@ -232,7 +234,7 @@ async function _createReply(announcementId: string, body: string) {
       message: `${replier?.display_name ?? 'Someone'} replied to: ${announcement.title}`,
     })
     await sendPushToProfiles([announcement.author_id], { title: 'OffPitchOS', message: `Reply on: ${announcement.title}`, url: '/dashboard/messages', tag: 'announcement_reply' })
-    sendEmailToProfiles([announcement.author_id], `OffPitchOS — Reply on: ${announcement.title}`, `${replier?.display_name ?? 'Someone'} replied to: ${announcement.title}`, 'https://offpitchos.com/dashboard/messages')
+    sendEmailToProfiles([announcement.author_id], `OffPitchOS: New reply on ${announcement.title}`, `${replier?.display_name ?? 'Someone'} replied to: ${announcement.title}`, 'https://offpitchos.com/dashboard/messages')
   }
 
   revalidatePath('/dashboard/messages')
@@ -322,8 +324,21 @@ export interface AudienceCounts {
 }
 
 export async function getMessagesData() {
-  const { user, profile, supabase } = await getUserProfile()
+  const { profile, supabase } = await getUserProfile()
   const service = createServiceClient()
+  // In "View as → Player" preview, member reads ("my player", which
+  // announcements reach me) are for the club's sample player.
+  const viewer = await getViewerIdentity()
+  const user = { id: viewer.userId }
+  const previewTeamIds: Set<string> | null = viewer.isPreview ? new Set<string>() : null
+  if (previewTeamIds && viewer.previewPlayer && viewer.profileId) {
+    previewTeamIds.add(viewer.previewPlayer.teamId)
+    const { data: tms } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('profile_id', viewer.profileId)
+    for (const tm of tms ?? []) previewTeamIds.add(tm.team_id as string)
+  }
 
   const { data: announcements } = await supabase
     .from('announcements')
@@ -336,6 +351,12 @@ export async function getMessagesData() {
     .eq('club_id', profile.club_id!)
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
+
+  // A real player only sees club-wide posts and their own teams' posts.
+  if (previewTeamIds && announcements) {
+    const scoped = announcements.filter(a => !a.team_id || previewTeamIds.has(a.team_id))
+    announcements.splice(0, announcements.length, ...scoped)
+  }
 
   const { data: teams } = await supabase
     .from('teams')
@@ -515,9 +536,11 @@ export async function getMessagesData() {
 
   return {
     announcements: announcementsWithStats,
-    teams: teams ?? [],
+    teams: previewTeamIds ? (teams ?? []).filter(t => previewTeamIds.has(t.id)) : (teams ?? []),
     userRole: await getEffectiveRole(profile.role),
-    userProfileId: profile.id,
+    // Preview: the sample player's id, so the head coach's own posts don't
+    // render author controls (pin/delete) inside the player view.
+    userProfileId: viewer.isPreview && viewer.profileId ? viewer.profileId : profile.id,
     audienceByTeam,
     clubWideAudience: clubWide,
   }
@@ -538,6 +561,8 @@ async function _respondToPoll(
   playerId: string,
   response: 'yes' | 'no' | 'maybe'
 ): Promise<{ error?: string }> {
+  // Returned rather than thrown so the card's optimistic update reverts.
+  if (await isPlayerPreview()) return { error: PREVIEW_WRITE_ERROR }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }

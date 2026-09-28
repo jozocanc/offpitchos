@@ -180,7 +180,7 @@ export default function LoadClient({ data }: { data: LoadPageData }) {
             </select>
             {data.sessions.length === 0 && (
               <p className="text-gray text-xs mt-2">
-                No past sessions yet. Load attaches to a session that has already happened.
+                No past sessions yet. After your first practice or game, come back and import that day&apos;s vest data.
               </p>
             )}
           </div>

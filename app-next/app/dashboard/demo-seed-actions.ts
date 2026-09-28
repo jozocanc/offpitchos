@@ -15,6 +15,23 @@ import {
   DEMO_ANNOUNCEMENT,
 } from '@/lib/demo/seed-data'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { getClubTimezoneById } from '@/lib/club-timezone-server'
+import { dayKey, addDaysToKey, zonedParts } from '@/lib/format-datetime'
+
+// The UTC instant for a wall-clock time in the club's zone. The seed used to
+// call setHours() on the server, which is UTC on Vercel, so a 7 PM kickoff
+// showed as 3 PM Eastern. Two passes settle DST edges.
+function zonedWallTime(key: string, hour: number, minute: number, timeZone: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  const target = Date.UTC(y, m - 1, d, hour, minute)
+  let guess = target
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(guess), timeZone)
+    const [py, pm, pd] = p.key.split('-').map(Number)
+    guess += target - Date.UTC(py, pm - 1, pd, p.hour, p.minute)
+  }
+  return new Date(guess)
+}
 
 const DEMO_FLAG_ENABLED = () => process.env.NEXT_PUBLIC_ALLOW_DEMO_SEED === 'true'
 
@@ -122,7 +139,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
 
   const state = await getDemoSeedState()
   if (!state.emptyEnough) {
-    throw new Error('Club is not empty — clear existing data before seeding')
+    throw new Error('Your program already has data. The sample team only loads into an empty program.')
   }
 
   const clubId = profile.club_id
@@ -299,14 +316,27 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
   // times so feedback can be back-dated to the event day (otherwise
   // every feedback row gets created_at=now and the development chart
   // bucketByDay returns 1 day → no chart line).
-  const now = new Date()
+  const timeZone = await getClubTimezoneById(clubId)
+  const todayKey = dayKey(new Date(), timeZone)
   const pastEvents: { id: string; startIso: string }[] = []
   const upcomingEventIds: string[] = []
   for (const plan of DEMO_EVENTS) {
-    const start = new Date(now)
-    start.setDate(start.getDate() + plan.daysFromNow)
-    start.setHours(plan.startHour, plan.startMinute, 0, 0)
+    const start = zonedWallTime(addDaysToKey(todayKey, plan.daysFromNow), plan.startHour, plan.startMinute, timeZone)
     const end = new Date(start.getTime() + plan.durationMinutes * 60_000)
+
+    // Away fixture: off the home venue, with the full trip filled in so a
+    // head coach sees a real itinerary the moment the sample team loads.
+    const t = plan.travel
+    const travelColumns = t
+      ? {
+          travel_depart_at: new Date(start.getTime() - t.departHoursBeforeStart * 3_600_000).toISOString(),
+          travel_depart_location: t.departLocation,
+          travel_return_at: new Date(end.getTime() + t.returnHoursAfterEnd * 3_600_000).toISOString(),
+          travel_mode: t.mode,
+          travel_hotel: t.hotel,
+          travel_notes: t.notes,
+        }
+      : {}
 
     const { data: event, error: eventError } = await admin
       .from('events')
@@ -317,9 +347,11 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
         title: plan.title,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        venue_id: venue.id,
+        venue_id: plan.awayAddress ? null : venue.id,
+        address: plan.awayAddress ?? null,
         status: 'scheduled',
         created_by: user.id,
+        ...travelColumns,
       })
       .select('id')
       .single()

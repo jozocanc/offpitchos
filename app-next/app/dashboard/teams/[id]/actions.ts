@@ -33,7 +33,7 @@ async function _generateParentInvite(formData: FormData) {
     .single()
 
   if (profileError || !profile?.club_id) {
-    throw new Error('Could not find your club')
+    throw new Error('Could not find your team')
   }
 
   // Verify the team belongs to this club
@@ -329,7 +329,7 @@ async function _revokeParentInvite(inviteId: string, teamId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
 
   const { error } = await supabase
     .from('invites')

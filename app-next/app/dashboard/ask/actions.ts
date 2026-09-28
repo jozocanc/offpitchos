@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { isMember } from '@/lib/constants'
 import { askClubQuestion } from '@/lib/ai'
 import { type ActionResult, toActionError } from '@/lib/action-result'
@@ -18,7 +18,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
   return { user, profile, supabase }
 }
 
@@ -48,7 +48,11 @@ async function _askQuestion(question: string) {
   if (!question.trim()) throw new Error('Question cannot be empty')
   if (question.length > 500) throw new Error('Question too long (max 500 characters)')
 
-  const { user, profile, supabase } = await getUserProfile()
+  const { profile, supabase } = await getUserProfile()
+  // "View as → Player" preview: Pep answers as it would for the club's
+  // sample player (their name, their roster row, no staff-only context).
+  const viewer = await getViewerIdentity()
+  const previewing = viewer.isPreview && !!viewer.previewPlayer
 
   // Gather club context
   const { data: club } = await supabase
@@ -106,7 +110,7 @@ async function _askQuestion(question: string) {
     return {
       title: e.title,
       type: e.type,
-      team: team?.name ?? 'Club',
+      team: team?.name ?? 'Team',
       date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
       time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
       endTime: new Date(e.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
@@ -157,7 +161,7 @@ async function _askQuestion(question: string) {
     const detail = (campDetails ?? []).find((d: any) => d.event_id === e.id)
     return {
       title: e.title,
-      team: cTeam?.name ?? 'Club',
+      team: cTeam?.name ?? 'Team',
       ageGroup: cTeam?.age_group ?? '',
       date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
       time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
@@ -174,7 +178,7 @@ async function _askQuestion(question: string) {
     .eq('club_id', profile.club_id)
     .in('status', ['pending', 'escalated'])
 
-  const pendingCoverage = (coverageReqs ?? []).map((cr: any) => {
+  const pendingCoverage = (previewing ? [] : (coverageReqs ?? [])).map((cr: any) => {
     const crEvent = Array.isArray(cr.events) ? cr.events[0] : cr.events
     const crTeam = crEvent?.teams ? (Array.isArray(crEvent.teams) ? crEvent.teams[0] : crEvent.teams) : null
     return {
@@ -187,11 +191,11 @@ async function _askQuestion(question: string) {
   // For players, include their own roster row (players.parent_id is the
   // account linked to the row) so Ref can personalize answers
   let myPlayers: { name: string; team: string; jersey: number | null }[] = []
-  if (isMember(profile.role)) {
+  if (isMember(profile.role) || previewing) {
     const { data: rows } = await supabase
       .from('players')
       .select('first_name, last_name, jersey_number, teams(name)')
-      .eq('parent_id', user.id)
+      .eq('parent_id', viewer.userId)
     myPlayers = (rows ?? []).map((k: any) => {
       const kTeam = Array.isArray(k.teams) ? k.teams[0] : k.teams
       return { name: `${k.first_name} ${k.last_name}`, team: kTeam?.name ?? '', jersey: k.jersey_number }
@@ -202,30 +206,33 @@ async function _askQuestion(question: string) {
   const { data: userProfile } = await supabase
     .from('profiles')
     .select('display_name')
-    .eq('user_id', user.id)
+    .eq('user_id', viewer.userId)
     .single()
 
   // Call Claude
   const answer = await askClubQuestion(question, {
-    clubName: club?.name ?? 'Unknown Club',
+    clubName: club?.name ?? 'your team',
     teams: teamData,
     upcomingEvents,
     recentAnnouncements,
     upcomingCamps,
     pendingCoverage,
     today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }),
-    userRole: profile.role,
+    userRole: previewing ? 'player' : profile.role,
     userName: userProfile?.display_name ?? 'User',
     myPlayers: myPlayers.length > 0 ? myPlayers : undefined,
   })
 
-  // Persist to ai_chats
-  await supabase.from('ai_chats').insert({
-    club_id: profile.club_id,
-    profile_id: profile.id,
-    question: question.trim(),
-    answer,
-  })
+  // Persist to ai_chats. Skipped in preview so the head coach's demo
+  // questions don't land in the AI log under their own name.
+  if (!viewer.isPreview) {
+    await supabase.from('ai_chats').insert({
+      club_id: profile.club_id,
+      profile_id: profile.id,
+      question: question.trim(),
+      answer,
+    })
+  }
 
   return { answer }
 }

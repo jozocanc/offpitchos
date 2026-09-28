@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Privacy Policy — OffPitchOS',
+  title: 'Privacy Policy',
   description: 'How OffPitchOS collects, stores, and protects your team data.',
 }
 
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
               <li><strong>Account info:</strong> name, email, role on the team (for example head coach, coach, or player), and password hash.</li>
               <li><strong>Team data:</strong> teams, rosters, schedules, attendance, feedback notes, gear sizes, travel details, and camp registrations, including an optional guardian contact for camp registrants under 18.</li>
               <li><strong>Communications:</strong> messages, announcements, and notification preferences.</li>
-              <li><strong>Payment data:</strong> processed by Stripe. We never see or store card numbers — only a transaction ID and status.</li>
+              <li><strong>Payment data:</strong> processed by Stripe. We never see or store card numbers, only a transaction ID and status.</li>
               <li><strong>Device data:</strong> IP address and browser type for security; push notification tokens when you opt in.</li>
             </ul>
           </section>
@@ -53,12 +53,12 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold text-white mb-3">Who we share it with</h2>
             <p className="mb-3">Only these service providers, and only what they need to do their job:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Supabase</strong> — database hosting and authentication.</li>
-              <li><strong>Vercel</strong> — web hosting.</li>
-              <li><strong>Stripe</strong> — payment processing for camp registrations.</li>
-              <li><strong>Resend</strong> — transactional email delivery.</li>
-              <li><strong>Anthropic (Claude)</strong> — AI features (triage, voice commands, Ask). Anthropic does not retain or train on your data per their API terms.</li>
-              <li><strong>Google OAuth</strong> — optional sign-in.</li>
+              <li><strong>Supabase</strong>: database hosting and authentication.</li>
+              <li><strong>Vercel</strong>: web hosting.</li>
+              <li><strong>Stripe</strong>: payment processing for camp registrations.</li>
+              <li><strong>Resend</strong>: transactional email delivery.</li>
+              <li><strong>Anthropic (Claude)</strong>: AI features (triage, voice commands, Ask). Anthropic does not retain or train on your data per their API terms.</li>
+              <li><strong>Google OAuth</strong>: optional sign-in.</li>
             </ul>
             <p className="mt-3">
               We will disclose data to law enforcement only when legally required and will notify you unless prohibited.
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
               <li>Opt out of non-essential notifications in Settings.</li>
             </ul>
             <p className="mt-3">
-              If you are in the EU, UK, or California, you have additional rights under GDPR / CCPA — including the right to know, the right to delete, and the right to non-discrimination. Email us to exercise any of these rights.
+              If you are in the EU, UK, or California, you have additional rights under GDPR / CCPA, including the right to know, the right to delete, and the right to non-discrimination. Email us to exercise any of these rights.
             </p>
           </section>
 

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { type ActionResult, toActionError } from '@/lib/action-result'
@@ -20,7 +20,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
   return { user, profile, supabase }
 }
 
@@ -124,7 +124,7 @@ async function _setCampDetails(input: {
   capacity: number | null
 }) {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only directors can set camp details')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can set camp details')
 
   const { data: existing } = await supabase
     .from('camp_details')
@@ -196,6 +196,7 @@ export async function registerForCamp(
 }
 
 async function _registerForCamp(eventId: string, playerId: string) {
+  await assertNotPreview()
   const { profile, supabase } = await getUserProfile()
 
   const { data: detail } = await supabase
@@ -244,7 +245,7 @@ export async function togglePayment(
 
 async function _togglePayment(registrationId: string) {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only directors can update payment status')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can update payment status')
 
   const { data: reg } = await supabase
     .from('camp_registrations')
@@ -279,12 +280,14 @@ export async function getParentPlayers(
 // own roster row. Used by the in-app "Register" flow so a player can sign
 // themselves up.
 async function _getParentPlayers() {
-  const { user, supabase } = await getUserProfile()
+  const { supabase } = await getUserProfile()
+  // Sample player's id in "View as → Player" preview, else the caller's.
+  const viewer = await getViewerIdentity()
 
   const { data: players } = await supabase
     .from('players')
     .select('id, first_name, last_name, team_id, teams(name)')
-    .eq('parent_id', user.id)
+    .eq('parent_id', viewer.userId)
 
   return players ?? []
 }
@@ -318,7 +321,7 @@ export async function createCamp(
 
 async function _createCamp(input: CreateCampInput) {
   const { user, profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only directors can create camps')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can create camps')
 
   if (!input.title.trim()) throw new Error('Title is required')
   if (new Date(input.endTime) <= new Date(input.startTime)) {
@@ -407,7 +410,7 @@ async function _createCamp(input: CreateCampInput) {
       // Part 1.5: await the bulk send so we can surface email-delivery
       // failures to the DOC. Per-recipient failures are already logged
       // in Vercel by describeResendError in lib/email.ts.
-      const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — New camp', message, 'https://offpitchos.com/dashboard/camps')
+      const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS: New camp', message, 'https://offpitchos.com/dashboard/camps')
       emailFailed = emailResult.failed.length
 
       // Split by role so the toast can say "notified N players and M
@@ -453,7 +456,7 @@ async function _sendCampPaymentReminders(eventId: string): Promise<{
   emailFailed: number
 }> {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only directors can send payment reminders')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can send payment reminders')
 
   // Camp + fee for the reminder message.
   const { data: event } = await supabase
@@ -541,7 +544,7 @@ async function _sendCampPaymentReminders(eventId: string): Promise<{
     })
     const emailResult = await sendEmailToProfiles(
       ids,
-      'OffPitchOS — Camp payment reminder',
+      'OffPitchOS: Camp payment reminder',
       `${message}. Open the app to pay.`,
       'https://offpitchos.com/dashboard/camps',
     )

@@ -28,7 +28,7 @@ export default async function FilesPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Files</h1>
         <p className="text-sm text-gray mt-1">
-          Club-wide documents shared with everyone.
+          Program-wide documents shared with everyone.
         </p>
       </div>
 

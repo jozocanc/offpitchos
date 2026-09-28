@@ -37,7 +37,7 @@ export default async function JoinByCodePage({
         teamName: teamRaw.name,
         ageGroup: teamRaw.age_group,
         clubId: teamRaw.club_id,
-        clubName: (club as { name?: string } | null)?.name ?? 'Club',
+        clubName: (club as { name?: string } | null)?.name ?? 'Team',
       }
     }
   } catch {
@@ -61,7 +61,7 @@ export default async function JoinByCodePage({
             <p className="text-red text-lg font-bold mb-2">Invalid Code</p>
             <p className="text-gray text-sm">
               The invite code &quot;{code.toUpperCase()}&quot; doesn&apos;t match any team.
-              Check with your coach or director for the correct code.
+              Check with your head coach for the correct code.
             </p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default async function JoinByCodePage({
         <div className="bg-dark-secondary rounded-2xl p-8 border border-white/10 shadow-2xl">
           <div className="mb-6 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-gray text-sm">Club</span>
+              <span className="text-gray text-sm">Program</span>
               <span className="font-semibold">{team.clubName}</span>
             </div>
             <div className="flex items-center justify-between">

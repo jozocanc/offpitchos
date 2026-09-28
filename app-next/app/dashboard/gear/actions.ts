@@ -21,7 +21,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No program found')
   return { user, profile, supabase }
 }
 
@@ -33,7 +33,12 @@ interface TeamGearSummary {
   jerseyBreakdown: Record<string, number>
   shortsBreakdown: Record<string, number>
   missingCount: number
-  players: { id: string; firstName: string; lastName: string; jerseySize: string | null; shortsSize: string | null; collectToken: string }[]
+  players: {
+    id: string; firstName: string; lastName: string; jerseySize: string | null; shortsSize: string | null; collectToken: string
+    // Travel readiness from /collect (052)
+    hasTravelId: boolean | null
+    passportExpiry: string | null
+  }[]
 }
 
 export interface GearData {
@@ -66,7 +71,7 @@ export async function getGearData(): Promise<GearData> {
 
   const { data: players } = await supabase
     .from('players')
-    .select('id, first_name, last_name, team_id, jersey_size, shorts_size, collect_token, parent_id')
+    .select('id, first_name, last_name, team_id, jersey_size, shorts_size, collect_token, parent_id, has_travel_id, passport_expiry')
     .eq('club_id', profile.club_id)
 
   const teamSummaries: TeamGearSummary[] = (teams ?? []).map(team => {
@@ -103,6 +108,8 @@ export async function getGearData(): Promise<GearData> {
         jerseySize: p.jersey_size,
         shortsSize: p.shorts_size,
         collectToken: p.collect_token,
+        hasTravelId: p.has_travel_id ?? null,
+        passportExpiry: p.passport_expiry ?? null,
       })),
     }
   })
@@ -204,7 +211,7 @@ async function _requestMissingSizes(): Promise<RequestSizesResult> {
   const { profile } = await getUserProfile()
 
   if (profile.role !== 'doc') {
-    throw new Error('Only directors can request sizes from players')
+    throw new Error('Only the head coach can request sizes from players')
   }
 
   const service = createServiceClient()

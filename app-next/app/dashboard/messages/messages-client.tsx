@@ -106,7 +106,7 @@ export default function MessagesClient({
           className="bg-dark border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
         >
           <option value="">All</option>
-          <option value="club-wide">Club-Wide Only</option>
+          <option value="club-wide">Program-wide only</option>
           {teams.map(t => (
             <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
           ))}

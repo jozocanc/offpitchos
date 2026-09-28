@@ -72,7 +72,7 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
         if (result.autoAssigned) {
           toast(`${result.coveringCoachName} auto-assigned to cover`, 'success')
         } else {
-          toast('Coverage request sent to all coaches', 'success')
+          toast('Head coach and staff notified', 'success')
         }
         onClose()
       } catch (err) {
@@ -90,8 +90,8 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
         <h2 className="text-xl font-bold mb-2">Can&apos;t Attend</h2>
         <p className="text-gray text-sm mb-6">
           {isCoach
-            ? 'Assign a replacement directly, or send the request to all coaches in the club.'
-            : 'A coverage request will be sent to all other coaches in your club. If no one accepts, the head coach will be notified.'}
+            ? 'Pick a staff member to cover this session, or notify the head coach and the rest of the staff so someone can step in.'
+            : 'Your staff will be notified so someone can step in.'}
         </p>
 
         {error && <p className="text-red text-sm mb-4">{error}</p>}
@@ -140,7 +140,7 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
             disabled={isPending}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Sending...' : 'Send to all coaches'}
+            {isPending ? 'Sending...' : 'Notify the staff'}
           </button>
         </div>
       </div>

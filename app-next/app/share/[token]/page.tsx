@@ -63,7 +63,7 @@ async function loadShare(token: string) {
 
   return {
     team,
-    clubName: (club?.name as string) ?? 'Club',
+    clubName: (club?.name as string) ?? 'Team',
     roster: (rosterRows ?? []) as RosterRow[],
     schedule: (scheduleRows ?? []) as ScheduleRow[],
   }
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const data = await loadShare(token)
   if (!data) return { title: 'Team' }
   return {
-    title: `${teamLabel(data.team.team_name, data.team.age_group)} — ${data.clubName}`,
+    title: `${teamLabel(data.team.team_name, data.team.age_group)} · ${data.clubName}`,
     description: `${data.team.team_name} schedule and roster on OffPitchOS.`,
   }
 }
@@ -229,7 +229,7 @@ export default async function PublicTeamPage({ params }: { params: Promise<{ tok
 
         <footer className="pt-8 mt-12 border-t border-white/10 text-center">
           <p className="text-gray text-xs">
-            Powered by <a href="https://offpitchos.com" className="text-green font-bold hover:opacity-80">OffPitchOS</a> — the operating system for youth soccer clubs.
+            Powered by <a href="https://offpitchos.com" className="text-green font-bold hover:opacity-80">OffPitchOS</a>, the operating system for soccer teams.
           </p>
         </footer>
       </div>

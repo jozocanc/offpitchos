@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { isMember } from '@/lib/constants'
 import { checkAndEscalateTimeouts } from '../coverage/actions'
 import { checkConflicts } from './conflict-actions'
@@ -12,6 +12,16 @@ import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getRsvpTalliesForEvents } from './rsvp-actions'
 import { type ActionResult, toActionError, unwrap } from '@/lib/action-result'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import {
+  type TravelInput,
+  type EventTravelFields,
+  TRAVEL_SELECT,
+  normalizeTravelInput,
+  hasTravel,
+  travelChanged,
+  travelNotificationMessage,
+} from '@/lib/travel'
 
 // ---------- Types ----------
 
@@ -30,6 +40,9 @@ interface CreateEventInput {
     days: number[]      // 0=Sun, 1=Mon, etc.
     endDate: string     // ISO date string
   }
+  // Away-trip details (migration 052). Single events only; ignored for a
+  // recurring series. Omitted = no travel.
+  travel?: TravelInput | null
 }
 
 interface UpdateEventInput {
@@ -42,6 +55,10 @@ interface UpdateEventInput {
   link?: string | null
   notes: string | null
   updateFuture: boolean // true = edit all future in series
+  // Away-trip details (migration 052). Always applied to THIS event only,
+  // even when updateFuture is set: a trip belongs to one fixture.
+  // undefined = leave travel untouched, null = clear it.
+  travel?: TravelInput | null
 }
 
 // ---------- Helpers ----------
@@ -57,7 +74,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
 
   return { user, profile, supabase }
 }
@@ -101,7 +118,7 @@ async function notifyTeamMembers(
 
   await service.from('notifications').insert(notifications)
   await sendPushToProfiles(memberIds, { title: 'OffPitchOS', message, url: '/dashboard/schedule', tag: type })
-  const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
+  const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS: Schedule', message, 'https://offpitchos.com/dashboard/schedule')
 
   // Count by role so the caller can report "notified N players and M coaches"
   const { data: profiles } = await service
@@ -117,6 +134,25 @@ async function notifyTeamMembers(
   }
 
   return { parents: players, coaches, emailFailed: emailResult.failed.length }
+}
+
+// "View as → Player" preview: the DOC's client can read every team in the
+// club, but a real player only sees their own teams' schedule (RLS
+// events_member_read). Returns the sample player's team ids so the preview
+// matches, or null when not previewing.
+async function getPreviewTeamIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<Set<string> | null> {
+  const viewer = await getViewerIdentity()
+  if (!viewer.isPreview) return null
+  if (!viewer.previewPlayer || !viewer.profileId) return new Set()
+  const { data } = await supabase
+    .from('team_members')
+    .select('team_id')
+    .eq('profile_id', viewer.profileId)
+  const ids = new Set((data ?? []).map(r => r.team_id as string))
+  ids.add(viewer.previewPlayer.teamId)
+  return ids
 }
 
 // ---------- Actions ----------
@@ -135,6 +171,10 @@ async function _createEvent(input: CreateEventInput): Promise<NotifyCounts> {
   const { user, profile, supabase } = await getUserProfile()
 
   if (!input.recurring?.enabled) {
+    // Validate travel up front so a bad return time fails before anything is written.
+    const travel = normalizeTravelInput(input.travel)
+    const withTravel = hasTravel(travel)
+
     // Check for team conflicts on single events (recurring relies on UI-side warnings)
     const conflicts = unwrap(await checkConflicts({
       teamId: input.teamId,
@@ -163,6 +203,9 @@ async function _createEvent(input: CreateEventInput): Promise<NotifyCounts> {
         notes: input.notes?.trim() || null,
         status: 'scheduled',
         created_by: user.id,
+        // Travel columns only when there is a trip, so plain events never
+        // touch them.
+        ...(withTravel ? travel : {}),
       })
       .select('id')
       .single()
@@ -170,9 +213,20 @@ async function _createEvent(input: CreateEventInput): Promise<NotifyCounts> {
     if (error) throw new Error(`Failed to create event: ${error.message}`)
 
     const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
-    const createdMessage = locationLabel
+    let createdMessage = locationLabel
       ? `New event: ${input.title.trim()} at ${locationLabel}`
       : `New event: ${input.title.trim()}`
+    // One notification, not two: the trip rides along with the new-event message.
+    if (withTravel) {
+      const travelMessage = travelNotificationMessage({
+        title: input.title,
+        eventStartIso: input.startTime,
+        travel,
+        timeZone: await getClubTimezone(),
+        isUpdate: false,
+      })
+      createdMessage = `${createdMessage}. ${travelMessage}`
+    }
     const counts = await notifyTeamMembers(event.id, input.teamId, 'event_created', createdMessage)
 
     revalidatePath('/dashboard/schedule')
@@ -309,6 +363,44 @@ async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
     notes: input.notes?.trim() || null,
   }
 
+  // Travel (migration 052). Compared against what is stored so a save that
+  // leaves the trip as it was sends no travel notification.
+  let travel: ReturnType<typeof normalizeTravelInput> | null = null
+  let travelDirty = false
+  let coreChanged = true
+  if (input.travel !== undefined) {
+    travel = normalizeTravelInput(input.travel)
+    const { data: prev, error: prevError } = await supabase
+      .from('events')
+      .select(`title, start_time, end_time, venue_id, address, link, notes, ${TRAVEL_SELECT}`)
+      .eq('id', input.eventId)
+      .single()
+    if (prevError || !prev) throw new Error('Could not load the event to update')
+    const p = prev as unknown as EventTravelFields & {
+      title: string; start_time: string; end_time: string; venue_id: string | null
+      address: string | null; link: string | null; notes: string | null
+    }
+    travelDirty = travelChanged(p, travel)
+    coreChanged = !(
+      p.title === updates.title &&
+      new Date(p.start_time).getTime() === new Date(updates.start_time).getTime() &&
+      new Date(p.end_time).getTime() === new Date(updates.end_time).getTime() &&
+      (p.venue_id ?? null) === (updates.venue_id ?? null) &&
+      (p.address ?? null) === updates.address &&
+      (p.link ?? null) === updates.link &&
+      (p.notes ?? null) === updates.notes
+    )
+  }
+  const travelMessage = travel && travelDirty
+    ? travelNotificationMessage({
+        title: updates.title,
+        eventStartIso: input.startTime,
+        travel,
+        timeZone: await getClubTimezone(),
+        isUpdate: true,
+      })
+    : null
+
   if (input.updateFuture) {
     // Only team_id is needed here — the RPC does its own lookup of the
     // recurrence group and start time, and returns just a row count.
@@ -342,16 +434,25 @@ async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
       throw new Error('No events were updated. You may not have permission to edit this series.')
     }
 
+    // The trip belongs to this fixture only, not the whole series.
+    if (travel && travelDirty) {
+      const { error: travelError } = await supabase
+        .from('events')
+        .update(travel)
+        .eq('id', input.eventId)
+      if (travelError) throw new Error(`Series saved, but travel details failed: ${travelError.message}`)
+    }
+
     const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
     const futureMessage = locationLabel
-      ? `Schedule updated: ${input.title.trim()} — now at ${locationLabel} (this and future events)`
+      ? `Schedule updated: ${input.title.trim()}, now at ${locationLabel} (this and future events)`
       : `Schedule updated: ${input.title.trim()} (this and future events)`
 
     const counts = await notifyTeamMembers(
       input.eventId,
       event.team_id,
       'event_updated',
-      futureMessage,
+      travelMessage ? `${futureMessage}. ${travelMessage}` : futureMessage,
     )
 
     revalidatePath('/dashboard/schedule')
@@ -361,7 +462,7 @@ async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
     // Single event update
     const { data: event, error } = await supabase
       .from('events')
-      .update(updates)
+      .update(travel && travelDirty ? { ...updates, ...travel } : updates)
       .eq('id', input.eventId)
       .select('team_id')
       .single()
@@ -370,10 +471,14 @@ async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
 
     const locationLabel = await resolveLocationLabel(supabase, input.venueId, input.address)
     const singleMessage = locationLabel
-      ? `Event updated: ${input.title.trim()} — now at ${locationLabel}`
+      ? `Event updated: ${input.title.trim()}, now at ${locationLabel}`
       : `Event updated: ${input.title.trim()}`
 
-    const counts = await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', singleMessage)
+    // Travel-only edit: send just the trip message, not a vague "Event updated".
+    const message = travelMessage
+      ? (coreChanged ? `${singleMessage}. ${travelMessage}` : travelMessage)
+      : singleMessage
+    const counts = await notifyTeamMembers(input.eventId, event.team_id, 'event_updated', message)
 
     revalidatePath('/dashboard/schedule')
     revalidatePath('/dashboard')
@@ -655,6 +760,8 @@ async function _getPastEvents() {
     .select(`
       id, team_id, type, title, start_time, end_time,
       venue_id, address, link, recurrence_group, notes, status,
+      travel_depart_at, travel_depart_location, travel_return_at,
+      travel_mode, travel_hotel, travel_notes,
       teams ( name, age_group ),
       venues ( name, address )
     `)
@@ -667,6 +774,12 @@ async function _getPastEvents() {
   // surface those with an "Unmarked" badge so coaches can spot (and fix)
   // forgotten sessions at a glance without running down the attention
   // panel one-by-one.
+  const previewTeams = await getPreviewTeamIds(supabase)
+  if (previewTeams && events) {
+    const scoped = events.filter(e => previewTeams.has(e.team_id))
+    events.splice(0, events.length, ...scoped)
+  }
+
   const eventIds = (events ?? []).map(e => e.id)
   let unmarkedEventIds: string[] = []
   if (eventIds.length > 0) {
@@ -694,6 +807,8 @@ export async function getScheduleData() {
     .select(`
       id, team_id, type, title, start_time, end_time,
       venue_id, address, link, recurrence_group, notes, status,
+      travel_depart_at, travel_depart_location, travel_return_at,
+      travel_mode, travel_hotel, travel_notes,
       teams ( name, age_group ),
       venues ( name, address )
     `)
@@ -745,11 +860,15 @@ export async function getScheduleData() {
   const upcomingEventIds = (events ?? []).map(e => e.id)
   const rsvpTallies = unwrap(await getRsvpTalliesForEvents(upcomingEventIds))
 
+  // Player preview: only the sample player's teams, and no staff-only
+  // coverage data (a real player can't read coverage_requests).
+  const previewTeams = await getPreviewTeamIds(supabase)
+
   return {
-    events: events ?? [],
-    teams: teams ?? [],
+    events: previewTeams ? (events ?? []).filter(e => previewTeams.has(e.team_id)) : (events ?? []),
+    teams: previewTeams ? (teams ?? []).filter(t => previewTeams.has(t.id)) : (teams ?? []),
     venues: venues ?? [],
-    coverageRequests: coverageRequests ?? [],
+    coverageRequests: previewTeams ? [] : (coverageRequests ?? []),
     coachesByTeam,
     rsvpTallies,
     userRole: await getEffectiveRole(profile.role),

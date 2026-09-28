@@ -221,8 +221,8 @@ export default async function PricingPage() {
               body: 'Cancel, reschedule, reply to players. From the bus, in plain English.',
             },
             {
-              title: 'AI coverage engine',
-              body: 'Coach drops out? System finds a replacement and notifies everyone.',
+              title: 'Weekly staff digest',
+              body: 'Pep AI writes the week up for your staff: attendance, standouts and what is next.',
             },
             {
               title: 'Attention panel',
@@ -285,8 +285,8 @@ export default async function PricingPage() {
               a: 'No. What PlayMetrics, Sports Connect, and LeagueApps call “a small percentage” we call a line item on your budget. One monthly rate. Nothing else.',
             },
             {
-              q: 'Monthly or annual — what&rsquo;s the difference?',
-              a: 'Monthly: pay month-to-month, cancel anytime, no commitment. Annual: lock in a year and take 20% off the monthly rate. Either way, no auto-renew traps — when your term ends, you decide.',
+              q: 'Monthly or annual: what&rsquo;s the difference?',
+              a: 'Monthly: pay month-to-month, cancel anytime, no commitment. Annual: lock in a year and take 20% off the monthly rate. Either way, no auto-renew traps. When your term ends, you decide.',
             },
             {
               q: 'What happens after the first 10 founding teams?',

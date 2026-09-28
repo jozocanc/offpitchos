@@ -29,7 +29,7 @@ export async function updateClubName(name: string) {
   if (!user) return { error: 'Not authenticated' }
 
   const trimmed = name.trim()
-  if (!trimmed) return { error: 'Club name cannot be empty' }
+  if (!trimmed) return { error: 'Program name cannot be empty' }
 
   // Only DOCs can update club name
   const { data: profile } = await supabase
@@ -38,7 +38,7 @@ export async function updateClubName(name: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the club name' }
+  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the program name' }
 
   const { error } = await supabase
     .from('clubs')
@@ -152,7 +152,7 @@ export async function deleteAccount() {
     // holds the email and name, and sign-in still works. Say exactly that
     // rather than reporting a clean success.
     return {
-      error: `Your club data was removed, but your email and sign-in could not be cleared: ${scrubError.message}. Contact support so it can be finished.`,
+      error: `Your team data was removed, but your email and sign-in could not be cleared: ${scrubError.message}. Contact support so it can be finished.`,
     }
   }
 

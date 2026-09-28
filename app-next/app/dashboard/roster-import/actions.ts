@@ -78,7 +78,7 @@ export async function previewImport(
   if (variant === 'onboarding' && (existingPlayerCount ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Onboarding import requires an empty club. Use the dashboard import for additional teams.',
+      error: 'This import only works on a new, empty program. Use the roster import on the dashboard to add more players.',
     }
   }
 
@@ -119,12 +119,12 @@ export async function previewImport(
     const emailRaw = get(row, 'player_email')
 
     if (!firstName || !lastName) {
-      warnings.push({ rowNumber: row.rowNumber, message: 'Missing player name — row skipped' })
+      warnings.push({ rowNumber: row.rowNumber, message: 'Missing player name, row skipped' })
       skippedRows++
       continue
     }
     if (!teamName) {
-      warnings.push({ rowNumber: row.rowNumber, field: 'team_name', message: 'Missing team — row skipped' })
+      warnings.push({ rowNumber: row.rowNumber, field: 'team_name', message: 'Missing team, row skipped' })
       skippedRows++
       continue
     }
@@ -143,7 +143,7 @@ export async function previewImport(
     // Player dedup within CSV
     const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
     if (seenPlayerKeys.has(playerKey)) {
-      warnings.push({ rowNumber: row.rowNumber, message: `Duplicate of an earlier row — skipped` })
+      warnings.push({ rowNumber: row.rowNumber, message: `Duplicate of an earlier row, skipped` })
       skippedRows++
       continue
     }
@@ -162,7 +162,7 @@ export async function previewImport(
       warnings.push({
         rowNumber: row.rowNumber,
         field: 'team_age_group',
-        message: `Team "${existing.name}" exists with age_group "${existing.age_group}" — your "${ageGroupRaw}" ignored`,
+        message: `Team "${existing.name}" exists with age group "${existing.age_group}", so "${ageGroupRaw}" was ignored`,
       })
     }
 
@@ -174,7 +174,7 @@ export async function previewImport(
         warnings.push({
           rowNumber: row.rowNumber,
           field: 'date_of_birth',
-          message: dob.ambiguous ? 'Date ambiguous (US vs UK) — stored as null' : 'Date unparseable — stored as null',
+          message: dob.ambiguous ? 'Date of birth is ambiguous (US vs UK format), left blank' : 'Date of birth not recognized, left blank',
         })
       }
     }
@@ -475,7 +475,7 @@ export async function sendParentRecoveryEmails(
     .select('name')
     .eq('id', profile.club_id)
     .single()
-  const clubName = club?.name ?? 'Your club'
+  const clubName = club?.name ?? 'Your team'
 
   const service = createServiceClient()
   const failures: { email: string; reason: string }[] = []

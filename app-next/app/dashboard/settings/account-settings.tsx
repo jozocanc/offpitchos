@@ -17,21 +17,24 @@ interface AccountSettingsProps {
 export default function AccountSettings({ clubName, displayName, email, isDOC, role, staffTitle }: AccountSettingsProps) {
   return (
     <>
-      {/* Club info */}
+      {/* Program info (stored on the clubs table) */}
       <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-        <h2 className="text-lg font-bold mb-4">Club Information</h2>
+        <h2 className="text-lg font-bold mb-1">Program</h2>
+        <p className="text-gray text-xs mb-4">
+          The name your staff and players see, e.g. Tyler Junior College Men&apos;s Soccer.
+        </p>
         <div className="space-y-4">
           {isDOC ? (
             <EditableField
-              label="Club Name"
+              label="Program name"
               value={clubName}
               onSave={updateClubName}
             />
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray mb-1">Club Name</label>
+              <label className="block text-sm font-medium text-gray mb-1">Program name</label>
               <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-                <p className="text-white">{clubName || '—'}</p>
+                <p className="text-white">{clubName || 'Not set'}</p>
               </div>
             </div>
           )}
@@ -48,14 +51,14 @@ export default function AccountSettings({ clubName, displayName, email, isDOC, r
         </div>
         <div className="space-y-4">
           <EditableField
-            label="Display Name"
+            label="Your name"
             value={displayName}
             onSave={updateDisplayName}
           />
           <div>
             <label className="block text-sm font-medium text-gray mb-1">Email</label>
             <div className="bg-dark rounded-xl px-4 py-3 border border-white/5">
-              <p className="text-white">{email || '—'}</p>
+              <p className="text-white">{email || 'Not set'}</p>
             </div>
           </div>
         </div>

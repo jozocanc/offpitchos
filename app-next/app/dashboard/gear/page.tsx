@@ -23,7 +23,7 @@ export default async function GearPage() {
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Gear</h1>
-        <p className="text-sm text-gray mt-1">Player sizes and gear order summaries.</p>
+        <p className="text-sm text-gray mt-1">Collect jersey and shorts sizes from your players, then copy a ready-to-send kit order.</p>
       </div>
 
       <GearClient

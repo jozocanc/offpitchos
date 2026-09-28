@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 
 export async function getAttendanceData(
   ...args: Parameters<typeof _getAttendanceData>
@@ -133,12 +134,14 @@ async function _getMyKidsOnTeam(teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  // Sample player's id in "View as → Player" preview, else the caller's.
+  const viewer = await getViewerIdentity()
 
   const { data: players } = await supabase
     .from('players')
     .select('id, first_name, last_name, jersey_number')
     .eq('team_id', teamId)
-    .eq('parent_id', user.id)
+    .eq('parent_id', viewer.userId)
     .order('last_name')
 
   return players ?? []
@@ -163,6 +166,7 @@ async function _parentExcuseChildren(input: {
   playerIds: string[]
   reason: string
 }): Promise<{ excused: number; notifiedCoaches: number }> {
+  await assertNotPreview()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

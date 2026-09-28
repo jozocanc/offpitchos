@@ -28,7 +28,7 @@ export async function addTeam(formData: FormData): Promise<ActionResult> {
       .single()
 
     if (profileError || !profile?.club_id) {
-      throw new Error('Could not find your club')
+      throw new Error('Could not find your program')
     }
 
     const { error } = await supabase

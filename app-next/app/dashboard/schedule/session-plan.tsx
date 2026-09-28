@@ -122,7 +122,7 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
         <div className={`text-xs ${overscheduled ? 'text-red' : 'text-gray'}`}>
           Total: {totalMin} min
           {eventDurationMin !== undefined && ` / ${eventDurationMin} min scheduled`}
-          {overscheduled && ' — over'}
+          {overscheduled && ' (over)'}
         </div>
       )}
 
@@ -210,7 +210,7 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{d.title}</div>
-                    <div className="text-xs text-gray">{d.category}{d.teamId === null ? ' · Club-wide' : ''}</div>
+                    <div className="text-xs text-gray">{d.category}{d.teamId === null ? ' · Program-wide' : ''}</div>
                   </div>
                 </button>
               ))}

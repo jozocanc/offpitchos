@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import DigestClient from './digest-client'
+import { isStaff } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 export const metadata: Metadata = { title: 'Weekly Digest' }
 export const dynamic = 'force-dynamic'
@@ -30,10 +32,14 @@ export default async function DigestPage() {
 
   if (!profile?.club_id) redirect('/dashboard')
 
-  const isDoc = profile.role === 'doc'
+  // Staff only: the digest names individual players' attendance and coach
+  // feedback. Effective role so the head coach's player preview matches.
+  const effectiveRole = await getEffectiveRole(profile.role ?? 'player')
+  if (!isStaff(effectiveRole)) redirect('/dashboard')
 
-  // Service client read so players who haven't joined a team_member yet
-  // can still see the club-wide digest. RLS already filters by club.
+  const isDoc = effectiveRole === 'doc'
+
+  // Service client read; the query is scoped to the viewer's own club.
   const service = createServiceClient()
   const { data: digestsRaw } = await service
     .from('weekly_digests')

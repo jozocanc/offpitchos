@@ -41,7 +41,7 @@ export default function EditableField({ label, value, onSave }: EditableFieldPro
       <div>
         <label className="block text-sm font-medium text-gray mb-1">{label}</label>
         <div className="bg-dark rounded-xl px-4 py-3 border border-white/5 flex items-center justify-between">
-          <p className="text-white">{value || '—'}</p>
+          <p className="text-white">{value || 'Not set'}</p>
           <button
             onClick={handleEdit}
             className="text-xs font-bold text-green hover:opacity-80 transition-opacity"

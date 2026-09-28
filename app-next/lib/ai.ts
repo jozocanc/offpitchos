@@ -19,7 +19,7 @@ interface ClubContext {
 }
 
 function formatContext(ctx: ClubContext): string {
-  let text = `Club: ${ctx.clubName}\n`
+  let text = `Program: ${ctx.clubName}\n`
   if (ctx.today) text += `Today: ${ctx.today}\n`
   if (ctx.userName) text += `User: ${ctx.userName} (${ctx.userRole})\n`
   if (ctx.myPlayers && ctx.myPlayers.length > 0) {
@@ -29,7 +29,8 @@ function formatContext(ctx: ClubContext): string {
 
   text += `## Teams\n`
   for (const t of ctx.teams) {
-    text += `- ${t.name} (${t.ageGroup}): ${t.playerCount} players, coaches: ${t.coaches.join(', ') || 'none assigned'}\n`
+    // Most college teams carry no age group; don't print an empty "()".
+    text += `- ${t.name}${t.ageGroup ? ` (${t.ageGroup})` : ''}: ${t.playerCount} players, staff: ${t.coaches.join(', ') || 'none assigned'}\n`
   }
 
   text += `\n## Upcoming Schedule (next 14 days)\n`
@@ -61,15 +62,15 @@ function formatContext(ctx: ClubContext): string {
     text += `No recent announcements.\n`
   }
   for (const a of ctx.recentAnnouncements) {
-    text += `- ${a.date}: "${a.title}" ${a.team ? `(${a.team})` : '(club-wide)'} — ${a.body.slice(0, 200)}\n`
+    text += `- ${a.date}: "${a.title}" ${a.team ? `(${a.team})` : '(program-wide)'} — ${a.body.slice(0, 200)}\n`
   }
 
   return text
 }
 
-const SYSTEM_PROMPT = `You are Ref, the OffPitchOS AI assistant for a soccer team (a college or club program). You answer questions from players and staff (the head coach or director, and assistant coaches) based on the team's real-time data provided below.
+const SYSTEM_PROMPT = `You are Pep, the OffPitchOS AI assistant for a college or club soccer team. You answer questions from the head coach, the coaching staff (assistant, goalkeeping and fitness coaches, video analysts) and the players, all of whom are adults, based on the team's real-time data provided below. There are no parents on the platform.
 
-The data below is fetched LIVE from the database at the moment the user asks — it is always current and accurate. Trust it completely.
+The data below is fetched LIVE from the database at the moment the user asks. It is always current and accurate. Trust it completely.
 
 Rules:
 - Only answer based on the data provided. If the data doesn't contain the answer, say so honestly.
@@ -77,8 +78,9 @@ Rules:
 - Format dates and times clearly (e.g. "Saturday Apr 19 at 5:00 PM").
 - Always include the venue and address when answering about events.
 - If a practice or game is cancelled, make that very clear.
-- Never make up information. If you're unsure, say "I don't have that information — check with your coaching staff."
-- Keep answers short — 2-4 sentences max unless the question requires a list.
+- Never make up information. If you're unsure, say "I don't have that information. Check with your coaching staff."
+- Keep answers short: 2-4 sentences max unless the question requires a list.
+- Never use em-dashes in your answers; use commas, colons or periods.
 - When a player asks, personalize the answer to THEIR own team. Don't list events for teams they're not on.
 - "This week" means the 7 days starting from today's date shown above.
 - "Today" means the date shown above. Use it to determine which events are next.

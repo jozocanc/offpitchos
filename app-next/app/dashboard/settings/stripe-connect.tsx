@@ -34,11 +34,11 @@ export default function StripeConnect() {
     <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-white">Stripe Payments</h3>
+          <h3 className="font-bold text-white">Stripe payments</h3>
           <p className="text-sm text-gray mt-1">
             {connected
-              ? 'Your Stripe account is connected. Players can pay for camps online.'
-              : 'Connect your Stripe account to collect camp payments online.'}
+              ? 'Your Stripe account is connected. Camp registrations can be paid online.'
+              : 'Connect Stripe to take payment for ID camps and clinics online.'}
           </p>
         </div>
         {connected ? (

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!profile || profile.role !== 'doc') {
-    return NextResponse.json({ error: 'Only directors can connect Stripe' }, { status: 403 })
+    return NextResponse.json({ error: 'Only the head coach can connect Stripe' }, { status: 403 })
   }
 
   // Check if club already has a Stripe account

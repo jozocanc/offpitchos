@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import { isPlayerPreview, PREVIEW_WRITE_ERROR } from '@/lib/admin-role'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // "View as → Player" preview never starts a real checkout.
+  if (await isPlayerPreview()) return NextResponse.json({ error: PREVIEW_WRITE_ERROR }, { status: 403 })
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!detail) return NextResponse.json({ error: 'Camp not found' }, { status: 404 })
-  if (detail.fee_cents === 0) return NextResponse.json({ error: 'This camp is free — register directly' }, { status: 400 })
+  if (detail.fee_cents === 0) return NextResponse.json({ error: 'This camp is free. Register directly.' }, { status: 400 })
 
   // Get club's Stripe account
   const { data: settings } = await supabase
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!settings?.stripe_account_id) {
-    return NextResponse.json({ error: 'Club has not connected Stripe yet' }, { status: 400 })
+    return NextResponse.json({ error: 'This program has not connected Stripe yet' }, { status: 400 })
   }
 
   // Get event title

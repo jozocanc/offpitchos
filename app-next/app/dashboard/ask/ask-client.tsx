@@ -82,12 +82,13 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
         {messages.length === 0 && !loading && (
           <div className="text-center text-gray mt-20">
             <div className="text-4xl mb-4">⚽</div>
-            <p className="text-lg font-medium text-white/80">Ask Ref anything about your club</p>
-            <p className="text-sm mt-2">Schedule, teams, events, announcements — Ref has all the info.</p>
+            <p className="text-lg font-medium text-white/80">Ask Pep anything about your team</p>
+            <p className="text-sm mt-2">Schedule, events, staff, announcements. Pep has all the info.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {[
                 'What\'s the schedule this week?',
-                'Who coaches U12?',
+                'When does the bus leave Friday?',
+                'Who\'s our goalkeeping coach?',
                 'Any cancelled practices?',
                 'When is the next game?',
               ].map(suggestion => (

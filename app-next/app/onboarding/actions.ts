@@ -21,7 +21,7 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
 
   // Age group is optional — a college program or senior side has none.
   if (!clubName?.trim() || !teamName?.trim()) {
-    return { ok: false, error: 'Club name and team name are required' }
+    return { ok: false, error: 'Program name and team name are required' }
   }
 
   // 1. Create the club
@@ -31,7 +31,7 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
     .select('id')
     .single()
 
-  if (clubError) return { ok: false, error: `Couldn't create your club: ${clubError.message}` }
+  if (clubError) return { ok: false, error: `Couldn't create your program: ${clubError.message}` }
 
   // 2. Create the first team
   const { error: teamError } = await supabase

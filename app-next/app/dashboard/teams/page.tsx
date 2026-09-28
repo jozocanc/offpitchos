@@ -7,6 +7,7 @@ import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
 import { isMember } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 export const metadata: Metadata = { title: 'Teams' }
 
@@ -26,7 +27,12 @@ interface Team {
   low_attendance_count: number
 }
 
-export default async function TeamsPage() {
+export default async function TeamsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ all?: string }>
+}) {
+  const { all } = await searchParams
   const supabase = await createClient()
   const timezone = await getClubTimezone()
   const { data: { user } } = await supabase.auth.getUser()
@@ -42,10 +48,15 @@ export default async function TeamsPage() {
     return (
       <div className="p-6 md:p-10 max-w-5xl mx-auto">
         <h1 className="text-3xl font-black tracking-tight">Teams</h1>
-        <p className="text-gray mt-4">No club found. Please complete onboarding.</p>
+        <p className="text-gray mt-4">
+          Your account isn&apos;t linked to a program yet.{' '}
+          <Link href="/onboarding" className="text-green hover:underline">Finish setup</Link>
+        </p>
       </div>
     )
   }
+
+  const isDoc = (await getEffectiveRole(profile.role ?? 'player')) === 'doc'
 
   const { data: teamsRaw, error: teamsError } = await supabase
     .from('teams')
@@ -55,6 +66,13 @@ export default async function TeamsPage() {
 
   if (teamsError) {
     console.error('Teams query error:', teamsError.message)
+  }
+
+  // Most college programs field exactly one team, so the list is a pointless
+  // extra click: go straight to its roster. `?all=1` still shows the list, which
+  // is where a head coach adds a second team.
+  if (teamsRaw?.length === 1 && all !== '1') {
+    redirect(`/dashboard/teams/${teamsRaw[0].id}`)
   }
 
   // Get member counts, coach counts, next event, and per-team roster health for each team.
@@ -160,9 +178,9 @@ export default async function TeamsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Teams</h1>
-          <p className="text-gray text-sm mt-1">{teams.length} team{teams.length !== 1 ? 's' : ''} in your club</p>
+          <p className="text-gray text-sm mt-1">{teams.length} team{teams.length !== 1 ? 's' : ''} in your program</p>
         </div>
-        {profile?.role === 'doc' && (
+        {isDoc && (
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/roster-import"
@@ -177,8 +195,12 @@ export default async function TeamsPage() {
 
       {teams.length === 0 ? (
         <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
-          <p className="text-gray text-lg">No teams yet.</p>
-          <p className="text-gray text-sm mt-1">Use the &quot;Add Team&quot; button to create your first team.</p>
+          <p className="text-gray text-lg">No team yet.</p>
+          <p className="text-gray text-sm mt-1">
+            {isDoc
+              ? 'Create your team with "Add Team", or import your roster from a CSV and the team is created for you.'
+              : 'Your head coach hasn\'t set up the team yet.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -236,7 +258,7 @@ function TeamCard({ team, timezone }: { team: Team; timezone: string }) {
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-white">{team.coach_count}</p>
-            <p className="text-[10px] text-gray uppercase tracking-wider">Coaches</p>
+            <p className="text-[10px] text-gray uppercase tracking-wider">Staff</p>
           </div>
           <div className="text-center">
             <p className={`text-lg font-bold ${rateColor}`}>{team.attendance_rate}%</p>

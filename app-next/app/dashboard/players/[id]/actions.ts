@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
@@ -17,12 +17,15 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
   return { user, profile, supabase }
 }
 
 export async function getPlayerProfile(playerId: string) {
-  const { user, profile, supabase } = await getUserProfile()
+  const { profile, supabase } = await getUserProfile()
+  // "View as → Player" preview: ownership is judged as the sample player.
+  const viewer = await getViewerIdentity()
+  const user = { id: viewer.userId }
 
   // Get player info
   const { data: player } = await supabase
@@ -93,6 +96,7 @@ async function _submitPlayerSize(
   jerseySize: string | null,
   shortsSize: string | null,
 ) {
+  await assertNotPreview()
   const { user, profile, supabase } = await getUserProfile()
 
   // Verify the caller owns this player row (players.parent_id = the player's own
@@ -147,7 +151,7 @@ async function _addFeedback(input: {
   const { profile, supabase } = await getUserProfile()
 
   if (profile.role !== 'doc' && profile.role !== 'coach') {
-    throw new Error('Only coaches and directors can add feedback')
+    throw new Error('Only the coaching staff can add feedback')
   }
 
   if (!input.notes.trim()) throw new Error('Feedback notes are required')

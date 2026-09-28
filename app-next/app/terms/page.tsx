@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Terms of Service — OffPitchOS',
+  title: 'Terms of Service',
   description: 'The rules for using OffPitchOS.',
 }
 
@@ -17,7 +17,7 @@ export default function TermsPage() {
         <div className="space-y-8 text-white/90 leading-relaxed">
           <section>
             <p className="text-lg">
-              By creating an account or using OffPitchOS, you agree to these terms. Read them — they are short and written in plain English.
+              By creating an account or using OffPitchOS, you agree to these terms. Read them. They are short and written in plain English.
             </p>
           </section>
 
@@ -31,7 +31,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">Your content</h2>
             <p>
-              You own everything you upload — rosters, messages, photos, feedback, and team data. By uploading it, you grant us a limited license to store, display, and transmit that content solely to operate OffPitchOS on your behalf. We will never use your content for advertising or to train AI models.
+              You own everything you upload: rosters, messages, photos, feedback, and team data. By uploading it, you grant us a limited license to store, display, and transmit that content solely to operate OffPitchOS on your behalf. We will never use your content for advertising or to train AI models.
             </p>
           </section>
 
@@ -39,7 +39,7 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-white mb-3">Acceptable use</h2>
             <p className="mb-3">Don&rsquo;t use OffPitchOS to:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Harass, bully, threaten, or harm anyone — especially minors.</li>
+              <li>Harass, bully, threaten, or harm anyone, especially minors.</li>
               <li>Upload content that is illegal, defamatory, sexually explicit, or violates another person&rsquo;s privacy.</li>
               <li>Attempt to break, reverse-engineer, or probe the security of the platform.</li>
               <li>Scrape, resell, or use our data for any purpose other than running your team.</li>

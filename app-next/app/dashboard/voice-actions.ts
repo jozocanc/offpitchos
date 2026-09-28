@@ -9,6 +9,7 @@ import { createAnnouncement } from './messages/actions'
 import { isMember } from '@/lib/constants'
 import { formatShortDate, formatTime } from '@/lib/format-datetime'
 import { unwrap } from '@/lib/action-result'
+import { isPlayerPreview } from '@/lib/admin-role'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -25,7 +26,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No program found')
   return { user, profile, supabase }
 }
 
@@ -78,7 +79,7 @@ const tools: Anthropic.Messages.Tool[] = [
           enum: ['practice', 'game', 'tournament', 'camp', 'tryout', 'meeting'],
           description: 'The event type',
         },
-        title: { type: 'string', description: 'Short human-readable title, e.g. "U14 Boys Practice"' },
+        title: { type: 'string', description: 'Short human-readable title, e.g. "Practice" or "Film Session"' },
         startTime: { type: 'string', description: 'Start time as ISO 8601 WITH the user timezone offset, e.g. "2026-04-12T18:00:00-04:00"' },
         endTime: { type: 'string', description: 'End time as ISO 8601 WITH the user timezone offset. If not specified by the user, default to 90 minutes after startTime.' },
         venueId: { type: 'string', description: 'Optional UUID of the venue. Omit if not specified or if no matching venue exists.' },
@@ -100,11 +101,11 @@ const tools: Anthropic.Messages.Tool[] = [
   },
   {
     name: 'send_announcement',
-    description: 'Post a new announcement to a specific team or to the entire club. Use when the user says things like "tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ...", or "post to the club ...". Extract the audience (team name OR club-wide) and the message content from the transcript.',
+    description: 'Post a new announcement to a specific team or to the entire program. Use when the user says things like "tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ...", or "post to everyone ...". Extract the audience (team name OR program-wide) and the message content from the transcript.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        teamId: { type: 'string', description: 'UUID of the team to send to. Omit for a club-wide announcement.' },
+        teamId: { type: 'string', description: 'UUID of the team to send to. Omit for a program-wide announcement.' },
         title: { type: 'string', description: 'Short title derived from the user message (max 60 chars). Example: "Indoor practice tonight".' },
         body: { type: 'string', description: 'The full announcement body — what the user wants to tell the audience. Be faithful to the transcript; do not add information.' },
       },
@@ -150,7 +151,7 @@ function buildContext(events: any[], teams: any[], venues: any[], timeZone: stri
 
   text += `## Teams\n`
   for (const t of teams) {
-    text += `- ${t.name} (${t.age_group}) — ID: ${t.id}\n`
+    text += `- ${t.name}${t.age_group ? ` (${t.age_group})` : ''} — ID: ${t.id}\n`
   }
 
   text += `\n## Venues\n`
@@ -164,7 +165,7 @@ function buildContext(events: any[], teams: any[], venues: any[], timeZone: stri
     const timeStr = new Date(e.start_time).toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
     const endStr = new Date(e.end_time).toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
     const venue = e.venues?.[0]?.name ?? e.venues?.name ?? 'TBD'
-    const team = e.teams?.[0]?.name ?? e.teams?.name ?? 'Club'
+    const team = e.teams?.[0]?.name ?? e.teams?.name ?? 'Team'
     const status = e.status === 'cancelled' ? ' [CANCELLED]' : ''
     text += `- ID: ${e.id} | ${dateStr} ${timeStr}-${endStr} | ${e.title} (${e.type}) | ${team} | at ${venue}${status}\n`
   }
@@ -172,7 +173,7 @@ function buildContext(events: any[], teams: any[], venues: any[], timeZone: stri
   return text
 }
 
-const VOICE_SYSTEM_PROMPT = `You are Ref, the OffPitchOS voice command assistant. A coach or director is giving you a spoken command about their schedule.
+const VOICE_SYSTEM_PROMPT = `You are Pep, the OffPitchOS voice command assistant. The head coach or a member of the coaching staff of a college or club soccer team is giving you a spoken command about the team's schedule. Players are adults; there are no parents.
 
 Your job:
 1. Match the spoken command to the correct event using the schedule data below.
@@ -180,19 +181,19 @@ Your job:
 3. If you can't find a matching event or the command is ambiguous, respond with a text message asking for clarification. Do NOT guess.
 
 Rules:
-- Match events by team name, event type, date, and time. Use fuzzy matching (e.g. "U14" matches a team with "U14" in its name or age group).
+- Match events by team name, event type, date, and time. Use fuzzy matching (e.g. "reserves" matches a team with "Reserves" in its name). Most programs have a single team; if there is only one team, assume it.
 - "Tonight" means today's date. "Tomorrow" means tomorrow. Interpret relative dates from the current date/time.
 - When updating time, preserve the event duration unless told otherwise.
-- When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "U14 Boys Practice" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
-- When the user says they themselves cannot make an event ("I can't make", "I'm sick", "I can't cover my U14 practice tonight", "need a replacement for my practice"), call request_coverage with the matching eventId. This will trigger the coverage flow and auto-assign a replacement. Do NOT cancel the event — coverage is different from cancellation.
-- When the user wants to send a message to a team or the whole club ("tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ..."), call send_announcement. Match the team fuzzy (e.g. "the reserves" → Reserves team). If the user says "all teams", "the whole club", "everyone", or does not name a team, omit teamId for a club-wide post. Build a short sensible title from the message.
+- When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "Practice" or "Film Session" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
+- When the user says they themselves cannot make an event ("I can't make", "I'm sick", "I can't make practice tonight", "need a replacement for my practice"), call request_coverage with the matching eventId. This will trigger the coverage flow and auto-assign a replacement. Do NOT cancel the event: coverage is different from cancellation.
+- When the user wants to send a message to a team or the whole program ("tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ..."), call send_announcement. Match the team fuzzy (e.g. "the reserves" → Reserves team). If the user says "all teams", "the whole program", "everyone", or does not name a team, omit teamId for a program-wide post. Build a short sensible title from the message.
 - Only use tools when you're confident about the match. If multiple options could match, ask which one.
 - When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
-CRITICAL — Timezone handling:
+CRITICAL: Timezone handling:
 - All times in the schedule data below are shown in the USER'S LOCAL TIMEZONE.
 - When calling update_event_time, ALWAYS include the user's UTC offset in the ISO 8601 string.
-- Example: if the user's offset is -04:00 and they want 3:00 PM on April 10, return "2026-04-10T15:00:00-04:00" — NOT "2026-04-10T15:00:00" and NOT "2026-04-10T15:00:00Z".
+- Example: if the user's offset is -04:00 and they want 3:00 PM on April 10, return "2026-04-10T15:00:00-04:00", NOT "2026-04-10T15:00:00" and NOT "2026-04-10T15:00:00Z".
 - The user's current offset is given in the context below. Use it verbatim.`
 
 export interface VoiceCommandResult {
@@ -251,8 +252,8 @@ export async function interpretVoiceCommand(
 
   const { profile, supabase } = await getUserProfile()
 
-  if (isMember(profile.role)) {
-    return { kind: 'clarification', message: 'Voice commands are only available for directors and coaches.' }
+  if (isMember(profile.role) || await isPlayerPreview()) {
+    return { kind: 'clarification', message: 'Voice commands are only available to the head coach and coaching staff.' }
   }
 
   const now = new Date()
@@ -308,7 +309,7 @@ export async function interpretVoiceCommand(
 
   if (!toolUse || toolUse.type !== 'tool_use') {
     const textBlock = response.content.find(block => block.type === 'text')
-    const message = textBlock && textBlock.type === 'text' ? textBlock.text : 'I didn\'t understand that command. Try something like "Cancel U14 practice tonight".'
+    const message = textBlock && textBlock.type === 'text' ? textBlock.text : 'I didn\'t understand that command. Try something like "Cancel practice tonight".'
     return { kind: 'clarification', message }
   }
 
@@ -377,9 +378,9 @@ function buildPlanSummary(
         : 'Request coverage for that event.'
     case 'send_announcement': {
       const team = input.teamId ? teams.find(t => t.id === input.teamId) : null
-      const audience = team ? `${team.name}` : 'the whole club'
+      const audience = team ? `${team.name}` : 'the whole program'
       const preview = String(input.body ?? '').slice(0, 80)
-      return `Send announcement to ${audience}: "${input.title}" — ${preview}${preview.length >= 80 ? '…' : ''}`
+      return `Send announcement to ${audience}: "${input.title}": ${preview}${preview.length >= 80 ? '…' : ''}`
     }
     default:
       return 'Do that action.'
@@ -401,8 +402,8 @@ export async function executeVoicePlan(
 ): Promise<VoiceCommandResult> {
   const { profile, supabase } = await getUserProfile()
 
-  if (isMember(profile.role)) {
-    return { success: false, message: 'Voice commands are only available for directors and coaches.' }
+  if (isMember(profile.role) || await isPlayerPreview()) {
+    return { success: false, message: 'Voice commands are only available to the head coach and coaching staff.' }
   }
 
   // Re-fetch minimal context needed for tool execution (event/venue/team lookups)
@@ -451,7 +452,7 @@ export async function executeVoicePlan(
         const name = event?.title ?? 'Event'
         return {
           success: true,
-          message: `Done — "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
+          message: `Done. "${name}" cancelled. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
           undoEventId: input.eventId,
         }
       }
@@ -472,7 +473,7 @@ export async function executeVoicePlan(
         const newStart = new Date(input.newStartTime)
         const timeStr = formatTime(newStart, timeZone)
         const dateStr = formatShortDate(newStart, timeZone)
-        return { success: true, message: `Done — "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
+        return { success: true, message: `Done. "${event.title}" moved to ${dateStr} at ${timeStr}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
 
       case 'update_event_venue': {
@@ -489,7 +490,7 @@ export async function executeVoicePlan(
           updateFuture: false,
         }))
         const venue = venues.find(v => v.id === input.venueId)
-        return { success: true, message: `Done — "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
+        return { success: true, message: `Done. "${event.title}" moved to ${venue?.name ?? 'new venue'}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}` }
       }
 
       case 'send_announcement': {
@@ -518,7 +519,7 @@ export async function executeVoicePlan(
           const reasonTail = result.reason ? ` (${result.reason.toLowerCase()})` : ''
           return {
             success: true,
-            message: `Done — ${result.coveringCoachName} is covering "${result.eventTitle}" for you${reasonTail}.`,
+            message: `Done. ${result.coveringCoachName} is covering "${result.eventTitle}" for you${reasonTail}.`,
           }
         }
         return {
@@ -550,7 +551,7 @@ export async function executeVoicePlan(
         const venuePart = venueName ? ` at ${venueName}` : ''
         return {
           success: true,
-          message: `Added — ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
+          message: `Added: ${team.name} ${input.type} on ${dateStr} at ${timeStr}${venuePart}. ${formatNotified(counts.parents, counts.coaches, counts.emailFailed)}`,
         }
       }
 

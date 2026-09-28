@@ -118,7 +118,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
   }
 
   function handleEmail(id: string) {
-    if (!confirm('Send this digest to everyone in the club via email?')) return
+    if (!confirm('Email this digest to your coaching staff?')) return
     setEmailing(id)
     startTransition(async () => {
       try {
@@ -141,7 +141,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
         <div>
           <h1 className="text-3xl font-black tracking-tight">Weekly Digest</h1>
           <p className="text-gray text-sm mt-1">
-            AI-generated recap of the week — attendance, standout players, and what&apos;s coming up.
+            A staff-only recap of the week: attendance, standout players, and what&apos;s coming up.
           </p>
         </div>
         {isDoc && (
@@ -150,7 +150,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
             disabled={isPending}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
           >
-            {isPending ? 'Generating…' : latest ? 'Regenerate This Week' : 'Generate Digest'}
+            {isPending ? 'Generating…' : latest ? 'Regenerate this week' : 'Generate Digest'}
           </button>
         )}
       </div>
@@ -160,8 +160,8 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
           <p className="text-gray text-lg">No digest yet.</p>
           <p className="text-gray text-sm mt-1">
             {isDoc
-              ? 'Click "Generate Digest" to create the first one.'
-              : 'Your head coach will generate the first digest at the end of the week.'}
+              ? 'Click "Generate Digest" for a recap of this week\'s sessions, attendance and feedback.'
+              : 'Your head coach generates the digest at the end of each week.'}
           </p>
         </div>
       )}
@@ -185,7 +185,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
                 disabled={isPending && emailing === latest.id}
                 className="text-xs font-bold bg-green/10 hover:bg-green/20 text-green border border-green/20 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50"
               >
-                {emailing === latest.id ? 'Sending…' : latest.emailed_at ? 'Resend Email' : 'Send to Club'}
+                {emailing === latest.id ? 'Sending…' : latest.emailed_at ? 'Resend email' : 'Email staff'}
               </button>
             )}
           </header>

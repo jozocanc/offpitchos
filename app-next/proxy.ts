@@ -2,13 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createHmac } from 'crypto'
 
-const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register', '/access', '/pricing', '/share', '/collect']
+const publicPrefixes = ['/login', '/signup', '/join', '/auth/callback', '/auth/confirm', '/forgot-password', '/pitch.html', '/privacy', '/terms', '/camps/register', '/access', '/pricing', '/share', '/collect']
 const publicExact = new Set(['/'])
 
 // Routes that still need early-access gating even though they're public.
 // Team/camp invite links bypass the gate since the prospect has been invited.
 const gatedPrefixes = ['/login', '/signup', '/forgot-password']
 
+const TEAM_CODE = /^[A-Za-z0-9]{4,12}$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // An invite link IS a credential. Asking an invited coach for the early-access
@@ -19,6 +20,23 @@ async function hasValidInvite(
   supabase: ReturnType<typeof createServerClient>,
   params: URLSearchParams
 ): Promise<boolean> {
+  // A team invite code (/join/code/XXXX -> /signup?code=XXXX) is how a whole
+  // squad joins. It used to hit the access wall because only ?invite= was
+  // honoured. teams is not readable anonymously, so check it with the service
+  // key; only existence is revealed, and codes are what the team shares.
+  const code = params.get('code')
+  if (code && TEAM_CODE.test(code)) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (url && key) {
+      const res = await fetch(
+        `${url}/rest/v1/teams?select=id&invite_code=eq.${encodeURIComponent(code.toUpperCase())}&limit=1`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' },
+      )
+      if (res.ok && ((await res.json()) as unknown[]).length > 0) return true
+    }
+  }
+
   const token = params.get('invite')
   if (!token || !UUID.test(token)) return false
 

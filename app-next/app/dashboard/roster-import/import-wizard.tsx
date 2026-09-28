@@ -153,7 +153,7 @@ export default function ImportWizard({
         <div className="bg-dark-secondary rounded-2xl p-8 shadow-lg">
           <h2 className="text-xl font-bold mb-1">Import roster</h2>
           <p className="text-gray text-sm mb-6">
-            Upload a CSV from SportsEngine, TeamSnap, GotSport, or any spreadsheet. We&apos;ll auto-map known column names.
+            Upload your roster as a CSV: an export from your athletics department, TeamSnap, SportsEngine, or any spreadsheet. We&apos;ll match the columns we recognize.
           </p>
           <input
             type="file"
@@ -192,7 +192,7 @@ export default function ImportWizard({
                   onChange={(e) => setMapping({ ...mapping, [h]: e.target.value as OffPitchField | '' })}
                   className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-green transition-colors appearance-none"
                 >
-                  <option value="">— don&apos;t import —</option>
+                  <option value="">Don&apos;t import</option>
                   {ALL_FIELDS.map(f => (
                     <option key={f} value={f}>
                       {f}{REQUIRED_FIELDS.includes(f) ? ' *' : ''}
@@ -349,7 +349,7 @@ export default function ImportWizard({
                 <ul className="mt-2 space-y-1">
                   {inviteResult.failures.map((f, i) => (
                     <li key={i} className="text-red text-xs">
-                      {f.email} — {f.reason}
+                      {f.email}: {f.reason}
                     </li>
                   ))}
                 </ul>
@@ -379,7 +379,7 @@ export default function ImportWizard({
             )}
             {variant === 'dashboard' && (
               <Link href="/dashboard/teams" className="text-green underline hover:opacity-90 transition-opacity">
-                View teams &rarr;
+                View roster &rarr;
               </Link>
             )}
           </div>

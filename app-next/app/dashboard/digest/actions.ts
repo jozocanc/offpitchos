@@ -20,7 +20,7 @@ async function getDocProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
   if (profile.role !== 'doc') throw new Error('Only the head coach can generate digests')
 
   return { user, profile, supabase }
@@ -67,11 +67,13 @@ async function _emailDigest(digestId: string) {
 
   if (!digest) throw new Error('Digest not found')
 
-  // Email everyone in the club: staff and players.
+  // Email the coaching staff only. The digest names individual players'
+  // attendance and coach feedback, so it is a staff document, not a squad one.
   const { data: profiles } = await service
     .from('profiles')
     .select('id')
     .eq('club_id', profile.club_id!)
+    .in('role', ['doc', 'coach'])
 
   const profileIds = (profiles ?? []).map(p => p.id)
 

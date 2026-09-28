@@ -166,8 +166,8 @@ function EmptyState({ hasQuery, isDoc }: { hasQuery: boolean; isDoc: boolean }) 
       <p className="text-sm text-white font-medium mb-1">No files yet</p>
       <p className="text-xs text-gray">
         {isDoc
-          ? 'Upload registration forms, code of conduct, or any club document.'
-          : 'Your club hasn\u2019t shared any files yet.'}
+          ? 'Upload registration forms, code of conduct, or any team document.'
+          : 'Your coaching staff hasn\u2019t shared any files yet.'}
       </p>
     </div>
   )

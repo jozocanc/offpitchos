@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation'
 import { DRILL_CATEGORIES, DRILL_CATEGORY_LABELS, VISIBILITIES } from '@/lib/tactics/drill-categories'
 import { createBlankDrillFormAction, deleteDrill, duplicateDrill, updateVisibility } from './actions'
 import type { DrillSummary } from './actions'
+
+// 'club' is the stored value; to a college staff it is the whole program.
+const VISIBILITY_LABELS: Record<string, string> = {
+  private: 'Private',
+  team: 'Team',
+  club: 'Program-wide',
+}
 import GenerateModal from './generate-modal'
 import ImportPdfModal from './import-pdf-modal'
 import { useToast } from '@/components/toast'
@@ -165,7 +172,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
       <div className="flex flex-wrap gap-2">
         <select value={teamId} onChange={e => setTeamId(e.target.value)} className="bg-dark-secondary border border-white/10 rounded px-3 py-2 text-sm">
           <option value="all">All teams</option>
-          <option value="none">Club-wide</option>
+          <option value="none">Program-wide</option>
           {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <select value={category} onChange={e => setCategory(e.target.value)} className="bg-dark-secondary border border-white/10 rounded px-3 py-2 text-sm">
@@ -175,7 +182,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
         <select value={visibility} onChange={e => setVisibility(e.target.value)} className="bg-dark-secondary border border-white/10 rounded px-3 py-2 text-sm">
           <option value="all">All visibility</option>
           <option value="mine">My drills</option>
-          {VISIBILITIES.map(v => <option key={v} value={v}>{v[0].toUpperCase() + v.slice(1)}</option>)}
+          {VISIBILITIES.map(v => <option key={v} value={v}>{VISIBILITY_LABELS[v] ?? v}</option>)}
         </select>
         <input
           value={search} onChange={e => setSearch(e.target.value)} placeholder="Search drills…"
@@ -305,7 +312,7 @@ function DrillCard({ drill, selectMode, selected, onToggleSelect, onDelete, onDu
           <Link href={`/dashboard/tactics/${drill.id}`} className="block font-medium truncate hover:text-green">{drill.title}</Link>
         )}
         <div className="flex items-center gap-2 text-xs text-gray">
-          <span>{vIcon} {drill.visibility}</span>
+          <span>{vIcon} {VISIBILITY_LABELS[drill.visibility] ?? drill.visibility}</span>
           {drill.teamName && <span>· {drill.teamName}</span>}
           <span>· {drill.category}</span>
         </div>
@@ -320,9 +327,9 @@ function DrillCard({ drill, selectMode, selected, onToggleSelect, onDelete, onDu
                   <div className="absolute right-0 top-full mt-1 bg-dark border border-white/10 rounded-lg shadow-lg z-20 min-w-[160px]">
                     <button onClick={() => { setMenuOpen(false); onDuplicate(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Duplicate</button>
                     {drill.canEdit && <>
-                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'private') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Private</button>
-                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'team') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Team</button>
-                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'club') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make Club-wide</button>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'private') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make private</button>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'team') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Share with team</button>
+                      <button onClick={() => { setMenuOpen(false); onVisibilityChange(drill.id, 'club') }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5">Make program-wide</button>
                     </>}
                     {drill.canDelete && <button onClick={() => { setMenuOpen(false); onDelete(drill.id) }} className="block w-full text-left px-3 py-2 text-sm hover:bg-white/5 text-red">Delete</button>}
                   </div>

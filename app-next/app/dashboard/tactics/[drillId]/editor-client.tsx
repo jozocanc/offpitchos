@@ -1030,7 +1030,7 @@ export default function EditorClient({
 
   const teamName = drill.team_id
     ? (teams.find(t => t.id === drill.team_id)?.name ?? 'Team')
-    : 'Club-wide'
+    : 'Program-wide'
 
   // ── Narrow screen guard ──────────────────────────────────────────────────────
   const [isWide, setIsWide] = useState(true)

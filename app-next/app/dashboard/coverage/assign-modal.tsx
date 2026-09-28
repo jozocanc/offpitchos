@@ -122,7 +122,7 @@ export default function AssignModal({ requestId, coaches, onClose }: AssignModal
           <div className="bg-dark rounded-xl p-4 border border-yellow-500/20 mb-4">
             <p className="text-yellow-400 text-sm font-semibold mb-1">No ideal matches</p>
             <p className="text-gray text-xs">
-              Every coach in the club either has a conflict at this time or isn&apos;t available.
+              Every coach on your staff either has a conflict at this time or isn&apos;t available.
               Pick anyone below if you want to assign manually.
             </p>
           </div>

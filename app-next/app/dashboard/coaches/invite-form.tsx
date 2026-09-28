@@ -49,7 +49,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
           toast(`Invite sent to ${invitedEmail}`, 'success')
         } else {
           toast(
-            `Invite created, but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
+            `Invite created, but the email didn't send. Copy the join link from Pending invites below and share it directly.`,
             'error',
           )
         }
@@ -74,7 +74,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
           onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}
         >
           <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
-            <h2 className="text-xl font-bold mb-6">Invite a Coach</h2>
+            <h2 className="text-xl font-bold mb-6">Invite a staff member</h2>
             <p className="text-gray text-sm -mt-4 mb-6">
               Every coach gets the same staff access. Only you, the head coach, manage the team.
             </p>
@@ -137,7 +137,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
                 disabled={isPending}
                 className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isPending ? 'Sending…' : 'Send Invite'}
+                {isPending ? 'Sending…' : 'Send invite'}
               </button>
             </div>
           </div>

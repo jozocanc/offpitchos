@@ -13,8 +13,8 @@ export default async function AskPage() {
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-[100dvh] max-w-3xl mx-auto p-6 md:px-10 md:py-8">
       <div className="mb-4 shrink-0">
-        <h1 className="text-2xl font-bold text-white">Ask Ref</h1>
-        <p className="text-sm text-gray mt-1">Get instant answers about your club — schedule, teams, events, and more.</p>
+        <h1 className="text-2xl font-bold text-white">Ask Pep</h1>
+        <p className="text-sm text-gray mt-1">Get instant answers about your team: schedule, events, staff, and more.</p>
       </div>
 
       {userRole === 'doc' && (

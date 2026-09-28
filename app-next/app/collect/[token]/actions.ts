@@ -17,6 +17,9 @@ export interface CollectPlayer {
   emergencyContactName: string | null
   emergencyContactPhone: string | null
   dietaryNotes: string | null
+  // Travel readiness (052). Expiry date only, never the passport number.
+  passportExpiry: string | null
+  hasTravelId: boolean | null
   collectedAt: string | null
 }
 
@@ -33,7 +36,7 @@ export async function getCollectPlayer(token: string): Promise<CollectPlayer | n
     const service = createServiceClient()
     const { data } = await service
       .from('players')
-      .select('first_name, last_name, jersey_size, shorts_size, address, emergency_contact_name, emergency_contact_phone, dietary_notes, collected_at, teams(name), clubs(name)')
+      .select('first_name, last_name, jersey_size, shorts_size, address, emergency_contact_name, emergency_contact_phone, dietary_notes, passport_expiry, has_travel_id, collected_at, teams(name), clubs(name)')
       .eq('collect_token', token)
       .single()
 
@@ -53,6 +56,8 @@ export async function getCollectPlayer(token: string): Promise<CollectPlayer | n
       emergencyContactName: data.emergency_contact_name,
       emergencyContactPhone: data.emergency_contact_phone,
       dietaryNotes: data.dietary_notes,
+      passportExpiry: data.passport_expiry,
+      hasTravelId: data.has_travel_id,
       collectedAt: data.collected_at,
     }
   } catch {
@@ -69,6 +74,8 @@ export async function saveCollectedDetails(
     emergencyContactName: string
     emergencyContactPhone: string
     dietaryNotes: string
+    passportExpiry: string   // 'YYYY-MM-DD' or ''
+    hasTravelId: boolean | null
   }
 ): Promise<ActionResult> {
   try {
@@ -83,6 +90,11 @@ export async function saveCollectedDetails(
       return t === '' ? null : t
     }
 
+    const passportExpiry = fields.passportExpiry.trim()
+    if (passportExpiry && !/^\d{4}-\d{2}-\d{2}$/.test(passportExpiry)) {
+      throw new Error('Passport expiry must be a date.')
+    }
+
     const { data, error } = await service
       .from('players')
       .update({
@@ -92,6 +104,8 @@ export async function saveCollectedDetails(
         emergency_contact_name: orNull(fields.emergencyContactName),
         emergency_contact_phone: orNull(fields.emergencyContactPhone),
         dietary_notes: orNull(fields.dietaryNotes),
+        passport_expiry: passportExpiry || null,
+        has_travel_id: fields.hasTravelId,
         collected_at: new Date().toISOString(),
       })
       .eq('collect_token', token)

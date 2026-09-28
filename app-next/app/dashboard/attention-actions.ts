@@ -71,13 +71,13 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No program found')
   return { user, profile, supabase }
 }
 
-const ATTENTION_PROMPT = `You are triaging the inbox of a soccer team's head coach.
+const ATTENTION_PROMPT = `You are triaging the inbox of the head coach of a college or club soccer team. They run a small coaching staff (assistant, goalkeeping and fitness coaches) and a roster of adult players. There are no parents.
 
-Your job: from the raw signals below, produce a short prioritized list of things the DOC needs to act on RIGHT NOW. This is what they see when they sit down at their desk.
+Your job: from the raw signals below, produce a short prioritized list of things the head coach needs to act on RIGHT NOW. This is what they see when they sit down at their desk.
 
 STRICT RULES:
 - You may ONLY return items that reference a signalId from the list below. Do NOT invent new items.
@@ -85,7 +85,9 @@ STRICT RULES:
 - If there are no signals, return {"items": []}.
 - Return at most 5 items.
 - Sort by urgency: critical first, then important, then routine.
-- Keep descriptions SHORT — under 80 characters.
+- Keep descriptions SHORT: under 80 characters.
+- Never use em-dashes in titles or descriptions; use commas, colons or periods.
+- Refer to the organisation as the team or program, never "club".
 
 URGENCY GUIDANCE (by signal type):
 - "critical" — time pressure or breakdowns. Examples: coverage requests that are EXPIRED or expire in <30 min; events starting in <2 hours without coverage resolved.
@@ -299,7 +301,7 @@ export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: b
     const signalId = `gear-missing`
     hrefBySignalId.set(signalId, '/dashboard/gear')
     signalParts.push(`\n## Gear sizes missing`)
-    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players in the club are missing jersey or shorts sizes. The head coach can request them from the players with one click on the Gear page.`)
+    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players on the roster are missing jersey or shorts sizes. The head coach can request them from the players with one click on the Gear page.`)
   }
 
   // Pending invites (older than 3 days)

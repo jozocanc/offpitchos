@@ -114,7 +114,7 @@ export default async function Home() {
           {[
             {
               t: 'The change is the easy part',
-              d: 'Moving a session takes ten seconds. Telling everyone, finding cover and updating the record is what eats the evening.',
+              d: 'Moving a session takes ten seconds. Telling everyone and updating the record is what eats the evening.',
             },
             {
               t: 'Nothing talks to anything',
@@ -179,7 +179,7 @@ export default async function Home() {
           <Feature
             label="Voice-driven operations"
             title="Say it. It is done."
-            body="Cancel a session from the car park. The schedule updates, cover is requested, and everyone affected is told — before you have put your phone down."
+            body="Cancel a session from the parking lot. The schedule updates and everyone affected is told before you have put your phone down."
             mockup={<VoiceMockup />}
           />
           <Feature
@@ -192,7 +192,7 @@ export default async function Home() {
           <Feature
             label="Sessions and tactics"
             title="From an idea to a session plan."
-            body="Describe a drill in plain language and Pep AI builds it on the board — animated, printable, attached to the session, and shared with the staff who need it."
+            body="Describe a drill in plain language and Pep AI builds it on the board: animated, printable, attached to the session, and shared with the staff who need it."
             mockup={<EventMockup />}
           />
         </div>
@@ -207,7 +207,7 @@ export default async function Home() {
               One system. Three points of view.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
-              Everyone sees precisely what their job requires — and nothing that belongs
+              Everyone sees precisely what their job requires, and nothing that belongs
               to someone else.
             </p>
           </div>
@@ -653,7 +653,7 @@ function VoiceMockup() {
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <p style={{ color: mockText }} className="text-xs">
-          <span className="font-semibold">24 players</span> notified · Coach Mike updated
+          <span className="font-semibold">24 players</span> notified · Staff updated
         </p>
       </div>
     </MockShell>

@@ -9,7 +9,7 @@ export default function DangerZone({ userRole }: { userRole: string }) {
   const router = useRouter()
 
   function handleLeave() {
-    if (!confirm('Leave this club? You will be removed from all teams and lose access. This cannot be undone.')) return
+    if (!confirm('Leave this program? You will be removed from the team and lose access. This cannot be undone.')) return
     startTransition(async () => {
       const result = await leaveClub()
       if (result.error) {
@@ -34,7 +34,7 @@ export default function DangerZone({ userRole }: { userRole: string }) {
     if (!confirm(
       'Delete your account?\n\n' +
       'Your name and email address will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
-      'Anything you posted stays with the club, but is no longer linked to you. This cannot be undone.'
+      'Anything you posted stays with the team, but is no longer linked to you. This cannot be undone.'
     )) return
     if (!confirm('Are you really sure? This cannot be undone.')) return
     startTransition(async () => {
@@ -49,13 +49,13 @@ export default function DangerZone({ userRole }: { userRole: string }) {
 
   return (
     <section className="bg-dark-secondary rounded-2xl p-6 border border-red/20">
-      <h2 className="text-lg font-bold mb-4 text-red">Danger Zone</h2>
+      <h2 className="text-lg font-bold mb-4 text-red">Danger zone</h2>
       <div className="space-y-4">
         {userRole !== 'doc' && (
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-sm">Leave Club</p>
-              <p className="text-gray text-xs">Remove yourself from all teams and leave this club.</p>
+              <p className="font-medium text-sm">Leave program</p>
+              <p className="text-gray text-xs">Remove yourself from the team and leave this program.</p>
             </div>
             <button
               onClick={handleLeave}
@@ -68,14 +68,14 @@ export default function DangerZone({ userRole }: { userRole: string }) {
         )}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-sm">Delete Account</p>
+            <p className="font-medium text-sm">Delete account</p>
             {/* Must match what migration 037 actually does. This is a soft
                 delete: the profile row survives so the club's history keeps
                 its foreign keys, and sign-in is disabled by banning the auth
                 user rather than deleting it. */}
             <p className="text-gray text-xs">
               Removes your name and email, takes you off every team, and stops you
-              signing in. Anything you posted stays with the club.
+              signing in. Anything you posted stays with the team.
             </p>
           </div>
           <button

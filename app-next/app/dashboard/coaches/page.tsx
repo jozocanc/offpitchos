@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import { appUrl } from '@/lib/app-url'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getEffectiveRole } from '@/lib/admin-role'
 import InviteCoachForm from './invite-form'
 
-export const metadata: Metadata = { title: 'Coaches' }
+export const metadata: Metadata = { title: 'Staff' }
 import CopyLink from '../teams/[id]/copy-link'
 import RevokeButton from './revoke-button'
 import TitleSelect from './title-select'
@@ -44,7 +45,9 @@ export default async function CoachesPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') redirect('/dashboard')
+  // Effective role, so the head coach's "View as: Player" preview is bounced
+  // the same way a real player is.
+  if ((await getEffectiveRole(profile?.role ?? 'player')) !== 'doc') redirect('/dashboard')
 
   const clubId = profile?.club_id ?? ''
 
@@ -200,9 +203,9 @@ export default async function CoachesPage() {
                   </div>
                   <div>
                     <p className={`text-lg font-bold ${coach.attendanceRate >= 80 ? 'text-green' : coach.attendanceRate >= 60 ? 'text-yellow-400' : 'text-white'}`}>
-                      {coach.attendanceRate > 0 ? `${coach.attendanceRate}%` : '—'}
+                      {coach.attendanceRate > 0 ? `${coach.attendanceRate}%` : 'n/a'}
                     </p>
-                    <p className="text-[10px] text-gray uppercase tracking-wider">Att. Rate</p>
+                    <p className="text-[10px] text-gray uppercase tracking-wider">Attendance</p>
                   </div>
                 </div>
               </div>
@@ -213,7 +216,7 @@ export default async function CoachesPage() {
 
       {/* Pending invites */}
       <section>
-        <h2 className="text-lg font-bold mb-4">Pending Invites</h2>
+        <h2 className="text-lg font-bold mb-4">Pending invites</h2>
         {invites.length === 0 ? (
           <div className="bg-dark-secondary rounded-2xl p-8 text-center border border-white/5">
             <p className="text-gray">No pending invites.</p>

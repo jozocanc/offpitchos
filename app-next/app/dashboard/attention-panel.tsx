@@ -100,7 +100,7 @@ export default function AttentionPanel() {
         toast('Invite email resent', 'success')
       } else {
         toast(
-          `Invite refreshed — but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
+          `Invite refreshed, but the email didn't send. Copy the join link from the pending invites list and share it directly.`,
           'error',
         )
       }
@@ -132,7 +132,7 @@ export default function AttentionPanel() {
           <span className="inline-block w-2 h-2 rounded-full bg-green animate-pulse" />
           Needs your attention
           {data && data.items.length > 0 && (
-            <span className="text-sm font-bold text-green">— {data.items.length}</span>
+            <span className="text-sm font-bold text-green">· {data.items.length}</span>
           )}
         </h2>
         <div className="flex items-center gap-3">

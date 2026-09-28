@@ -164,7 +164,7 @@ export default function InstallPrompt() {
               <li className="flex items-start gap-3">
                 <span className="w-6 h-6 rounded-full bg-green/20 text-green font-bold flex items-center justify-center shrink-0 text-xs">3</span>
                 <span className="text-white leading-snug">
-                  Tap <strong>Add</strong> — OffPitchOS will appear on your home screen and
+                  Tap <strong>Add</strong> and OffPitchOS will appear on your home screen and
                   launch in full-screen mode with push notifications.
                 </span>
               </li>

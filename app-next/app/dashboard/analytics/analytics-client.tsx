@@ -59,10 +59,10 @@ interface AnalyticsData {
 }
 
 const periods = [
-  { value: '7d', label: '7 Days' },
-  { value: '30d', label: '30 Days' },
-  { value: '90d', label: '90 Days' },
-  { value: 'month', label: 'This Month' },
+  { value: '7d', label: '7 days' },
+  { value: '30d', label: '30 days' },
+  { value: '90d', label: '90 days' },
+  { value: 'month', label: 'This month' },
 ]
 
 const chartTooltipStyle = {
@@ -82,7 +82,11 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
   const [isPending, startTransition] = useTransition()
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null)
 
-  const { overview, activity, coverage, revenue, teamStats, totalFeedback, charts } = data
+  // Coverage stats are still computed by getAnalyticsData but not shown: a
+  // college staff doesn't run substitute-coach requests.
+  const { overview, activity, revenue, teamStats, totalFeedback, charts } = data
+  // Most programs have no age group on any team; drop the empty column then.
+  const showAgeGroup = teamStats.some(t => ageGroupLabel(t.ageGroup))
 
   function handlePeriodChange(newPeriod: string) {
     setPeriod(newPeriod)
@@ -111,13 +115,13 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
         ))}
       </div>
 
-      {/* Club Overview */}
+      {/* Program overview */}
       <section>
-        <h2 className="text-lg font-bold text-white mb-4">Club Overview</h2>
+        <h2 className="text-lg font-bold text-white mb-4">Program overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <StatCard label="Teams" value={overview.totalTeams} />
           <StatCard label="Players" value={overview.totalPlayers} />
-          <StatCard label="Coaches" value={overview.totalCoaches} />
+          <StatCard label="Staff" value={overview.totalCoaches} />
           <StatCard label="Player accounts" value={overview.totalPlayerAccounts} />
         </div>
       </section>
@@ -128,15 +132,15 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <StatCard label="Events" value={activity.eventsInRange} />
           <StatCard label="Cancelled" value={activity.cancelledInRange} color={activity.cancelledInRange > 0 ? 'red' : undefined} />
-          <StatCard label="Attendance Rate" value={`${activity.attendanceRate}%`} color="green" />
-          <StatCard label="Player Feedback" value={totalFeedback} />
+          <StatCard label="Attendance rate" value={`${activity.attendanceRate}%`} color="green" />
+          <StatCard label="Feedback notes" value={totalFeedback} />
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Attendance Chart */}
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-gray mb-4">Attendance Breakdown</h3>
+            <h3 className="text-sm font-medium text-gray mb-4">Attendance breakdown</h3>
             {charts.attendance.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={charts.attendance} barCategoryGap="20%">
@@ -151,13 +155,13 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[220px] flex items-center justify-center text-gray text-sm">No attendance data for this period.</div>
+              <div className="h-[220px] flex items-center justify-center text-gray text-sm">No attendance taken in this period. Mark attendance on any event in the schedule.</div>
             )}
           </div>
 
           {/* Events Chart */}
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-gray mb-4">Events Over Time</h3>
+            <h3 className="text-sm font-medium text-gray mb-4">Events over time</h3>
             {charts.events.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={charts.events}>
@@ -171,20 +175,9 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[220px] flex items-center justify-center text-gray text-sm">No events for this period.</div>
+              <div className="h-[220px] flex items-center justify-center text-gray text-sm">No events in this period. Add practices and games from the schedule.</div>
             )}
           </div>
-        </div>
-      </section>
-
-      {/* Coverage — 1 col on narrow, 3 on sm+ to stop cards getting squeezed
-          below reading width. */}
-      <section>
-        <h2 className="text-lg font-bold text-white mb-4">Coach Coverage</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard label="Coverage Requests" value={coverage.totalRequests} />
-          <StatCard label="Fill Rate" value={`${coverage.coverageRate}%`} color="green" />
-          <StatCard label="Pending" value={coverage.pendingCoverage} color={coverage.pendingCoverage > 0 ? 'yellow' : undefined} />
         </div>
       </section>
 
@@ -192,10 +185,10 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
           most likely to overflow so the StatCard truncate + smaller mobile
           font size carries the rest of the burden. */}
       <section>
-        <h2 className="text-lg font-bold text-white mb-4">Camp Revenue</h2>
+        <h2 className="text-lg font-bold text-white mb-4">Camp revenue</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard label="Camp Registrations" value={revenue.totalCampRegistrations} />
-          <StatCard label="Expected Revenue" value={formatCurrency(revenue.totalRevenueCents)} color="green" />
+          <StatCard label="Camp registrations" value={revenue.totalCampRegistrations} />
+          <StatCard label="Expected revenue" value={formatCurrency(revenue.totalRevenueCents)} color="green" />
           <StatCard label="Collected" value={formatCurrency(revenue.totalCollectedCents)} />
         </div>
       </section>
@@ -208,7 +201,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
             <thead>
               <tr className="border-b border-white/5 text-left text-gray">
                 <th className="px-5 py-3 font-medium">Team</th>
-                <th className="px-5 py-3 font-medium">Age Group</th>
+                {showAgeGroup && <th className="px-5 py-3 font-medium">Age group</th>}
                 <th className="px-5 py-3 font-medium">Players</th>
                 <th className="px-5 py-3 font-medium">Events</th>
                 <th className="px-5 py-3 font-medium">Activity</th>
@@ -222,7 +215,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                 return (
                   <tr key={team.name} className="border-b border-white/5 last:border-0">
                     <td className="px-5 py-3 text-white font-medium">{team.name}</td>
-                    <td className="px-5 py-3 text-gray">{ageGroupLabel(team.ageGroup) ?? ''}</td>
+                    {showAgeGroup && <td className="px-5 py-3 text-gray">{ageGroupLabel(team.ageGroup) ?? ''}</td>}
                     <td className="px-5 py-3 text-white">{team.players}</td>
                     <td className="px-5 py-3 text-white">{team.eventsLast30}</td>
                     <td className="px-5 py-3 relative">

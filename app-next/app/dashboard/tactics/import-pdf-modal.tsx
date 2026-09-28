@@ -109,7 +109,7 @@ export default function ImportPdfModal({
 
           <div className="px-5 pb-5 space-y-4">
             <p className="text-sm text-gray">
-              Upload a coaching drill PDF — diagram and notes — and it&apos;s
+              Upload a coaching drill PDF (diagram and notes) and it&apos;s
               reproduced on a new tactics board you can edit.
             </p>
 
@@ -165,7 +165,7 @@ export default function ImportPdfModal({
                   disabled={isPending}
                   className="w-full bg-dark border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-green disabled:opacity-50 transition"
                 >
-                  <option value="">Club-wide (no specific team)</option>
+                  <option value="">Program-wide (no specific team)</option>
                   {teams.map(t => (
                     <option key={t.id} value={t.id}>
                       {t.name}

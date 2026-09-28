@@ -40,7 +40,7 @@ export default function AiLogClient() {
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
         </svg>
-        {showLog ? 'Hide' : 'View'} Ref Chat Log
+        {showLog ? 'Hide' : 'View'} Pep Chat Log
       </button>
 
       {showLog && (
@@ -48,7 +48,7 @@ export default function AiLogClient() {
           {loading ? (
             <div className="p-4 text-gray text-sm">Loading log...</div>
           ) : entries.length === 0 ? (
-            <div className="p-4 text-gray text-sm">No Ref chats yet.</div>
+            <div className="p-4 text-gray text-sm">No Pep chats yet.</div>
           ) : (
             <div className="divide-y divide-white/5">
               {entries.map(entry => (

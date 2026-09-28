@@ -81,16 +81,6 @@ function SettingsIcon() {
   )
 }
 
-function CoverageIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="8.5" cy="7" r="4" />
-      <polyline points="17 11 19 13 23 9" />
-    </svg>
-  )
-}
-
 function TacticsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -177,32 +167,39 @@ function CloseIcon() {
   )
 }
 
+// Coverage (substitute-coach requests) is deliberately absent: a college staff
+// of three to five has no need for it. The route and code still exist.
+// Players get a lean nav: Dashboard, Schedule, Messages, Files, Ask.
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
-  { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc'] },
-  { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon />, roles: ['doc', 'coach'] },
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
-  { label: 'Coverage', href: '/dashboard/coverage', icon: <CoverageIcon />, roles: ['doc', 'coach'] },
-  { label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] },
-  { label: 'Coaches', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
+  { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon />, roles: ['doc', 'coach'] },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
-  { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
-  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
-  { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
+  { label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] },
   { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
+  { label: 'Staff', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
+  { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
+  { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
+  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
+  { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc'] },
+  // A weekly staff summary: it names individual players' attendance and
+  // coach feedback, so it is not for the squad.
+  { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon />, roles: ['doc', 'coach'] },
   { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'player'] },
-  { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
 
 interface SidebarProps {
   userEmail: string
   userRole: string
-  /** True only for a DOC — decided server-side from their real profile role. */
+  /** True only for the head coach, decided server-side from their real profile role. */
   canSwitchRole?: boolean
+  /** True when the program has exactly one team. /dashboard/teams then
+   *  redirects straight to that team, so the nav item reads "Roster". */
+  singleTeam?: boolean
 }
 
-export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: SidebarProps) {
+export default function Sidebar({ userEmail, userRole, canSwitchRole = false, singleTeam = false }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [viewAs, setViewAs] = useState(userRole)
@@ -222,7 +219,9 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: 
   // A legacy 'parent' account navigates as a player; nav lists no longer
   // name the parent role.
   const navRole = activeRole === 'parent' ? 'player' : activeRole
-  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(navRole))
+  const filteredNavItems = navItems
+    .filter(item => !item.roles || item.roles.includes(navRole))
+    .map(item => (singleTeam && item.href === '/dashboard/teams' ? { ...item, label: 'Roster' } : item))
 
   const sidebarContent = (
     <div className="flex flex-col h-full">

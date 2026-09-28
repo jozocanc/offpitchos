@@ -94,7 +94,7 @@ export default function DemoSeedButton({ state }: Props) {
         }}
         className="bg-green text-dark font-bold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity text-xs shrink-0 disabled:opacity-50"
       >
-        {loading === 'seed' ? 'Loading…' : 'Load demo data'}
+        {loading === 'seed' ? 'Loading…' : 'Load sample team'}
       </button>
     </div>
   )

@@ -53,16 +53,16 @@ export async function sendCoachInviteEmail({
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `You've been invited to coach at ${clubName}`,
+    subject: `You've been invited to join the coaching staff at ${clubName}`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
         <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">
           OffPitch<span style="color: #00FF87;">OS</span>
         </h1>
-        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Club Operating System</p>
+        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Team Operating System</p>
 
         <p style="font-size: 16px; color: #333; margin-bottom: 8px;">
-          You've been invited to join <strong>${clubName}</strong> as a coach.
+          You've been invited to join the coaching staff at <strong>${clubName}</strong>.
         </p>
         <p style="font-size: 14px; color: #666; margin-bottom: 32px;">
           Click the button below to accept the invite and set up your account.
@@ -102,13 +102,13 @@ export async function sendRosterRecoveryEmail({
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `${clubName} added you on OffPitchOS — set your password`,
+    subject: `${clubName} added you on OffPitchOS: set your password`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
         <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">
           OffPitch<span style="color: #00FF87;">OS</span>
         </h1>
-        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Club Operating System</p>
+        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Team Operating System</p>
 
         <p style="font-size: 16px; color: #333; margin-bottom: 8px;">
           <strong>${clubName}</strong> just added you to OffPitchOS, the app your team runs on.
@@ -125,7 +125,7 @@ export async function sendRosterRecoveryEmail({
           Or copy this link: <a href="${recoveryUrl}" style="color: #00FF87;">${recoveryUrl}</a>
         </p>
         <p style="font-size: 12px; color: #94A3B8; margin-top: 16px;">
-          If you weren't expecting this, you can safely ignore the email — your account stays inactive until you set a password.
+          If you weren't expecting this, you can safely ignore this email. Your account stays inactive until you set a password.
         </p>
       </div>
     `,
@@ -161,7 +161,7 @@ export async function sendNotificationEmail({
         <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">
           OffPitch<span style="color: #00FF87;">OS</span>
         </h1>
-        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Club Operating System</p>
+        <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Team Operating System</p>
 
         <p style="font-size: 16px; color: #333; margin-bottom: 24px;">
           ${message}
@@ -174,7 +174,7 @@ export async function sendNotificationEmail({
         ` : ''}
 
         <p style="font-size: 12px; color: #94A3B8; margin-top: 32px;">
-          You're receiving this because you're a member of a club on OffPitchOS.
+          You're receiving this because you're on a team that uses OffPitchOS.
         </p>
       </div>
     `,

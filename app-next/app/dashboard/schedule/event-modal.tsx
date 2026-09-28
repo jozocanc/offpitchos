@@ -10,6 +10,14 @@ import SessionPlan from './session-plan'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
 import { teamLabel } from '@/lib/team-label'
+import {
+  type EventTravelFields,
+  type TravelInput,
+  TRAVEL_MODES,
+  TRAVEL_MODE_LABELS,
+  hasTravel,
+  suggestsTravel,
+} from '@/lib/travel'
 
 interface Team {
   id: string
@@ -23,7 +31,7 @@ interface Venue {
   address: string | null
 }
 
-interface EventData {
+interface EventData extends EventTravelFields {
   id: string
   team_id: string
   type: string
@@ -72,11 +80,49 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [checkingConflicts, setCheckingConflicts] = useState(false)
 
+  // Travel (away games / tournaments). Browser-local datetime inputs, same
+  // convention as the date + time fields above.
+  const hadTravel = hasTravel(editEvent)
+  const [travelDepartAt, setTravelDepartAt] = useState(toDateTimeLocal(editEvent?.travel_depart_at))
+  const [travelDepartLocation, setTravelDepartLocation] = useState(editEvent?.travel_depart_location ?? '')
+  const [travelReturnAt, setTravelReturnAt] = useState(toDateTimeLocal(editEvent?.travel_return_at))
+  const [travelMode, setTravelMode] = useState(editEvent?.travel_mode ?? '')
+  const [travelHotel, setTravelHotel] = useState(editEvent?.travel_hotel ?? '')
+  const [travelNotes, setTravelNotes] = useState(editEvent?.travel_notes ?? '')
+  // null = follow the away-game heuristic; true/false = the coach chose.
+  const [travelChoice, setTravelChoice] = useState<boolean | null>(null)
+
   // Auto-generate title from team + type
   const selectedTeam = teams.find(t => t.id === teamId)
   const autoTitle = selectedTeam
     ? `${selectedTeam.name} ${EVENT_TYPE_LABELS[type]}`
     : ''
+
+  const travelSuggested = suggestsTravel({ type, title: title || autoTitle, venueId, address })
+  const travelFilled = Boolean(
+    travelDepartAt || travelDepartLocation.trim() || travelReturnAt || travelMode ||
+    travelHotel.trim() || travelNotes.trim(),
+  )
+  // A recurring series has no single trip, so travel is single-event only.
+  const travelAllowed = !recurringEnabled
+  const showTravel = travelAllowed && (travelChoice ?? (hadTravel || travelFilled || travelSuggested))
+
+  function clearTravel() {
+    setTravelDepartAt('')
+    setTravelDepartLocation('')
+    setTravelReturnAt('')
+    setTravelMode('')
+    setTravelHotel('')
+    setTravelNotes('')
+  }
+
+  // Default departure: 3 hours before kickoff, the usual college away-trip
+  // lead time. Only fills an empty field.
+  function suggestDeparture() {
+    if (!date || !startTime) return
+    const kickoff = new Date(`${date}T${startTime}`)
+    setTravelDepartAt(toDateTimeLocal(new Date(kickoff.getTime() - 3 * 60 * 60 * 1000).toISOString()))
+  }
 
   // Check for conflicts when scheduling inputs change
   useEffect(() => {
@@ -158,6 +204,27 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
       return
     }
 
+    // Travel: sent whenever there is something to save or clear, even if the
+    // coach collapsed the section. Otherwise an existing event's stored trip
+    // is left untouched (undefined). The server skips no-op changes.
+    let travel: TravelInput | null | undefined = isEditing ? undefined : null
+    if (travelAllowed && (showTravel || travelFilled || hadTravel)) {
+      const departISO = travelDepartAt ? new Date(travelDepartAt).toISOString() : null
+      const returnISO = travelReturnAt ? new Date(travelReturnAt).toISOString() : null
+      if (departISO && returnISO && new Date(returnISO) <= new Date(departISO)) {
+        setError('Return time must be after the departure time')
+        return
+      }
+      travel = {
+        departAt: departISO,
+        departLocation: travelDepartLocation.trim() || null,
+        returnAt: returnISO,
+        mode: travelMode || null,
+        hotel: travelHotel.trim() || null,
+        notes: travelNotes.trim() || null,
+      }
+    }
+
     setError(null)
 
     startTransition(async () => {
@@ -174,6 +241,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             link: link.trim() || null,
             notes: notes.trim() || null,
             updateFuture,
+            travel,
           })
           if (!updRes.ok) { setError(updRes.error); return }
           counts = updRes.data
@@ -197,6 +265,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
               days: recurringDays,
               endDate: recurringEndDate,
             },
+            travel,
           })
           if (!crtRes.ok) { setError(crtRes.error); return }
           counts = crtRes.data
@@ -370,6 +439,128 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4 resize-none"
         />
 
+        {/* Travel — away games and tournaments */}
+        {travelAllowed && !showTravel && (
+          <button
+            type="button"
+            onClick={() => setTravelChoice(true)}
+            className="w-full mb-4 border border-dashed border-white/15 rounded-xl px-4 py-3 text-sm font-medium text-gray hover:text-green hover:border-green/40 transition-colors text-left"
+          >
+            + Add travel details
+          </button>
+        )}
+        {showTravel && (
+          <div className="mb-4 rounded-xl border border-green/20 bg-green/5 p-4">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-sm font-bold">Travel</p>
+                <p className="text-xs text-gray mt-0.5">Players and staff see this on the event and get a notification when it changes.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTravelChoice(false)}
+                className="text-xs text-gray hover:text-white transition-colors shrink-0"
+              >
+                Hide
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="travel-depart" className="block text-xs font-medium text-gray">Departs</label>
+                  {!travelDepartAt && date && startTime && (
+                    <button type="button" onClick={suggestDeparture} className="text-[11px] font-semibold text-green hover:opacity-80">
+                      3h before start
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="travel-depart"
+                  type="datetime-local"
+                  value={travelDepartAt}
+                  onChange={e => setTravelDepartAt(e.target.value)}
+                  className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="travel-mode" className="block text-xs font-medium text-gray mb-1.5">Transport</label>
+                <select
+                  id="travel-mode"
+                  value={travelMode}
+                  onChange={e => setTravelMode(e.target.value)}
+                  className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
+                >
+                  <option value="">Select</option>
+                  {TRAVEL_MODES.map(m => (
+                    <option key={m} value={m}>{TRAVEL_MODE_LABELS[m]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <label htmlFor="travel-from" className="block text-xs font-medium text-gray mb-1.5">Departs from</label>
+            <input
+              id="travel-from"
+              type="text"
+              value={travelDepartLocation}
+              onChange={e => setTravelDepartLocation(e.target.value)}
+              placeholder="e.g. Field house parking lot"
+              maxLength={200}
+              className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-3"
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label htmlFor="travel-return" className="block text-xs font-medium text-gray mb-1.5">Returns (approx.)</label>
+                <input
+                  id="travel-return"
+                  type="datetime-local"
+                  value={travelReturnAt}
+                  min={travelDepartAt || undefined}
+                  onChange={e => setTravelReturnAt(e.target.value)}
+                  className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="travel-hotel" className="block text-xs font-medium text-gray mb-1.5">
+                  Hotel <span className="text-gray/70 font-normal">(optional)</span>
+                </label>
+                <input
+                  id="travel-hotel"
+                  type="text"
+                  value={travelHotel}
+                  onChange={e => setTravelHotel(e.target.value)}
+                  placeholder="e.g. Hampton Inn"
+                  maxLength={200}
+                  className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors"
+                />
+              </div>
+            </div>
+
+            <label htmlFor="travel-notes" className="block text-xs font-medium text-gray mb-1.5">Itinerary and notes</label>
+            <textarea
+              id="travel-notes"
+              value={travelNotes}
+              onChange={e => setTravelNotes(e.target.value)}
+              placeholder={'Meal stops, dress code, what to bring.\ne.g. 11:30 team lunch at Cracker Barrel. Travel polo and khakis. Both kits, ID, pillow.'}
+              rows={4}
+              maxLength={4000}
+              className="w-full bg-dark border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors resize-y"
+            />
+
+            {travelFilled && (
+              <button
+                type="button"
+                onClick={clearTravel}
+                className="mt-2 text-xs text-red hover:opacity-80 transition-opacity"
+              >
+                Remove travel details
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Session plan — doc/coach only, editing existing events */}
         {isEditing && (userRole === 'doc' || userRole === 'coach') && (() => {
           const durationFromStartEnd =
@@ -471,4 +662,14 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
 
 function formatTimeInput(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// ISO timestamp -> "YYYY-MM-DDTHH:MM" in the browser's zone, for
+// <input type="datetime-local">. Browser-local to match the date/time fields.
+function toDateTimeLocal(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

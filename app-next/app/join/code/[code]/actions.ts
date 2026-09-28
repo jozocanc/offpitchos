@@ -37,7 +37,7 @@ async function _getTeamByCode(code: string) {
     teamName: team.name,
     ageGroup: team.age_group,
     clubId: team.club_id,
-    clubName: club?.name ?? 'Club',
+    clubName: club?.name ?? 'Team',
   }
 }
 

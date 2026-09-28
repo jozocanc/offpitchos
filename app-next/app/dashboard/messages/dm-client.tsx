@@ -78,7 +78,7 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
         <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
           <p className="text-gray text-lg">No direct messages yet.</p>
           <p className="text-gray text-sm mt-1">
-            Start a conversation — phone numbers stay private.
+            Start a conversation. Phone numbers stay private.
           </p>
         </div>
       ) : (
@@ -194,7 +194,7 @@ function ThreadView({
         </div>
         <div>
           <h2 className="font-bold text-white">{otherName}</h2>
-          <p className="text-xs text-gray">Private — phone numbers stay hidden</p>
+          <p className="text-xs text-gray">Private. Phone numbers stay hidden.</p>
         </div>
       </div>
 

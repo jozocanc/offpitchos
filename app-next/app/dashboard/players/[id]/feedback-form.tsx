@@ -137,7 +137,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
             <option value="">No event</option>
             {recentEvents.map(e => (
               <option key={e.id} value={e.id}>
-                {e.title} — {formatMonthDay(e.start_time, timezone)}
+                {e.title} · {formatMonthDay(e.start_time, timezone)}
               </option>
             ))}
           </select>

@@ -50,12 +50,12 @@ function SignupForm() {
       <div className="w-full max-w-md p-8">
         <div className="text-center mb-8">
           <Wordmark size="xl" className="mb-3" />
-          <p className="text-gray">Create your account</p>
+          <p className="text-gray">Create an account to set up your program or join your team</p>
         </div>
 
         <form onSubmit={handleEmailSignup} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm text-gray mb-1">Full Name</label>
+            <label htmlFor="name" className="block text-sm text-gray mb-1">Full name</label>
             <input
               id="name"
               type="text"
@@ -85,8 +85,8 @@ function SignupForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-dark-secondary border border-gray/20 rounded-lg text-white placeholder-gray focus:outline-none focus:ring-2 focus:ring-green"
-              placeholder="Min 6 characters"
-              minLength={6}
+              placeholder="At least 8 characters"
+              minLength={8}
               required
             />
           </div>
@@ -100,7 +100,7 @@ function SignupForm() {
             disabled={loading}
             className="w-full bg-green text-dark font-bold py-3 px-4 rounded-lg uppercase tracking-wider hover:shadow-[0_0_20px_rgba(0,255,135,0.4)] transition disabled:opacity-50"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 

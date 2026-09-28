@@ -18,7 +18,7 @@ async function getStaffProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No program found')
 
   const role = await getEffectiveRole(profile.role)
   if (role !== 'doc' && role !== 'coach') {
@@ -119,7 +119,7 @@ export async function importEventLoad(
   try {
     const { profile, supabase } = await getStaffProfile()
 
-    if (rows.length === 0) throw new Error('Nothing to import — no rows matched a player.')
+    if (rows.length === 0) throw new Error('Nothing to import: no rows matched a player.')
 
     // Confirm the event belongs to this club before writing anything against
     // it. RLS would refuse the insert anyway; this produces a sentence a human
@@ -131,7 +131,7 @@ export async function importEventLoad(
       .eq('club_id', profile.club_id)
       .single()
 
-    if (!event) throw new Error('That session is not in your club.')
+    if (!event) throw new Error('That session is not in your program.')
 
     const { error } = await supabase
       .from('event_player_load')

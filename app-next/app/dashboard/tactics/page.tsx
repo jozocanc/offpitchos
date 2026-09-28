@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isStaff } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { listDrills } from './actions'
 import LibraryClient from './library-client'
 
@@ -13,7 +15,7 @@ export default async function TacticsLibraryPage() {
   const { data: profile } = await supabase
     .from('profiles').select('id, role, club_id').eq('user_id', user.id).single()
   if (!profile?.club_id) redirect('/onboarding')
-  if (profile.role !== 'doc' && profile.role !== 'coach') redirect('/dashboard')
+  if (!isStaff(await getEffectiveRole(profile.role ?? 'player'))) redirect('/dashboard')
 
   const drills = await listDrills()
   const { data: teams } = await supabase

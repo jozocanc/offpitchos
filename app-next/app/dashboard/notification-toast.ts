@@ -41,17 +41,17 @@ const ZERO_HINT: Record<ToastAction, string> = {
 // direct-contact fallback instead.
 const TOTAL_FAILURE_HINT: Record<ToastAction, string> = {
   event_created:
-    "Event created, but emails didn't deliver. The event is saved — edit it in a few minutes to retry, or message the team directly.",
+    "Event created, but emails didn't deliver. The event is saved. Edit it in a few minutes to retry, or message the team directly.",
   event_updated:
-    "Schedule updated, but emails didn't deliver. The update is saved — save the event again in a few minutes to retry.",
+    "Schedule updated, but emails didn't deliver. The update is saved. Save the event again in a few minutes to retry.",
   event_cancelled:
-    "Event cancelled, but emails didn't deliver. The cancellation is saved — message the team directly so they don't show up.",
+    "Event cancelled, but emails didn't deliver. The cancellation is saved. Message the team directly so they don't show up.",
   event_restored:
-    "Event restored, but emails didn't deliver. The change is saved — save the event again in a few minutes to retry.",
+    "Event restored, but emails didn't deliver. The change is saved. Save the event again in a few minutes to retry.",
   announcement_posted:
-    "Posted, but emails didn't deliver. The announcement is saved — repost in a few minutes to retry, or message the team directly.",
+    "Posted, but emails didn't deliver. The announcement is saved. Repost in a few minutes to retry, or message the team directly.",
   camp_created:
-    "Camp created, but emails didn't deliver. The camp is saved — post an announcement to notify the team.",
+    "Camp created, but emails didn't deliver. The camp is saved. Post an announcement to notify the team.",
 }
 
 function pluralize(n: number, singular: string, plural: string): string {

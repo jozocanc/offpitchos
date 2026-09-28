@@ -26,7 +26,7 @@ async function getUserProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
 
   return { user, profile, supabase }
 }
@@ -70,7 +70,7 @@ async function notifyClubCoaches(
   await service.from('notifications').insert(notifications)
   const coachIds = coaches.map(c => c.id)
   await sendPushToProfiles(coachIds, { title: 'OffPitchOS', message, url: '/dashboard/coverage', tag: type })
-  sendEmailToProfiles(coachIds, 'OffPitchOS — Coverage', message, 'https://offpitchos.com/dashboard/coverage')
+  sendEmailToProfiles(coachIds, 'OffPitchOS: Coverage', message, 'https://offpitchos.com/dashboard/coverage')
 }
 
 async function notifySpecificProfiles(
@@ -91,7 +91,7 @@ async function notifySpecificProfiles(
 
   await service.from('notifications').insert(notifications)
   await sendPushToProfiles(profileIds, { title: 'OffPitchOS', message, url: '/dashboard/coverage', tag: type })
-  sendEmailToProfiles(profileIds, 'OffPitchOS — Coverage', message, 'https://offpitchos.com/dashboard/coverage')
+  sendEmailToProfiles(profileIds, 'OffPitchOS: Coverage', message, 'https://offpitchos.com/dashboard/coverage')
 }
 
 async function getDocProfileId(clubId: string): Promise<string | null> {
@@ -173,7 +173,7 @@ async function _createCoverageRequest(
 
   if (result.assigned) {
     // Auto-assigned! Notify the covering coach, unavailable coach, and DOC
-    const reasonSuffix = result.reason ? ` — ${result.reason}` : ''
+    const reasonSuffix = result.reason ? `: ${result.reason}` : ''
     const message = `${result.coachName} is covering ${event.title} on ${dateStr} at ${timeStr}${reasonSuffix}`
 
     const { data: assignedRequest } = await supabase
@@ -204,7 +204,7 @@ async function _createCoverageRequest(
         eventId,
         [docId],
         'coverage_escalated',
-        `No available coach found for ${event.title} on ${dateStr} — please assign manually`
+        `No available coach found for ${event.title} on ${dateStr}. Please assign manually.`
       )
     }
   }
@@ -414,7 +414,7 @@ async function _assignCoverage(requestId: string, coachProfileId: string) {
           .gt('end_time', event.start_time)
 
         if (conflicts && conflicts.length > 0) {
-          throw new Error(`${conflicts[0].title} conflicts — this coach is already busy at that time.`)
+          throw new Error(`${conflicts[0].title} conflicts: this coach is already busy at that time.`)
         }
       }
     }
@@ -499,7 +499,7 @@ async function _checkAndEscalateTimeouts() {
         req.event_id,
         [docId],
         'coverage_escalated',
-        `No one accepted coverage for ${event?.title ?? 'an event'} — assign manually`
+        `No one accepted coverage for ${event?.title ?? 'an event'}. Assign manually.`
       )
     }
   }

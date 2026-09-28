@@ -210,7 +210,7 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
             <div className="flex items-center gap-2 text-xs text-gray mt-2">
               <span className="inline-block w-2 h-2 bg-red-400 rounded-full animate-pulse shrink-0" />
               <span>
-                {transcript ? 'Still listening — take your time.' : 'Listening — take your time, speak naturally.'}
+                {transcript ? 'Still listening, take your time.' : 'Listening. Take your time and speak naturally.'}
                 {' '}
                 <button onClick={stopListening} className="text-green font-semibold hover:underline">
                   Tap to finish
@@ -222,7 +222,7 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
           {isProcessing && (
             <div className="flex items-center gap-2 text-sm text-gray">
               <span className="inline-block w-1.5 h-1.5 bg-green rounded-full animate-pulse" />
-              Ref is thinking...
+              Pep is thinking...
             </div>
           )}
 
@@ -290,7 +290,7 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
         onClick={isListening ? stopListening : startListening}
         disabled={isProcessing || isExecuting || isConfirming}
         aria-label={isListening ? 'Stop listening' : 'Voice command'}
-        title='Voice command — try: "Cancel U14 practice tonight"'
+        title='Voice command. Try: "Cancel practice tonight"'
         className={`fixed bottom-6 right-4 sm:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all
           ${isListening
             ? 'bg-red-500 text-white animate-pulse ring-4 ring-red-500/30 scale-110'

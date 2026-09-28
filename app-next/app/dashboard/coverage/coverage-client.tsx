@@ -57,7 +57,7 @@ export default function CoverageClient({
 
       {escalated.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-sm font-bold text-red uppercase tracking-wider mb-3">Escalated — Needs Your Attention</h2>
+          <h2 className="text-sm font-bold text-red uppercase tracking-wider mb-3">Escalated: needs your attention</h2>
           <div className="space-y-3">
             {escalated.map(req => (
               <RequestCard key={req.id} request={req} responses={responses} onAssign={setAssignRequestId} />
@@ -68,7 +68,7 @@ export default function CoverageClient({
 
       {pending.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-3">Active Requests</h2>
+          <h2 className="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-3">Active requests</h2>
           <div className="space-y-3">
             {pending.map(req => (
               <RequestCard key={req.id} request={req} responses={responses} onAssign={setAssignRequestId} />
@@ -230,7 +230,7 @@ function CoachRequestCard({
         )}
         {isEscalated && (
           <span className="text-xs font-bold bg-red/10 text-red px-2 py-0.5 rounded-full">
-            Escalated — DOC assigning
+            Escalated: head coach assigning
           </span>
         )}
         {isResolved && (
@@ -252,7 +252,7 @@ function CoachRequestCard({
       )}
       {isSelfRequest && !isResolved && (
         <p className="text-xs text-gray mt-2 italic">
-          Waiting for another coach to accept — we&apos;ll notify you when someone does.
+          Waiting for another coach to accept. We&apos;ll notify you when someone does.
         </p>
       )}
     </div>

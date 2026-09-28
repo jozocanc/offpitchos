@@ -10,7 +10,7 @@ import OnboardingChecklist from './onboarding-checklist'
 import DemoSeedButton from './demo-seed-button'
 import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
-import { getEffectiveRole } from '@/lib/admin-role'
+import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime } from '@/lib/format-datetime'
 import { isMember } from '@/lib/constants'
@@ -36,7 +36,14 @@ export default async function DashboardPage() {
   // Respect the "preview as" switcher (same helper as the layout)
   const userRole = await getEffectiveRole(profile?.role ?? 'player')
 
-  const displayName = profile?.display_name
+  // "View as → Player" renders the club's sample player's dashboard: their
+  // name in the greeting, their team memberships below.
+  const viewer = await getViewerIdentity()
+  const preview = viewer.isPreview ? viewer.previewPlayer : null
+  const viewerProfileId = preview ? viewer.profileId : (profile?.id ?? null)
+
+  const displayName = preview?.firstName
+    ?? profile?.display_name
     ?? claims.user_metadata?.full_name
     ?? claims.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
     ?? 'there'
@@ -61,7 +68,7 @@ export default async function DashboardPage() {
         <DashboardBody
           userRole={userRole}
           clubId={profile?.club_id ?? null}
-          profileId={profile?.id ?? null}
+          profileId={viewerProfileId}
         />
       </Suspense>
     </div>

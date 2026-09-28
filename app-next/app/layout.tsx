@@ -7,10 +7,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "OffPitchOS — The operating system for soccer clubs",
+    default: "OffPitchOS: The operating system for soccer teams",
     template: "%s | OffPitchOS",
   },
-  description: "The operating system for serious soccer clubs, academies and college programs. Scheduling, communication, coverage and tactics in one system.",
+  description: "The operating system for serious soccer teams. Schedule, player comms, gear, travel and tactics in one system for the head coach, staff and players.",
   metadataBase: new URL(appUrl()),
   manifest: "/manifest.json",
   appleWebApp: {
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
     title: "OffPitchOS",
   },
   openGraph: {
-    title: "OffPitchOS — The operating system for soccer clubs",
-    description: "The operating system for serious soccer clubs, academies and college programs. Scheduling, communication, coverage and tactics in one system.",
+    title: "OffPitchOS: The operating system for soccer teams",
+    description: "The operating system for serious soccer teams. Schedule, player comms, gear, travel and tactics in one system for the head coach, staff and players.",
     siteName: "OffPitchOS",
   },
 };

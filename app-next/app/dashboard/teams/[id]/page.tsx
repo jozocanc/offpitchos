@@ -17,6 +17,7 @@ import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
 import { isMember, roleLabel } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 interface Member {
   profile_id: string
@@ -113,7 +114,22 @@ export default async function TeamDetailPage({
     .eq('team_id', id)
     .order('last_name', { ascending: true })
 
-  const players = (playersRaw ?? []) as Player[]
+  let players = (playersRaw ?? []) as Player[]
+
+  // A player's RLS only returns their own row (migration 053). Show them the
+  // squad through get_team_roster: name, number and position, nothing private.
+  if (profile?.role !== 'doc' && profile?.role !== 'coach') {
+    const { data: roster } = await supabase.rpc('get_team_roster', { p_team_id: id })
+    if (roster && roster.length > 0) {
+      const own = new Map(players.map(p => [p.id, p]))
+      players = (roster as Pick<Player, 'id' | 'first_name' | 'last_name' | 'jersey_number' | 'position'>[]).map(r => own.get(r.id) ?? {
+        ...r,
+        parent_id: '',
+        jersey_size: null,
+        shorts_size: null,
+      })
+    }
+  }
 
   // Attendance: pull last-30-day scheduled events for this team, then pull the
   // attendance rows keyed by (event_id, player_id). We aggregate per player on
@@ -170,8 +186,11 @@ export default async function TeamDetailPage({
 
   const baseUrl = appUrl()
 
-  const isDOC = profile?.role === 'doc'
-  const isSquadMember = isMember(profile?.role)
+  // Respect "View as → Player" so the head coach sees the player's team page,
+  // not the admin controls, when previewing.
+  const viewRole = profile?.role ? await getEffectiveRole(profile.role) : profile?.role
+  const isDOC = viewRole === 'doc'
+  const isSquadMember = isMember(viewRole)
   const coaches = members.filter(m => m.role === 'coach')
   const playerAccounts = members.filter(m => isMember(m.role))
 
@@ -189,8 +208,10 @@ export default async function TeamDetailPage({
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/dashboard/teams" className="text-gray text-sm hover:text-white transition-colors mb-4 inline-block">
-          ← Back to Teams
+        {/* ?all=1: the list redirects straight back here when the program has
+            a single team, so the link must opt out of that. */}
+        <Link href="/dashboard/teams?all=1" className="text-gray text-sm hover:text-white transition-colors mb-4 inline-block">
+          ← All teams
         </Link>
         <div className="flex items-center gap-3 mt-1">
           <h1 className="text-3xl font-black tracking-tight">{team.name}</h1>

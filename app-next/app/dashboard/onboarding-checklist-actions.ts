@@ -107,7 +107,7 @@ export async function dismissOnboarding(): Promise<{ ok: boolean; error?: string
     .single()
 
   if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'Only DOCs can dismiss the checklist' }
+    return { ok: false, error: 'Only the head coach can dismiss the checklist' }
   }
 
   const state = await getOnboardingState()

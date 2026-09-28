@@ -3,8 +3,9 @@
 import EventCard from './event-card'
 import { useClubTimezone } from '@/components/club-timezone'
 import { dayKey, daysFromToday, formatDayKeyLong } from '@/lib/format-datetime'
+import type { EventTravelFields } from '@/lib/travel'
 
-interface Event {
+interface Event extends EventTravelFields {
   id: string
   team_id: string
   type: string

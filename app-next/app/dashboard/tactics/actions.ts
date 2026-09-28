@@ -114,7 +114,7 @@ async function _createBlankDrill(teamId: string | null): Promise<string> {
     .select('id, role, club_id')
     .eq('user_id', user.id)
     .single()
-  if (!profile?.club_id) throw new Error('No club')
+  if (!profile?.club_id) throw new Error('No program found for this account')
   if (profile.role !== 'doc' && profile.role !== 'coach') throw new Error('Forbidden')
 
   const { data, error } = await supabase.from('drills').insert({
@@ -168,7 +168,7 @@ async function _duplicateDrill(drillId: string): Promise<string> {
   if (!user) throw new Error('Not authenticated')
   const { data: profile } = await supabase
     .from('profiles').select('id, club_id').eq('user_id', user.id).single()
-  if (!profile?.club_id) throw new Error('No club')
+  if (!profile?.club_id) throw new Error('No program found for this account')
 
   const { data: src } = await supabase.from('drills').select('*').eq('id', drillId).single()
   if (!src) throw new Error('Not found')

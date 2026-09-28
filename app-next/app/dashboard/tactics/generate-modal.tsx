@@ -128,7 +128,7 @@ export default function GenerateModal({
                 autoFocus
                 rows={4}
                 placeholder={
-                  'Describe your drill in English or German — e.g., ' +
+                  'Describe your drill, e.g. ' +
                   '"6v4 rondo in the middle third with 2 neutrals, attackers can only take 2 touches"'
                 }
                 className={[
@@ -175,7 +175,7 @@ export default function GenerateModal({
                   disabled={isPending}
                   className="w-full bg-dark border border-white/10 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-green disabled:opacity-50 transition"
                 >
-                  <option value="">Club-wide (no specific team)</option>
+                  <option value="">Program-wide (no specific team)</option>
                   {teams.map(t => (
                     <option key={t.id} value={t.id}>
                       {t.name}

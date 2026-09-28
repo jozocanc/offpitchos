@@ -8,6 +8,7 @@ import { type ActionResult, toActionError } from '@/lib/action-result'
 import { isMember } from '@/lib/constants'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate } from '@/lib/format-datetime'
+import { getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 
 // Player-scoped prioritization. Mirrors the DOC and coach attention panels
 // but keyed off the player's own roster row rather than team-wide state.
@@ -70,12 +71,18 @@ async function getParentContext() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club found')
+  if (!profile?.club_id) throw new Error('No team found')
   return { user, profile, supabase }
 }
 
 export async function getParentAttention(): Promise<ParentAttentionResult> {
-  const { user, profile, supabase } = await getParentContext()
+  const { profile: realProfile, supabase } = await getParentContext()
+  // In "View as → Player" preview this is the club's sample player; the DOC's
+  // own client can read their rows under players_doc_all. Otherwise it is the
+  // signed-in user.
+  const viewer = await getViewerIdentity()
+  const user = { id: viewer.userId }
+  const profile = { ...realProfile, id: viewer.profileId ?? realProfile.id }
 
   // Teams this player is a member of. Used both to scope the claim flow
   // (only show roster rows on teams they belong to) and to key downstream
@@ -87,6 +94,11 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
     .in('role', ['player', 'parent'])
 
   const teamIds = (memberships ?? []).map(m => m.team_id)
+  // Preview fallback: the sample owns a roster row even if it lacks a
+  // team_members row, so its team still counts.
+  if (viewer.previewPlayer && !teamIds.includes(viewer.previewPlayer.teamId)) {
+    teamIds.push(viewer.previewPlayer.teamId)
+  }
 
   if (teamIds.length === 0) {
     return {
@@ -351,6 +363,7 @@ async function _claimPlayers(playerIds: string[]): Promise<{
   claimed: number
   skipped: number
 }> {
+  await assertNotPreview()
   const { user, profile, supabase } = await getParentContext()
   if (!isMember(profile.role)) throw new Error('Only players can link a roster spot')
   if (playerIds.length === 0) return { claimed: 0, skipped: 0 }

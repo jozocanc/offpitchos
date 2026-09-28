@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { saveCollectedDetails, type CollectPlayer } from './actions'
+import { GEAR_SIZES, gearSizeLabel } from '@/lib/constants'
 
-const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
+const JERSEY_SIZES: readonly string[] = GEAR_SIZES
 
 const inputClass =
   'w-full px-4 py-3 bg-dark border border-gray/20 rounded-lg text-white placeholder-gray focus:outline-none focus:ring-2 focus:ring-green'
@@ -21,6 +22,8 @@ export default function CollectForm({
   const [emergencyContactName, setEmergencyContactName] = useState(player.emergencyContactName ?? '')
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(player.emergencyContactPhone ?? '')
   const [dietaryNotes, setDietaryNotes] = useState(player.dietaryNotes ?? '')
+  const [passportExpiry, setPassportExpiry] = useState(player.passportExpiry ?? '')
+  const [hasTravelId, setHasTravelId] = useState<boolean | null>(player.hasTravelId)
 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -38,6 +41,8 @@ export default function CollectForm({
       emergencyContactName,
       emergencyContactPhone,
       dietaryNotes,
+      passportExpiry,
+      hasTravelId,
     })
 
     setSaving(false)
@@ -77,7 +82,7 @@ export default function CollectForm({
             className={inputClass}
           >
             <option value="">Select</option>
-            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </div>
         <div>
@@ -89,7 +94,7 @@ export default function CollectForm({
             className={inputClass}
           >
             <option value="">Select</option>
-            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </div>
       </div>
@@ -144,6 +149,48 @@ export default function CollectForm({
           placeholder="Leave blank if none"
         />
       </div>
+
+      <fieldset className="border-t border-white/10 pt-5 space-y-4">
+        <legend className="text-sm font-semibold text-white pr-2">Travel</legend>
+
+        <div>
+          <p className="block text-sm text-gray mb-2">
+            Do you have a valid government photo ID for travel?
+            <span className="block text-xs text-gray/70 mt-0.5">REAL ID driver license, state ID or passport</span>
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {([true, false] as const).map(v => (
+              <button
+                key={String(v)}
+                type="button"
+                aria-pressed={hasTravelId === v}
+                onClick={() => setHasTravelId(hasTravelId === v ? null : v)}
+                className={`py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+                  hasTravelId === v
+                    ? 'bg-green text-dark border-green'
+                    : 'bg-dark border-gray/20 text-gray hover:text-white'
+                }`}
+              >
+                {v ? 'Yes' : 'Not yet'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="passport" className="block text-sm text-gray mb-1">
+            Passport expiry date <span className="text-gray/60">(optional)</span>
+          </label>
+          <input
+            id="passport"
+            type="date"
+            value={passportExpiry}
+            onChange={(e) => setPassportExpiry(e.target.value)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray/70 mt-1">Only the date. Never enter your passport number here.</p>
+        </div>
+      </fieldset>
 
       {error && <p className="text-red text-sm">{error}</p>}
 

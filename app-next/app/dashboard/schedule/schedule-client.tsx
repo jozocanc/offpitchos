@@ -15,8 +15,9 @@ import AttendanceModal from './attendance-modal'
 import { cancelEvent, restoreEvent, getPastEvents } from './actions'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
+import type { EventTravelFields } from '@/lib/travel'
 
-interface Event {
+interface Event extends EventTravelFields {
   id: string
   team_id: string
   type: string

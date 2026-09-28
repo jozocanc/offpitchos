@@ -30,7 +30,7 @@ export async function extractPdfPages(
     const buf = await file.arrayBuffer()
     doc = await pdfjsLib.getDocument({ data: buf }).promise
   } catch {
-    throw new PdfExtractError("Couldn't open that file — make sure it's a valid PDF.")
+    throw new PdfExtractError("Couldn't open that file. Make sure it's a valid PDF.")
   }
 
   const pages: ExtractedPage[] = []

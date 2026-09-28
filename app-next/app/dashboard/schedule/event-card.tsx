@@ -6,9 +6,11 @@ import CoverageActionsInline from './coverage-actions-inline'
 import EventPhotosModal from './event-photos-modal'
 import { useClubTimezone } from '@/components/club-timezone'
 import { formatTimeRange } from '@/lib/format-datetime'
+import type { EventTravelFields } from '@/lib/travel'
+import TravelStrip from './travel-strip'
 
 interface EventCardProps {
-  event: {
+  event: EventTravelFields & {
     id: string
     type: string
     title: string
@@ -253,6 +255,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           </div>
         )}
       </div>
+      {!isCancelled && <TravelStrip travel={event} eventStartIso={event.start_time} />}
       {showRsvpTally && rsvpTally && rsvpTally.totalKids > 0 && (
         <div className="mt-2 flex items-center gap-3 text-xs">
           <span className="inline-flex items-center gap-1 text-green">

@@ -215,9 +215,9 @@ async function _generateDrillFromDescription(
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club associated with this account')
+  if (!profile?.club_id) throw new Error('No program associated with this account')
   if (profile.role !== 'doc' && profile.role !== 'coach') {
-    throw new Error('Only DOCs and coaches can generate drills')
+    throw new Error('Only the coaching staff can generate drills')
   }
 
   // ── Resolve teamId ──────────────────────────────────────────────────────────
@@ -298,7 +298,7 @@ async function _generateDrillFromDescription(
   if (!parseResult.success) {
     console.error('[AI Tactics] Second attempt also failed validation:', parseResult.error.issues)
     throw new Error(
-      "Couldn't generate from that description — try being more specific " +
+      "Couldn't generate from that description. Try being more specific " +
         '(e.g., include number of players, field size, or drill type).',
     )
   }
@@ -451,9 +451,9 @@ async function _generateDrillFromPdf(
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('No club associated with this account')
+  if (!profile?.club_id) throw new Error('No program associated with this account')
   if (profile.role !== 'doc' && profile.role !== 'coach') {
-    throw new Error('Only DOCs and coaches can import drills')
+    throw new Error('Only the coaching staff can import drills')
   }
 
   const pages = (input.pages ?? []).slice(0, 5)
@@ -508,7 +508,7 @@ async function _generateDrillFromPdf(
   if (!parseResult.success) {
     console.error('[AI Tactics PDF] Second attempt also failed validation:', parseResult.error.issues)
     throw new Error(
-      "Couldn't reproduce that drill from the PDF — the diagram may be too unclear. " +
+      "Couldn't reproduce that drill from the PDF; the diagram may be too unclear. " +
         'Try a cleaner PDF or build the drill manually.',
     )
   }

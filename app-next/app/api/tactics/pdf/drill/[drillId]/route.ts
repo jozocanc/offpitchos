@@ -76,7 +76,7 @@ export async function GET(
     resolveThumbnail(row),
   ])
   const creatorName = creatorRes.data?.display_name ?? 'Unknown'
-  const teamName = teamRes.data?.name ?? 'Club-wide'
+  const teamName = teamRes.data?.name ?? 'Program-wide'
 
   const element = React.createElement(DrillPDF, {
     drill: parsed.data,

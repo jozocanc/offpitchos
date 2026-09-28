@@ -63,7 +63,7 @@ async function _addVenue(formData: FormData) {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile?.club_id) throw new Error('Could not find your club')
+  if (!profile?.club_id) throw new Error('Could not find your program')
 
   const { error } = await supabase
     .from('venues')

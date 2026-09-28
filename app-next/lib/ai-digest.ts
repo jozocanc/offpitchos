@@ -209,7 +209,7 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   return {
     weekStart: fmtDate(weekStart),
     weekEnd: fmtDate(new Date(weekEnd.getTime())),
-    clubName: club?.name ?? 'the club',
+    clubName: club?.name ?? 'the team',
     events: {
       total: (events ?? []).length,
       practices: (events ?? []).filter(e => e.type === 'practice').length,
@@ -234,15 +234,16 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   }
 }
 
-const DIGEST_SYSTEM = `You are Pep AI, the OffPitchOS club assistant. Write a weekly digest that anyone in the club can skim in under 30 seconds.
+const DIGEST_SYSTEM = `You are Pep AI, the OffPitchOS assistant for a college or club soccer team. Write a weekly digest for the coaching staff (the head coach and assistant coaches) that they can skim in under 30 seconds. Players are adults; there are no parents. Call the organisation the team or program, never "club".
 
-Tone: warm, direct, slightly proud — like a great club president would email.
+Tone: direct and specific, like a sharp assistant coach briefing the head coach.
+Never use em-dashes; use commas, colons or periods.
 Style: markdown. Short sections. Real names. Specific numbers.
 Length: 200–280 words total.
 NEVER invent data. If a stat is zero or missing, just say so or skip it.
 
 Structure:
-1. One-line greeting that names the club and the week.
+1. One-line opener that names the team and the week.
 2. A "What happened" section with 3-5 bullet points of real numbers (events run, attendance rate, etc).
 3. A "Standouts" section spotlighting 2–3 players from feedbackHighlights, calling out the coach note in plain language.
 4. A "Coming up" section listing the next 3-4 events with day + team.
@@ -268,7 +269,7 @@ ${JSON.stringify(stats, null, 2)}`,
 
   const block = message.content[0]
   if (block.type === 'text') return block.text
-  return `# Weekly Recap\n\nDigest could not be generated — please try again later.`
+  return `# Weekly Recap\n\nThe digest could not be generated. Please try again later.`
 }
 
 export async function generateAndStoreDigest(clubId: string, generatedBy: string | null = null): Promise<{ id: string; weekStart: string; markdown: string; stats: DigestStats }> {

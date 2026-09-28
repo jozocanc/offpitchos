@@ -102,7 +102,7 @@ export default function VenuesSection() {
           onClick={openAdd}
           className="bg-green text-dark font-bold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity text-sm"
         >
-          + Add Venue
+          + Add venue
         </button>
       </div>
 
@@ -110,7 +110,7 @@ export default function VenuesSection() {
         <div className="bg-dark rounded-xl border border-dashed border-white/10 px-4 py-8 text-center">
           <div className="text-3xl mb-2">📍</div>
           <p className="text-white text-sm font-medium">No venues saved yet</p>
-          <p className="text-gray text-xs mt-1">Add your first venue to use when scheduling events.</p>
+          <p className="text-gray text-xs mt-1">Save your home field and training pitch so you can pick them when scheduling.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -147,7 +147,7 @@ export default function VenuesSection() {
         >
           <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
             <h2 className="text-xl font-bold mb-6">
-              {editingVenue ? 'Edit Venue' : 'Add a Venue'}
+              {editingVenue ? 'Edit venue' : 'Add a venue'}
             </h2>
 
             <label className="block text-sm font-medium text-gray mb-2">Venue name</label>
@@ -155,7 +155,7 @@ export default function VenuesSection() {
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="e.g. Riverside Field"
+              placeholder="e.g. Home Stadium"
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
               autoFocus
             />
@@ -165,7 +165,7 @@ export default function VenuesSection() {
               type="text"
               value={address}
               onChange={e => setAddress(e.target.value)}
-              placeholder="e.g. 123 Main St, Springfield"
+              placeholder="Street address, city, state"
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-2"
             />
 
@@ -183,7 +183,7 @@ export default function VenuesSection() {
                 disabled={isPending}
                 className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isPending ? 'Saving…' : editingVenue ? 'Save Changes' : 'Add Venue'}
+                {isPending ? 'Saving…' : editingVenue ? 'Save changes' : 'Add venue'}
               </button>
             </div>
           </div>

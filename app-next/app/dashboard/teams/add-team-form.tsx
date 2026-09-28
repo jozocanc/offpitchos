@@ -69,7 +69,7 @@ export default function AddTeamForm() {
               type="text"
               value={teamName}
               onChange={e => setTeamName(e.target.value)}
-              placeholder="e.g. U14 Girls Gold"
+              placeholder="e.g. Reserves"
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
               autoFocus
             />

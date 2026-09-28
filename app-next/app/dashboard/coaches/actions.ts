@@ -35,7 +35,7 @@ export async function inviteCoach(
     .single()
 
   if (profileError || !profile?.club_id) {
-    throw new Error('Could not find your club')
+    throw new Error('Could not find your program')
   }
   if (profile.role !== ROLES.DOC) throw new Error('Only the head coach can invite staff')
 
@@ -71,7 +71,7 @@ export async function inviteCoach(
   try {
     await sendCoachInviteEmail({
       to: email.trim(),
-      clubName: club?.name ?? 'your club',
+      clubName: club?.name ?? 'your team',
       joinUrl: `${baseUrl}/join/${invite.token}`,
     })
     return { ok: true, data: { emailSent: true } }
@@ -142,7 +142,7 @@ export async function resendInvite(
     try {
       await sendCoachInviteEmail({
         to: invite.email,
-        clubName: club?.name ?? 'your club',
+        clubName: club?.name ?? 'your team',
         joinUrl: `${baseUrl}/join/${invite.token}`,
       })
       emailSent = true

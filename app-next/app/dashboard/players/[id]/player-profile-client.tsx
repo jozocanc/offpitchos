@@ -8,8 +8,9 @@ import DevelopmentChart from './development-chart'
 import { submitPlayerSize } from './actions'
 import { useToast } from '@/components/toast'
 import { teamLabel } from '@/lib/team-label'
+import { GEAR_SIZES, gearSizeLabel } from '@/lib/constants'
 
-const JERSEY_SIZES = ['YXS', 'YS', 'YM', 'YL', 'YXL', 'AS', 'AM', 'AL', 'AXL', 'AXXL']
+const JERSEY_SIZES: readonly string[] = GEAR_SIZES
 
 interface Feedback {
   id: string
@@ -101,7 +102,7 @@ function GearSizesEditor({
             className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
           >
             <option value="">—</option>
-            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </label>
         <label className="block">
@@ -112,7 +113,7 @@ function GearSizesEditor({
             className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
           >
             <option value="">—</option>
-            {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </label>
         <button
@@ -163,8 +164,8 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
           </div>
           {!canEditSize && player.jersey_size && (
             <div className="text-right text-xs text-gray">
-              <p>Jersey: {player.jersey_size}</p>
-              {player.shorts_size && <p>Shorts: {player.shorts_size}</p>}
+              <p>Jersey: {gearSizeLabel(player.jersey_size)}</p>
+              {player.shorts_size && <p>Shorts: {gearSizeLabel(player.shorts_size)}</p>}
             </div>
           )}
         </div>
@@ -239,7 +240,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
                     </div>
                     <p className="text-sm text-white/80 mb-2">{f.notes}</p>
                     <div className="flex items-center gap-2 text-xs text-gray">
-                      <span>— {coachName}</span>
+                      <span>· {coachName}</span>
                       {event && (
                         <span>· {event.title} ({formatMonthDay(event.start_time, timezone)})</span>
                       )}

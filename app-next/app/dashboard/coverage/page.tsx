@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isStaff } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 import { getCoverageData } from './actions'
 import CoverageClient from './coverage-client'
 
@@ -20,7 +22,7 @@ export default async function CoveragePage() {
   // Players get redirected — they have no coverage actions. DOC and coach
   // both see the page, but the client component renders different surfaces
   // based on role (DOC manages/assigns, coach accepts/declines).
-  if (profile?.role !== 'doc' && profile?.role !== 'coach') {
+  if (!isStaff(await getEffectiveRole(profile?.role ?? 'player'))) {
     redirect('/dashboard')
   }
 

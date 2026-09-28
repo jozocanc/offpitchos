@@ -6,11 +6,11 @@ import Link from 'next/link'
 import VenuesSection from './venues-section'
 
 export const metadata: Metadata = { title: 'Settings' }
-import CoverageSettings from './coverage-settings'
 import AccountSettings from './account-settings'
 import DangerZone from './danger-zone'
 import StripeConnect from './stripe-connect'
 import { isStaff } from '@/lib/constants'
+import { getEffectiveRole } from '@/lib/admin-role'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
     .single()
 
   // Staff-only page. Was `role === 'parent'`, which would have let a player in.
-  if (!isStaff(profile?.role)) redirect('/dashboard')
+  if (!isStaff(await getEffectiveRole(profile?.role ?? 'player'))) redirect('/dashboard')
 
   const { data: club } = await supabase
     .from('clubs')
@@ -38,7 +38,7 @@ export default async function SettingsPage() {
     <div className="p-6 md:p-10 max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight">Settings</h1>
-        <p className="text-gray text-sm mt-1">Manage your club settings</p>
+        <p className="text-gray text-sm mt-1">Manage your program and your account</p>
       </div>
 
       <div className="space-y-6">
@@ -51,19 +51,19 @@ export default async function SettingsPage() {
           staffTitle={profile?.staff_title}
         />
 
-        {/* Club invite link */}
+        {/* Staff invites */}
         {profile?.role === 'doc' && (
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-            <h2 className="text-lg font-bold mb-2">Club Coaches Link</h2>
+            <h2 className="text-lg font-bold mb-2">Staff invites</h2>
             <p className="text-gray text-sm mb-4">
-              Use the Coaches page to generate invite links for specific coaches or teams.
+              Invite assistant, goalkeeping and fitness coaches from the Staff page.
             </p>
-            <a
+            <Link
               href="/dashboard/coaches"
               className="inline-block text-sm font-bold text-green hover:underline"
             >
-              Go to Coaches page →
-            </a>
+              Go to Staff →
+            </Link>
           </section>
         )}
 
@@ -71,7 +71,7 @@ export default async function SettingsPage() {
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <h2 className="text-lg font-bold mb-2">Roster import</h2>
             <p className="text-gray text-sm mb-4">
-              Bulk-import teams and players from a CSV.
+              Bulk-import your players from a CSV roster.
             </p>
             <Link
               href="/dashboard/roster-import"
@@ -86,14 +86,12 @@ export default async function SettingsPage() {
 
         {profile?.role === 'doc' && <StripeConnect />}
 
-        {profile?.role === 'doc' && <CoverageSettings />}
-
         <DangerZone userRole={profile?.role ?? 'player'} />
 
         <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
           <h2 className="text-lg font-bold mb-2">Legal</h2>
           <p className="text-gray text-sm mb-4">
-            We never sell your data or train AI models on your club&rsquo;s info.
+            We never sell your data or train AI models on your team&rsquo;s information.
           </p>
           <div className="flex gap-4 text-sm font-bold">
             <a href="/privacy" className="text-green hover:underline">Privacy Policy →</a>
