@@ -275,21 +275,21 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: 
       <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/5">
         {canSwitchRole && (
           <div className="mb-3">
-            <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">Preview as</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">View as</p>
             <div className="flex gap-1">
-            {/* Staff (DOC, coach) and players only: the product is team-only,
-                there is no parent view to preview. */}
-            {(['doc', 'coach', 'player'] as const).map(role => (
+            {/* Two perspectives only: the coaching staff and a player. The head
+                coach's own view is the coach view. */}
+            {([['doc', 'Coach'], ['player', 'Player']] as const).map(([role, label]) => (
               <button
                 key={role}
                 onClick={() => switchRole(role)}
-                className={`flex-1 text-xs py-1 rounded font-medium transition-colors capitalize ${
+                className={`flex-1 text-xs py-1 rounded font-medium transition-colors ${
                   activeRole === role
                     ? 'bg-green text-dark'
                     : 'bg-white/5 text-gray hover:text-white'
                 }`}
               >
-                {role === 'doc' ? 'DOC' : role}
+                {label}
               </button>
             ))}
             </div>

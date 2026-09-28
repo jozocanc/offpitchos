@@ -21,7 +21,7 @@ async function getDocProfile() {
     .single()
 
   if (!profile?.club_id) throw new Error('No club found')
-  if (profile.role !== 'doc') throw new Error('Only DOC can generate digests')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can generate digests')
 
   return { user, profile, supabase }
 }

@@ -85,3 +85,22 @@ export const COVERAGE_STATUS_LABELS: Record<CoverageStatus, string> = {
 
 export const COVERAGE_RESPONSE_TYPES = ['accepted', 'declined'] as const
 export type CoverageResponseType = (typeof COVERAGE_RESPONSE_TYPES)[number]
+
+// One head coach (role 'doc', the person who created the team) and a staff of
+// coaches under them. A title is only a label: every titled staff member is
+// role 'coach' with the same permissions. Stored in profiles.staff_title.
+export const STAFF_TITLES = [
+  'Assistant Coach',
+  'Goalkeeping Coach',
+  'Fitness Coach',
+  'Video Analyst',
+] as const
+
+export const DEFAULT_STAFF_TITLE = 'Assistant Coach'
+
+export function roleLabel(role: string | null | undefined, staffTitle?: string | null): string {
+  if (role === ROLES.DOC) return 'Head Coach'
+  if (role === ROLES.COACH) return staffTitle || DEFAULT_STAFF_TITLE
+  if (role === ROLES.PLAYER || role === ROLES.PARENT) return 'Player'
+  return 'Member'
+}

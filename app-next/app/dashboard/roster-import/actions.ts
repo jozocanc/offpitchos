@@ -53,7 +53,7 @@ export async function previewImport(
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'DOC role required' }
+    return { ok: false, error: 'Only the head coach can do this' }
   }
 
   if (rows.length > MAX_ROWS) {
@@ -242,7 +242,7 @@ export async function commitImport(
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'DOC role required' }
+    return { ok: false, error: 'Only the head coach can do this' }
   }
 
   const service = createServiceClient()
@@ -453,7 +453,7 @@ export async function sendParentRecoveryEmails(
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'DOC role required' }
+    return { ok: false, error: 'Only the head coach can do this' }
   }
 
   // Security: verify these member profiles all belong to the DOC's club.

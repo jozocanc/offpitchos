@@ -19,7 +19,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id, display_name, role')
+    .select('club_id, display_name, role, staff_title')
     .eq('user_id', user.id)
     .single()
 
@@ -48,6 +48,7 @@ export default async function SettingsPage() {
           email={user.email ?? ''}
           isDOC={profile?.role === 'doc'}
           role={profile?.role}
+          staffTitle={profile?.staff_title}
         />
 
         {/* Club invite link */}

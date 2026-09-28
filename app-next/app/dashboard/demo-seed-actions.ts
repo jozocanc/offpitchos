@@ -117,7 +117,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     .single()
 
   if (!profile?.club_id || profile.role !== 'doc') {
-    throw new Error('Only the Director of Coaching can seed demo data')
+    throw new Error('Only the head coach can seed demo data')
   }
 
   const state = await getDemoSeedState()
@@ -503,7 +503,7 @@ async function _clearDemoData(): Promise<DemoClearResult> {
     .single()
 
   if (!profile?.club_id || profile.role !== 'doc') {
-    throw new Error('Only the Director of Coaching can clear demo data')
+    throw new Error('Only the head coach can clear demo data')
   }
 
   const admin = createServiceClient()

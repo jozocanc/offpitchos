@@ -16,7 +16,7 @@ import PublicShareCard from './public-share-card'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
-import { isMember } from '@/lib/constants'
+import { isMember, roleLabel } from '@/lib/constants'
 
 interface Member {
   profile_id: string
@@ -88,7 +88,7 @@ export default async function TeamDetailPage({
   // players.parent_id for the "linked" check.
   const { data: membersRaw } = await supabase
     .from('team_members')
-    .select('profile_id, role, profiles(display_name, user_id)')
+    .select('profile_id, role, profiles(display_name, user_id, staff_title)')
     .eq('team_id', id)
 
   const members = (membersRaw ?? []).map(m => ({
@@ -249,7 +249,7 @@ export default async function TeamDetailPage({
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{m.profiles?.display_name ?? 'Unknown'}</p>
-                      <p className="text-gray text-xs">Coach</p>
+                      <p className="text-gray text-xs">{roleLabel('coach', (m.profiles as { staff_title?: string | null } | null)?.staff_title)}</p>
                     </div>
                     {isDOC && <RemoveMemberButton teamId={team.id} userId={m.user_id} />}
                   </div>

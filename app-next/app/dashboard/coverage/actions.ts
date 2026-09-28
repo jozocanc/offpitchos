@@ -240,7 +240,7 @@ async function _getAssignmentSuggestions(requestId: string): Promise<RankedCandi
   const { profile, supabase } = await getUserProfile()
 
   if (profile.role !== 'doc') {
-    throw new Error('Only the Director of Coaching can view assignment suggestions')
+    throw new Error('Only the head coach can view assignment suggestions')
   }
 
   const { data: request, error } = await supabase

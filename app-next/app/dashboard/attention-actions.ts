@@ -75,7 +75,7 @@ async function getUserProfile() {
   return { user, profile, supabase }
 }
 
-const ATTENTION_PROMPT = `You are triaging the inbox of a soccer club Director of Coaching (DOC).
+const ATTENTION_PROMPT = `You are triaging the inbox of a soccer team's head coach.
 
 Your job: from the raw signals below, produce a short prioritized list of things the DOC needs to act on RIGHT NOW. This is what they see when they sit down at their desk.
 
@@ -299,7 +299,7 @@ export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: b
     const signalId = `gear-missing`
     hrefBySignalId.set(signalId, '/dashboard/gear')
     signalParts.push(`\n## Gear sizes missing`)
-    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players in the club are missing jersey or shorts sizes. DOC can request them from the players with one click on the Gear page.`)
+    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players in the club are missing jersey or shorts sizes. The head coach can request them from the players with one click on the Gear page.`)
   }
 
   // Pending invites (older than 3 days)

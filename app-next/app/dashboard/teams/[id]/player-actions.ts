@@ -107,7 +107,7 @@ async function _linkPlayerToParent(playerId: string, accountUserId: string, team
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the DOC can link a player account')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can link a player account')
   if (!profile.club_id) throw new Error('No club found')
 
   // Look up the target account's profile PK so we can query team_members by profile_id.
@@ -171,7 +171,7 @@ async function _createPlayerScopedInvite(
     .single()
 
   if (!profile?.club_id) throw new Error('No club found')
-  if (profile.role !== 'doc') throw new Error('Only the DOC can create player invites')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can create player invites')
 
   // Verify the player belongs to the team (and the team to this club) before
   // letting the DOC attach it to an invite — stops a bad playerId from
@@ -235,7 +235,7 @@ async function _createParentInviteReturningUrl(teamId: string): Promise<{ url: s
     .single()
 
   if (!profile?.club_id) throw new Error('No club found')
-  if (profile.role !== 'doc') throw new Error('Only the DOC can create player invites')
+  if (profile.role !== 'doc') throw new Error('Only the head coach can create player invites')
 
   const { data: team } = await supabase
     .from('teams')

@@ -38,7 +38,7 @@ export async function updateClubName(name: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') return { error: 'Only the Director of Coaching can change the club name' }
+  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the club name' }
 
   const { error } = await supabase
     .from('clubs')

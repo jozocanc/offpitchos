@@ -84,7 +84,7 @@ async function _updateTeam(teamId: string, name: string, ageGroup: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can edit teams')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can edit teams')
 
   const { error } = await supabase
     .from('teams')
@@ -119,7 +119,7 @@ async function _updateGroupChatLink(teamId: string, link: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can set the group chat link')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can set the group chat link')
 
   const { error } = await supabase
     .from('teams')
@@ -153,7 +153,7 @@ async function _deleteTeam(teamId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can delete teams')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can delete teams')
 
   // Delete team members first, then the team
   await supabase.from('team_members').delete().eq('team_id', teamId)
@@ -192,7 +192,7 @@ async function _removeMember(teamId: string, userId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can remove members')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can remove members')
 
   // Look up the member's profile PK to delete by profile_id
   const { data: memberProfile } = await supabase
@@ -241,7 +241,7 @@ async function _setTeamPublicShare(teamId: string, enabled: boolean) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can change sharing')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can change sharing')
 
   const updates: { public_enabled: boolean; public_share_token?: string } = {
     public_enabled: enabled,
@@ -295,7 +295,7 @@ async function _rotateTeamPublicShareToken(teamId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can rotate the share link')
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can rotate the share link')
 
   const { error } = await supabase
     .from('teams')

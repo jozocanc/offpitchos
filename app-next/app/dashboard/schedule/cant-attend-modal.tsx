@@ -91,7 +91,7 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
         <p className="text-gray text-sm mb-6">
           {isCoach
             ? 'Assign a replacement directly, or send the request to all coaches in the club.'
-            : 'A coverage request will be sent to all other coaches in your club. If no one accepts, the DOC will be notified.'}
+            : 'A coverage request will be sent to all other coaches in your club. If no one accepts, the head coach will be notified.'}
         </p>
 
         {error && <p className="text-red text-sm mb-4">{error}</p>}

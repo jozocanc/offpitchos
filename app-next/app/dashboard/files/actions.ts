@@ -83,7 +83,7 @@ export async function uploadClubFile(formData: FormData): Promise<{ error?: stri
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id) return { error: 'No club' }
-  if (profile.role !== 'doc') return { error: 'Only DOC can upload' }
+  if (profile.role !== 'doc') return { error: 'Only the head coach can upload' }
 
   const path = `${profile.club_id}/${crypto.randomUUID()}-${sanitize(file.name)}`
   const arrayBuf = await file.arrayBuffer()

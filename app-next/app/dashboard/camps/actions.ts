@@ -204,7 +204,7 @@ async function _registerForCamp(eventId: string, playerId: string) {
     .eq('event_id', eventId)
     .single()
 
-  if (!detail) throw new Error('Camp details not set up yet. Contact your director.')
+  if (!detail) throw new Error('Camp details not set up yet. Contact your head coach.')
 
   // Check capacity
   if (detail.capacity) {

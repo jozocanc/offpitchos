@@ -7,10 +7,14 @@ import InviteCoachForm from './invite-form'
 export const metadata: Metadata = { title: 'Coaches' }
 import CopyLink from '../teams/[id]/copy-link'
 import RevokeButton from './revoke-button'
+import TitleSelect from './title-select'
+import { DEFAULT_STAFF_TITLE } from '@/lib/constants'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 
 interface Coach {
+  profile_id: string
+  staff_title: string
   user_id: string
   display_name: string | null
   teams: string[]
@@ -24,6 +28,7 @@ interface Invite {
   token: string
   expires_at: string | null
   team_id: string | null
+  staff_title: string | null
   teams: { name: string } | null
 }
 
@@ -35,7 +40,7 @@ export default async function CoachesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('club_id, role')
+    .select('club_id, role, display_name')
     .eq('user_id', user.id)
     .single()
 
@@ -46,9 +51,10 @@ export default async function CoachesPage() {
   // Fetch current coaches with enriched data
   const { data: coachesRaw } = await supabase
     .from('profiles')
-    .select('id, user_id, display_name')
+    .select('id, user_id, display_name, staff_title')
     .eq('club_id', clubId)
     .eq('role', 'coach')
+    .order('display_name')
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const now = new Date().toISOString()
@@ -88,6 +94,8 @@ export default async function CoachesPage() {
       const attendanceRate = totalMarked > 0 ? Math.round((presentMarked / totalMarked) * 100) : 0
 
       return {
+        profile_id: coach.id,
+        staff_title: coach.staff_title ?? DEFAULT_STAFF_TITLE,
         user_id: coach.user_id,
         display_name: coach.display_name,
         teams: teamNames,
@@ -100,7 +108,7 @@ export default async function CoachesPage() {
   // Fetch pending coach invites
   const { data: invitesRaw } = await supabase
     .from('invites')
-    .select('id, email, token, expires_at, team_id, teams(name)')
+    .select('id, email, token, expires_at, team_id, staff_title, teams(name)')
     .eq('club_id', clubId)
     .eq('role', 'coach')
     .eq('status', 'pending')
@@ -121,20 +129,36 @@ export default async function CoachesPage() {
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Coaches</h1>
+          <h1 className="text-3xl font-black tracking-tight">Coaching Staff</h1>
           <p className="text-gray text-sm mt-1">
-            Manage your coaching staff
+            You are the head coach. Every coach gets the same staff access; only you manage the team.
           </p>
         </div>
         <InviteCoachForm teams={teams ?? []} />
       </div>
 
-      {/* Active coaches */}
+      {/* Head coach */}
       <section className="mb-10">
-        <h2 className="text-lg font-bold mb-4">Active Coaches</h2>
+        <h2 className="text-lg font-bold mb-4">Head Coach</h2>
+        <div className="bg-dark-secondary rounded-2xl p-5 border border-green/20 flex items-center gap-4 max-w-md">
+          <div className="w-11 h-11 rounded-full bg-green flex items-center justify-center shrink-0">
+            <span className="text-dark font-bold">
+              {(profile?.display_name ?? 'H').charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold truncate">{profile?.display_name ?? 'You'}</p>
+            <p className="text-gray text-xs">Head Coach · full control</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Staff */}
+      <section className="mb-10">
+        <h2 className="text-lg font-bold mb-4">Staff</h2>
         {!coaches || coaches.length === 0 ? (
           <div className="bg-dark-secondary rounded-2xl p-8 text-center border border-white/5">
-            <p className="text-gray">No coaches yet. Invite your first coach above.</p>
+            <p className="text-gray">No staff yet. Invite your assistant or goalkeeping coach above.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -151,7 +175,7 @@ export default async function CoachesPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{coach.display_name ?? 'Unknown'}</p>
-                    <p className="text-gray text-xs">Coach</p>
+                    <TitleSelect profileId={coach.profile_id} title={coach.staff_title} />
                   </div>
                 </div>
 
@@ -204,6 +228,7 @@ export default async function CoachesPage() {
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
                     <p className="font-semibold">{invite.email}</p>
+                    <p className="text-gray text-xs mt-0.5">{invite.staff_title ?? DEFAULT_STAFF_TITLE}</p>
                     {invite.teams && (
                       <p className="text-gray text-xs mt-0.5">Team: {invite.teams.name}</p>
                     )}

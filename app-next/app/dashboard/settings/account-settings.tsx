@@ -2,6 +2,7 @@
 
 import EditableField from './editable-field'
 import { updateDisplayName, updateClubName } from './actions'
+import { roleLabel } from '@/lib/constants'
 
 interface AccountSettingsProps {
   clubName: string
@@ -9,17 +10,11 @@ interface AccountSettingsProps {
   email: string
   isDOC: boolean
   role?: string
+  staffTitle?: string | null
 }
 
-function roleLabel(role?: string): string {
-  if (role === 'doc') return 'Director of Coaching'
-  if (role === 'coach') return 'Coach'
-  // 'parent' is a legacy member role; members are players now.
-  if (role === 'player' || role === 'parent') return 'Player'
-  return 'Member'
-}
 
-export default function AccountSettings({ clubName, displayName, email, isDOC, role }: AccountSettingsProps) {
+export default function AccountSettings({ clubName, displayName, email, isDOC, role, staffTitle }: AccountSettingsProps) {
   return (
     <>
       {/* Club info */}
@@ -48,7 +43,7 @@ export default function AccountSettings({ clubName, displayName, email, isDOC, r
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Account</h2>
           <span className="text-xs font-semibold bg-green/10 text-green border border-green/20 rounded-full px-3 py-1">
-            {roleLabel(role)}
+            {roleLabel(role, staffTitle)}
           </span>
         </div>
         <div className="space-y-4">

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { inviteCoach } from './actions'
 import { useToast } from '@/components/toast'
 import { teamLabel } from '@/lib/team-label'
+import { STAFF_TITLES, DEFAULT_STAFF_TITLE } from '@/lib/constants'
 
 interface Team {
   id: string
@@ -16,6 +17,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [teamId, setTeamId] = useState('')
+  const [staffTitle, setStaffTitle] = useState<string>(DEFAULT_STAFF_TITLE)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -29,6 +31,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
     const formData = new FormData()
     formData.set('email', email)
     if (teamId) formData.set('teamId', teamId)
+    formData.set('staffTitle', staffTitle)
 
     const invitedEmail = email.trim()
     startTransition(async () => {
@@ -40,12 +43,13 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
         }
         setEmail('')
         setTeamId('')
+        setStaffTitle(DEFAULT_STAFF_TITLE)
         setOpen(false)
         if (result.data.emailSent) {
           toast(`Invite sent to ${invitedEmail}`, 'success')
         } else {
           toast(
-            `Invite created — but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
+            `Invite created, but the email didn't send. Copy the join link from Pending Invites below and share it directly.`,
             'error',
           )
         }
@@ -61,7 +65,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
         onClick={() => setOpen(true)}
         className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
       >
-        + Invite Coach
+        + Invite Staff
       </button>
 
       {open && (
@@ -71,6 +75,9 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
         >
           <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
             <h2 className="text-xl font-bold mb-6">Invite a Coach</h2>
+            <p className="text-gray text-sm -mt-4 mb-6">
+              Every coach gets the same staff access. Only you, the head coach, manage the team.
+            </p>
 
             <label className="block text-sm font-medium text-gray mb-2" htmlFor="ic-email">
               Email address
@@ -84,6 +91,20 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
               autoFocus
             />
+
+            <label className="block text-sm font-medium text-gray mb-2" htmlFor="ic-title">
+              Title
+            </label>
+            <select
+              id="ic-title"
+              value={staffTitle}
+              onChange={e => setStaffTitle(e.target.value)}
+              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-4"
+            >
+              {STAFF_TITLES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
 
             <label className="block text-sm font-medium text-gray mb-2" htmlFor="ic-team">
               Assign to team <span className="text-gray/50">(optional)</span>

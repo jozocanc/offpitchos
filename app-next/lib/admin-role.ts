@@ -3,7 +3,7 @@ import { ROLES, type Role } from '@/lib/constants'
 
 // Parent is deliberately absent: the product is team-only now, so there is no
 // parent view left to preview.
-const VIEWABLE_ROLES: readonly string[] = [ROLES.DOC, ROLES.COACH, ROLES.PLAYER]
+const VIEWABLE_ROLES: readonly string[] = [ROLES.DOC, ROLES.PLAYER]
 
 /**
  * A DOC may preview the app as one of their own coaches or players. Nobody

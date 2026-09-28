@@ -161,7 +161,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
           <p className="text-gray text-sm mt-1">
             {isDoc
               ? 'Click "Generate Digest" to create the first one.'
-              : 'The DOC will generate the first digest at the end of the week.'}
+              : 'Your head coach will generate the first digest at the end of the week.'}
           </p>
         </div>
       )}

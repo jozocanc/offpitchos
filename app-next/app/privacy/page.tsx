@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">What we collect</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Account info:</strong> name, email, role on the team (for example director, coach, or player), and password hash.</li>
+              <li><strong>Account info:</strong> name, email, role on the team (for example head coach, coach, or player), and password hash.</li>
               <li><strong>Team data:</strong> teams, rosters, schedules, attendance, feedback notes, gear sizes, travel details, and camp registrations, including an optional guardian contact for camp registrants under 18.</li>
               <li><strong>Communications:</strong> messages, announcements, and notification preferences.</li>
               <li><strong>Payment data:</strong> processed by Stripe. We never see or store card numbers — only a transaction ID and status.</li>

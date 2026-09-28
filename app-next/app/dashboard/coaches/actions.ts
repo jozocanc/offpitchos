@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { sendCoachInviteEmail } from '@/lib/email'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { createServiceClient } from '@/lib/supabase/service'
+import { ROLES, STAFF_TITLES, DEFAULT_STAFF_TITLE } from '@/lib/constants'
 
 type InviteEmailState = { emailSent: boolean; emailError?: string }
 
@@ -19,6 +21,8 @@ export async function inviteCoach(
 
   const email = formData.get('email') as string
   const teamId = formData.get('teamId') as string | null
+  const titleInput = (formData.get('staffTitle') as string | null) ?? DEFAULT_STAFF_TITLE
+  const staffTitle = (STAFF_TITLES as readonly string[]).includes(titleInput) ? titleInput : DEFAULT_STAFF_TITLE
 
   if (!email?.trim()) {
     throw new Error('Email is required')
@@ -26,13 +30,14 @@ export async function inviteCoach(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('club_id')
+    .select('club_id, role')
     .eq('user_id', user.id)
     .single()
 
   if (profileError || !profile?.club_id) {
     throw new Error('Could not find your club')
   }
+  if (profile.role !== ROLES.DOC) throw new Error('Only the head coach can invite staff')
 
   const { data: invite, error } = await supabase
     .from('invites')
@@ -41,6 +46,7 @@ export async function inviteCoach(
       team_id: teamId || null,
       email: email.trim(),
       role: 'coach',
+      staff_title: staffTitle,
       status: 'pending',
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
@@ -101,7 +107,7 @@ export async function resendInvite(
     .single()
 
   if (profile?.role !== 'doc') {
-    throw new Error('Only the Director of Coaching can resend invites')
+    throw new Error('Only the head coach can resend invites')
   }
 
   // Fetch the invite to know email/role + scope it to this club
@@ -174,7 +180,7 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
     .single()
 
   if (profile?.role !== 'doc') {
-    throw new Error('Only the Director of Coaching can revoke invites')
+    throw new Error('Only the head coach can revoke invites')
   }
 
   const { error } = await supabase
@@ -187,6 +193,50 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
 
   revalidatePath('/dashboard/coaches')
   return { ok: true, data: undefined }
+ } catch (e) {
+  return toActionError(e)
+ }
+}
+
+// The head coach relabels a staff member. Title only, never the role: every
+// titled coach keeps the same staff permissions. Service client because
+// profiles_own_update only lets a user edit their own row, and the privilege
+// guard (migration 051) blocks anyone setting their own title.
+export async function updateCoachTitle(
+  profileId: string,
+  staffTitle: string,
+): Promise<ActionResult<null>> {
+ try {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== ROLES.DOC || !profile.club_id) {
+    throw new Error('Only the head coach can change staff titles')
+  }
+  if (!(STAFF_TITLES as readonly string[]).includes(staffTitle)) {
+    throw new Error('Pick a title from the list')
+  }
+
+  const { data, error } = await createServiceClient()
+    .from('profiles')
+    .update({ staff_title: staffTitle })
+    .eq('id', profileId)
+    .eq('club_id', profile.club_id)
+    .eq('role', ROLES.COACH)
+    .select('id')
+
+  if (error) throw new Error(`Couldn't update title: ${error.message}`)
+  if (!data || data.length === 0) throw new Error('Coach not found on your team')
+
+  revalidatePath('/dashboard/coaches')
+  return { ok: true, data: null }
  } catch (e) {
   return toActionError(e)
  }
