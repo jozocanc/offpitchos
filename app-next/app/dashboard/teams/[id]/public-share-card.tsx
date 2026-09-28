@@ -80,7 +80,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
             )}
           </h2>
           <p className="text-gray text-sm mt-1">
-            A no-login page showing this team&apos;s upcoming schedule + roster. Share on socials or with prospective families.
+            A no-login page showing this team&apos;s upcoming schedule + roster. Share on socials or with recruits and fans.
           </p>
         </div>
         <button
@@ -117,7 +117,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
           </div>
           <div className="flex items-center justify-between mt-3">
             <p className="text-xs text-gray">
-              Public page shows roster (names + jersey + position only) and a 30-day schedule. No phone numbers, no parent emails.
+              Public page shows roster (names + jersey + position only) and a 30-day schedule. No phone numbers, no emails.
             </p>
             <button
               onClick={rotate}

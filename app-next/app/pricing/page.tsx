@@ -5,7 +5,7 @@ import Wordmark from '@/components/wordmark'
 export const metadata = {
   title: 'Pricing · OffPitchOS',
   description:
-    'Transparent pricing built around your club — one flat monthly rate, no transaction fees, no long contracts. Founding clubs get 50% off for life.',
+    'Transparent pricing built around your team. One flat monthly rate, no transaction fees, no long contracts. Founding teams get 50% off for life.',
 }
 
 const cream = '#FAF7F2'
@@ -89,7 +89,7 @@ export default async function PricingPage() {
           style={{ color: ink }}
           className="text-5xl md:text-6xl font-semibold tracking-[-0.035em] leading-[1.03]"
         >
-          Built around your club,
+          Built around your team,
           <br />
           not a rigid tier.
         </h1>
@@ -97,7 +97,7 @@ export default async function PricingPage() {
           style={{ color: subtext }}
           className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
         >
-          One flat monthly rate based on your player count. Pay yearly and save 20%. No transaction fees. Cancel anytime.
+          One flat monthly rate based on your roster size. Pay yearly and save 20%. No transaction fees. Cancel anytime.
         </p>
       </section>
 
@@ -140,7 +140,7 @@ export default async function PricingPage() {
             style={{ color: subtext }}
             className="mt-6 text-base md:text-lg max-w-xl mx-auto leading-relaxed"
           >
-            Clubs we talk to land between $149 and $499/mo depending on size. Pay yearly and knock 20% off. Book a 15-minute call and we&apos;ll give you an exact number on the spot.
+            Teams we talk to land between $149 and $499/mo depending on size. Pay yearly and knock 20% off. Book a 15-minute call and we&apos;ll give you an exact number on the spot.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
             <a
@@ -163,7 +163,7 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      {/* Founding clubs callout */}
+      {/* Founding teams callout */}
       <section className="max-w-4xl mx-auto px-6 pb-8">
         <div
           style={{ backgroundColor: forest, color: cream }}
@@ -184,14 +184,14 @@ export default async function PricingPage() {
                 aria-hidden
               />
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-                South Florida clubs · First 10 only
+                Founding teams · First 10 only
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-[1.1] mb-4">
               50% off for life.
             </h2>
             <p className="text-base md:text-lg max-w-xl leading-relaxed opacity-90">
-              Our first 10 South Florida clubs lock in 50% off forever — roughly $75–$250/mo for life — in exchange for your logo, honest feedback, and a short testimonial when we ship. Design partners, not beta users.
+              Our first 10 teams lock in 50% off forever, roughly $75 to $250/mo for life, in exchange for your logo, honest feedback, and a short testimonial when we ship. Design partners, not beta users.
             </p>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default async function PricingPage() {
           {[
             {
               title: 'Voice commands',
-              body: 'Cancel, reschedule, reply to parents — from your car, in plain English.',
+              body: 'Cancel, reschedule, reply to players. From the bus, in plain English.',
             },
             {
               title: 'AI coverage engine',
@@ -233,12 +233,12 @@ export default async function PricingPage() {
               body: 'Session plans, drill library, PDF exports. Built for coaches.',
             },
             {
-              title: 'Parent & player portal',
-              body: 'Schedules, venues, RSVPs — on every phone, no training required.',
+              title: 'Player portal',
+              body: 'Schedules, travel, venues and availability on every player\'s phone. No training required.',
             },
             {
               title: 'Gear, camps & payments',
-              body: 'Size spreadsheets gone. Registration and camp checkout built-in.',
+              body: 'Size spreadsheets gone. Players send their own sizes, and ID camp checkout is built in.',
             },
           ].map((f) => (
             <div
@@ -278,7 +278,7 @@ export default async function PricingPage() {
           {[
             {
               q: 'Why don’t you show exact prices?',
-              a: 'Because clubs vary. A 120-player rec-focused club and a 600-player ECNL club need different things. One flat number for both would either overcharge the small one or undersell the big one. The 15-minute call is how we give you an honest number, not a ploy to trap you in a sales funnel.',
+              a: 'Because teams vary. A junior college with one 30-player roster and a university running several squads with a full staff need different things. One flat number for both would either overcharge the small one or undersell the big one. The 15-minute call is how we give you an honest number, not a ploy to trap you in a sales funnel.',
             },
             {
               q: 'Are there transaction or add-on fees?',
@@ -289,12 +289,12 @@ export default async function PricingPage() {
               a: 'Monthly: pay month-to-month, cancel anytime, no commitment. Annual: lock in a year and take 20% off the monthly rate. Either way, no auto-renew traps — when your term ends, you decide.',
             },
             {
-              q: 'What happens after the first 10 founding clubs?',
-              a: 'Founding pricing locks for the life of your account. After the first 10 slots are gone, new clubs pay the standard rate for their size.',
+              q: 'What happens after the first 10 founding teams?',
+              a: 'Founding pricing locks for the life of your account. After the first 10 slots are gone, new teams pay the standard rate for their size.',
             },
             {
-              q: 'Is my club’s data safe?',
-              a: 'Yes. COPPA-friendly defaults, encrypted at rest, deletable on request within 30 days. We don’t sell data, share it, or train models on it.',
+              q: 'Is my team’s data safe?',
+              a: 'Yes. Access scoped to each role, encrypted at rest, deletable on request within 30 days. We don’t sell data, share it, or train models on it.',
             },
           ].map((item) => (
             <div
@@ -337,7 +337,7 @@ export default async function PricingPage() {
             Ready for your number?
           </h2>
           <p className="text-base md:text-lg opacity-90 max-w-xl mx-auto mb-9">
-            Fifteen minutes. We’ll price your club on the call and you walk out with a written quote.
+            Fifteen minutes. We’ll price your team on the call and you walk out with a written quote.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <a
@@ -375,7 +375,7 @@ export default async function PricingPage() {
                 <Wordmark size="sm" />
               </span>
               <p style={{ color: subtext }} className="text-[14px] leading-relaxed mt-4">
-                The operating system for soccer clubs, academies and college programs.
+                The operating system for soccer teams: the coaching staff and every player.
               </p>
             </div>
             <div className="flex gap-10 sm:gap-14 text-[14px]">

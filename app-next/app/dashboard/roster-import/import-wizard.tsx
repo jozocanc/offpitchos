@@ -20,10 +20,7 @@ const ALL_FIELDS: OffPitchField[] = [
   'player_last_name',
   'team_name',
   'team_age_group',
-  'parent1_email',
-  'parent1_first_name',
-  'parent1_phone',
-  'parent2_email',
+  'player_email',
   'jersey_number',
   'position',
   'date_of_birth',
@@ -44,8 +41,8 @@ export default function ImportWizard({
   const [success, setSuccess] = useState<{
     teamsCreated: number
     playersCreated: number
-    parentsCreated: number
-    parentUserIds: string[]
+    accountsCreated: number
+    accountUserIds: string[]
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showReimportConfirm, setShowReimportConfirm] = useState(false)
@@ -125,8 +122,8 @@ export default function ImportWizard({
   }
 
   async function handleSendInvites(userIdsOverride?: string[]) {
-    if (!success?.parentUserIds?.length) return
-    const ids = userIdsOverride ?? success.parentUserIds
+    if (!success?.accountUserIds?.length) return
+    const ids = userIdsOverride ?? success.accountUserIds
     setError(null)
     setInviting(true)
     const res = await sendParentRecoveryEmails(ids)
@@ -140,12 +137,12 @@ export default function ImportWizard({
 
   function handleRetryFailed() {
     if (!inviteResult) return
-    // Build a list of user_ids from failed emails by mapping back through success.parentUserIds.
-    // But sendParentRecoveryEmails takes user_ids, and failures only have email — so we can't
-    // reliably re-narrow without extra data. Simplest approach: just re-call with all parentUserIds.
+    // Build a list of user_ids from failed emails by mapping back through success.accountUserIds.
+    // But sendParentRecoveryEmails takes user_ids, and failures only have email, so we can't
+    // reliably re-narrow without extra data. Simplest approach: just re-call with all accountUserIds.
     // Supabase generateLink will invalidate the prior token; sent ones get a fresh link.
     // Acceptable v1 because re-clicks don't double-create users — they only generate fresh links.
-    handleSendInvites(success?.parentUserIds)
+    handleSendInvites(success?.accountUserIds)
   }
 
   // ---- RENDER ----
@@ -239,17 +236,17 @@ export default function ImportWizard({
           <div className="bg-dark border border-white/10 rounded-xl p-4 mb-4 space-y-1 text-sm text-white">
             <p>{preview.counts.newTeams} new teams</p>
             <p>{preview.counts.newPlayers} new players</p>
-            <p>{preview.counts.uniqueParentEmails} parents (one account per unique email — siblings share)</p>
+            <p>{preview.counts.playerAccounts} player accounts (one per player with an email)</p>
             {preview.skippedRows > 0 && (
               <p className="text-yellow-400">{preview.skippedRows} rows will be skipped</p>
             )}
           </div>
-          {preview.siblingGroups.length > 0 && (
+          {preview.sharedEmails.length > 0 && (
             <div className="bg-dark border border-white/10 rounded-xl p-4 mb-4">
-              <p className="font-semibold mb-2 text-white text-sm">Siblings detected:</p>
+              <p className="font-semibold mb-2 text-white text-sm">Emails used on more than one row (only the first row gets the account):</p>
               <div className="space-y-1">
-                {preview.siblingGroups.map(g => (
-                  <p key={g.email} className="text-sm text-gray">{g.email} — {g.playerCount} players</p>
+                {preview.sharedEmails.map(g => (
+                  <p key={g.email} className="text-sm text-gray">{g.email}: {g.playerCount} rows</p>
                 ))}
               </div>
             </div>
@@ -275,7 +272,7 @@ export default function ImportWizard({
           {showReimportConfirm && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mt-4">
               <p className="text-sm text-white">
-                Adding to {preview.counts.existingPlayerCount} existing players. No duplicate detection — players or parents that already exist may be created again. Continue anyway?
+                Adding to {preview.counts.existingPlayerCount} existing players. No duplicate detection, so players that already exist may be created again. Continue anyway?
               </p>
               <div className="mt-3 flex items-center gap-4">
                 <button
@@ -320,21 +317,25 @@ export default function ImportWizard({
         <div className="bg-dark-secondary rounded-2xl p-8 shadow-lg text-center">
           <h2 className="text-xl font-bold mb-2">Import complete</h2>
           <p className="text-sm text-white mb-6">
-            {success.teamsCreated} teams · {success.playersCreated} players · {success.parentsCreated} parents created
+            {success.teamsCreated} teams · {success.playersCreated} players · {success.accountsCreated} player accounts created
           </p>
 
           {!inviteResult ? (
             <div className="mb-6">
               <button
                 onClick={() => handleSendInvites()}
-                disabled={inviting || success.parentsCreated === 0}
+                disabled={inviting || success.accountsCreated === 0}
                 className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {inviting ? 'Sending…' : `Send invites to ${success.parentsCreated} parents`}
+                {inviting ? 'Sending…' : `Send invites to ${success.accountsCreated} players`}
               </button>
-              {success.parentsCreated > 0 && (
+              {success.accountsCreated > 0 ? (
                 <p className="text-xs text-gray mt-3">
-                  Each parent gets an email with a &ldquo;set your password&rdquo; link. Re-sendable from this screen.
+                  Each player gets an email with a &ldquo;set your password&rdquo; link. Re-sendable from this screen.
+                </p>
+              ) : (
+                <p className="text-xs text-gray mt-3">
+                  No player emails were imported. Invite players from each team&apos;s roster page.
                 </p>
               )}
             </div>
@@ -342,7 +343,7 @@ export default function ImportWizard({
             <div className="bg-dark border border-white/10 rounded-xl p-4 mb-6 text-left text-sm">
               <p className="text-white">
                 Sent <span className="font-bold">{inviteResult.sent}</span>
-                {inviteResult.failed > 0 ? `, ${inviteResult.failed} failed:` : '. All parents emailed.'}
+                {inviteResult.failed > 0 ? `, ${inviteResult.failed} failed:` : '. All players emailed.'}
               </p>
               {inviteResult.failures.length > 0 && (
                 <ul className="mt-2 space-y-1">

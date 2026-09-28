@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { isMember } from '@/lib/constants'
 import { askClubQuestion } from '@/lib/ai'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
@@ -183,14 +184,15 @@ async function _askQuestion(question: string) {
     }
   })
 
-  // For parents, include their kids so Ref can personalize answers
-  let myKids: { name: string; team: string; jersey: number | null }[] = []
-  if (profile.role === 'parent') {
-    const { data: kids } = await supabase
+  // For players, include their own roster row (players.parent_id is the
+  // account linked to the row) so Ref can personalize answers
+  let myPlayers: { name: string; team: string; jersey: number | null }[] = []
+  if (isMember(profile.role)) {
+    const { data: rows } = await supabase
       .from('players')
       .select('first_name, last_name, jersey_number, teams(name)')
       .eq('parent_id', user.id)
-    myKids = (kids ?? []).map((k: any) => {
+    myPlayers = (rows ?? []).map((k: any) => {
       const kTeam = Array.isArray(k.teams) ? k.teams[0] : k.teams
       return { name: `${k.first_name} ${k.last_name}`, team: kTeam?.name ?? '', jersey: k.jersey_number }
     })
@@ -214,7 +216,7 @@ async function _askQuestion(question: string) {
     today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }),
     userRole: profile.role,
     userName: userProfile?.display_name ?? 'User',
-    myKids: myKids.length > 0 ? myKids : undefined,
+    myPlayers: myPlayers.length > 0 ? myPlayers : undefined,
   })
 
   // Persist to ai_chats

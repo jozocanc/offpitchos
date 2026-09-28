@@ -51,12 +51,12 @@ function GearSizesEditor({
   playerId,
   initialJersey,
   initialShorts,
-  isParent,
+  isOwner,
 }: {
   playerId: string
   initialJersey: string | null
   initialShorts: string | null
-  isParent: boolean
+  isOwner: boolean
 }) {
   const { toast } = useToast()
   const [jersey, setJersey] = useState(initialJersey ?? '')
@@ -72,7 +72,7 @@ function GearSizesEditor({
     try {
       const r = await submitPlayerSize(playerId, jersey || null, shorts || null)
       if (!r.ok) throw new Error(r.error)
-      toast(isParent ? 'Sizes submitted · thank you!' : 'Sizes updated', 'success')
+      toast(isOwner ? 'Sizes submitted · thank you!' : 'Sizes updated', 'success')
     } catch (err: any) {
       toast(err?.message ?? 'Failed to save sizes', 'error')
     } finally {
@@ -81,11 +81,11 @@ function GearSizesEditor({
   }
 
   return (
-    <div className={`mt-5 pt-5 border-t border-white/5 ${isParent && isIncomplete ? 'bg-yellow-400/5 -mx-6 px-6 pt-4 pb-4 mt-5 rounded-b-xl border-t-yellow-400/20' : ''}`}>
+    <div className={`mt-5 pt-5 border-t border-white/5 ${isOwner && isIncomplete ? 'bg-yellow-400/5 -mx-6 px-6 pt-4 pb-4 mt-5 rounded-b-xl border-t-yellow-400/20' : ''}`}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-bold text-white flex items-center gap-2">
           Gear sizes
-          {isParent && isIncomplete && (
+          {isOwner && isIncomplete && (
             <span className="text-[10px] font-bold uppercase tracking-wide bg-yellow-400/15 text-yellow-400 px-2 py-0.5 rounded-full">
               Needed
             </span>
@@ -123,27 +123,27 @@ function GearSizesEditor({
           {saving ? 'Saving…' : hasChanges ? 'Save' : 'Saved'}
         </button>
       </div>
-      {isParent && (
+      {isOwner && (
         <p className="text-xs text-gray mt-3">
-          Your director uses these sizes to order gear for the club. Please keep them up to date.
+          Your staff use these sizes to order team gear. Please keep them up to date.
         </p>
       )}
     </div>
   )
 }
 
-export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, userRole, playerId, isParent }: {
+export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, userRole, playerId, isOwner }: {
   player: Player
   feedback: Feedback[]
   recentEvents: RecentEvent[]
   categoryAverages: Record<string, { avg: number; count: number }>
   userRole: string
   playerId: string
-  isParent: boolean
+  isOwner: boolean
 }) {
   const timezone = useClubTimezone()
   const canAddFeedback = userRole === 'doc' || userRole === 'coach'
-  const canEditSize = isParent || userRole === 'doc' || userRole === 'coach'
+  const canEditSize = isOwner || userRole === 'doc' || userRole === 'coach'
   const team = player.teams as any
 
   return (
@@ -174,7 +174,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
             playerId={playerId}
             initialJersey={player.jersey_size}
             initialShorts={player.shorts_size}
-            isParent={isParent}
+            isOwner={isOwner}
           />
         )}
 

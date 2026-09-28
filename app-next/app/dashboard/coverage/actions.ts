@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { isMember } from '@/lib/constants'
 import { autoAssignCoverage, rankCoverageCandidates, type RankedCandidate } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
@@ -157,7 +158,7 @@ async function _createCoverageRequest(
   if (error) throw new Error(`Failed to create coverage request: ${error.message}`)
 
   // Explicit zone: this string goes into a push notification and an email, so
-  // a UTC-derived time is persisted and read by a parent, not just flashed.
+  // a UTC-derived time is persisted and read by a player, not just flashed.
   const timezone = await getClubTimezone()
   const dateStr = formatShortDate(event.start_time, timezone)
   const timeStr = formatTime(event.start_time, timezone)
@@ -318,25 +319,25 @@ async function _acceptCoverage(requestId: string) {
   await notifySpecificProfiles(request.event_id, notifyIds, 'coverage_accepted', message)
 
   if (event?.team_id) {
-    const { data: parents } = await service
+    const { data: teamMembers } = await service
       .from('team_members')
       .select('profile_id, profiles!inner(role)')
       .eq('team_id', event.team_id)
 
     // Supabase returns the inner join as either a single profile object or
     // an array depending on relationship cardinality; narrow both shapes.
-    const parentIds = ((parents ?? []) as Array<{
+    const playerIds = ((teamMembers ?? []) as Array<{
       profile_id: string
       profiles: { role: string } | { role: string }[] | null
     }>)
       .filter(p => {
         const prof = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
-        return prof?.role === 'parent'
+        return isMember(prof?.role)
       })
       .map(p => p.profile_id)
 
-    if (parentIds.length > 0) {
-      await notifySpecificProfiles(request.event_id, parentIds, 'coverage_accepted', message)
+    if (playerIds.length > 0) {
+      await notifySpecificProfiles(request.event_id, playerIds, 'coverage_accepted', message)
     }
   }
 

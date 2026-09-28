@@ -145,7 +145,7 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
     // --- Signal 3: Feedback owed -----------------------------------------
     // Post-game/practice events in the last 7 days where I wrote zero
     // feedback entries. We key by event, not player — one signal per event
-    // keeps the list short even if the team has 20 kids.
+    // keeps the list short even if the team has 25 players.
     const { data: myFeedback } = await supabase
       .from('player_feedback')
       .select('event_id')

@@ -115,7 +115,9 @@ async function _markBulkAttendance(
   revalidatePath('/dashboard/schedule')
 }
 
-// ---- Parent-facing "my kid can't attend" flow ----
+// ---- Player-facing "I can't make it" flow ----
+// players.parent_id is the account linked to a player row (the player's
+// own login), so the viewer normally has exactly one linked player.
 
 export async function getMyKidsOnTeam(
   ...args: Parameters<typeof _getMyKidsOnTeam>
@@ -142,9 +144,9 @@ async function _getMyKidsOnTeam(teamId: string) {
   return players ?? []
 }
 
-// Marks selected kids as "excused" and notifies the team's coaches with
-// an optional reason. Does NOT create a coverage request (that's the
-// coach flow) — just a heads-up so the coach knows before practice.
+// Marks the viewer's linked player(s) as "excused" and notifies the team's
+// coaches with an optional reason. Does NOT create a coverage request
+// (that's the coach flow), just a heads-up so the coach knows before practice.
 export async function parentExcuseChildren(
   ...args: Parameters<typeof _parentExcuseChildren>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _parentExcuseChildren>>>> {
@@ -165,7 +167,7 @@ async function _parentExcuseChildren(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  if (input.playerIds.length === 0) throw new Error('Select at least one child')
+  if (input.playerIds.length === 0) throw new Error('Select at least one player')
 
   const { data: ownedPlayers } = await supabase
     .from('players')
@@ -175,7 +177,7 @@ async function _parentExcuseChildren(input: {
     .in('id', input.playerIds)
 
   if (!ownedPlayers || ownedPlayers.length === 0) {
-    throw new Error('None of those players belong to you on this team')
+    throw new Error('That player is not linked to your account on this team')
   }
 
   const excuseRecords = ownedPlayers.map(p => ({
@@ -199,9 +201,9 @@ async function _parentExcuseChildren(input: {
     .eq('id', input.eventId)
     .single()
 
-  const kidNames = ownedPlayers.map(p => p.first_name).join(' & ')
-  const reasonSuffix = input.reason.trim() ? ` — "${input.reason.trim()}"` : ''
-  const message = `${kidNames} can't attend ${event?.title ?? 'an event'}${reasonSuffix}`
+  const playerNames = ownedPlayers.map(p => p.first_name).join(' & ')
+  const reasonSuffix = input.reason.trim() ? `: "${input.reason.trim()}"` : ''
+  const message = `${playerNames} can't attend ${event?.title ?? 'an event'}${reasonSuffix}`
 
   const { data: coaches } = await service
     .from('team_members')
@@ -216,7 +218,7 @@ async function _parentExcuseChildren(input: {
       title: 'OffPitchOS',
       message,
       url: '/dashboard/schedule',
-      tag: 'parent_excuse',
+      tag: 'player_excuse',
     })
     notifiedCoaches = coachIds.length
   }

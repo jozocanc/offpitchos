@@ -17,7 +17,7 @@ export default async function CoveragePage() {
     .eq('user_id', user.id)
     .single()
 
-  // Parents get redirected — they have no coverage actions. DOC and coach
+  // Players get redirected — they have no coverage actions. DOC and coach
   // both see the page, but the client component renders different surfaces
   // based on role (DOC manages/assigns, coach accepts/declines).
   if (profile?.role !== 'doc' && profile?.role !== 'coach') {

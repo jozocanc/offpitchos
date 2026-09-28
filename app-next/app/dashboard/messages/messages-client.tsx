@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ROLES } from '@/lib/constants'
+import { ROLES, isMember } from '@/lib/constants'
 import AnnouncementCard from './announcement-card'
 import NewAnnouncementModal from './new-announcement-modal'
 import DMClient from './dm-client'
@@ -14,7 +14,7 @@ interface Team {
 }
 
 interface AudienceCounts {
-  parents: number
+  players: number
   coaches: number
 }
 
@@ -43,9 +43,12 @@ export default function MessagesClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [tab, setTab] = useState<'announcements' | 'dm'>(initialTab)
 
-  // All roles can post messages — DOC for club announcements, coaches for
-  // team updates, parents for communicating with their kid's coaches.
-  const canPost = userRole === ROLES.DOC || userRole === ROLES.COACH || userRole === ROLES.PARENT
+  // Staff post announcements: DOC club-wide or per team, coaches per team.
+  // Players get a "Message Coach" button that opens the Direct tab, so a
+  // question to the coach stays 1:1 instead of fanning out to the whole
+  // team the way an announcement does.
+  const isPlayer = isMember(userRole)
+  const canPost = userRole === ROLES.DOC || userRole === ROLES.COACH || isPlayer
 
   const filtered = announcements.filter(a => {
     if (!filterTeam) return true
@@ -88,10 +91,10 @@ export default function MessagesClient({
         </p>
         {canPost && (
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => (isPlayer ? setTab('dm') : setModalOpen(true))}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
-            {userRole === ROLES.PARENT ? 'Message Coach' : '+ New Announcement'}
+            {isPlayer ? 'Message Coach' : '+ New Announcement'}
           </button>
         )}
       </div>
@@ -114,7 +117,7 @@ export default function MessagesClient({
         <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
           <p className="text-gray text-lg">No announcements yet.</p>
           <p className="text-gray text-sm mt-1">
-            {canPost ? 'Post your first announcement to get started.' : 'Announcements from your coaches will appear here.'}
+            {canPost && !isPlayer ? 'Post your first announcement to get started.' : 'Announcements from your coaches will appear here.'}
           </p>
         </div>
       ) : (

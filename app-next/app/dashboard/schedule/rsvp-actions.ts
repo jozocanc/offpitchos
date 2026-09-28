@@ -7,9 +7,11 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
-// Parent-driven RSVP. Lives in its own table (event_rsvps) so the
-// attendance table remains the coach's source of truth — a parent
-// saying "we'll be there" never overwrites a coach's mark.
+// Player-driven RSVP. Lives in its own table (event_rsvps) so the
+// attendance table remains the coach's source of truth: a player
+// saying "I'll be there" never overwrites a coach's mark.
+// players.parent_id is the account linked to a player row (the player's
+// own login), so "my players" below is normally exactly one row.
 
 export type RsvpResponse = 'going' | 'not_going'
 
@@ -44,7 +46,7 @@ async function _getMyKidsOnTeamForRsvp(teamId: string) {
   return players ?? []
 }
 
-// Returns the current parent's RSVPs for the given (event, kids) pairs
+// Returns the current viewer's RSVPs for the given (event, player) pairs
 // so the modal can preselect the existing answer instead of erasing it.
 export async function getMyExistingRsvps(
   ...args: Parameters<typeof _getMyExistingRsvps>
@@ -92,9 +94,9 @@ async function _parentRsvp(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  if (input.playerIds.length === 0) throw new Error('Select at least one child')
+  if (input.playerIds.length === 0) throw new Error('Select at least one player')
 
-  // RLS will already block someone else's kid, but verify owner-up-front
+  // RLS will already block someone else's player row, but verify owner-up-front
   // so we can give a clean error message instead of a silent zero-row write.
   const { data: ownedPlayers } = await supabase
     .from('players')
@@ -104,7 +106,7 @@ async function _parentRsvp(input: {
     .in('id', input.playerIds)
 
   if (!ownedPlayers || ownedPlayers.length === 0) {
-    throw new Error('None of those players belong to you on this team')
+    throw new Error('That player is not linked to your account on this team')
   }
 
   const records = ownedPlayers.map(p => ({
@@ -121,8 +123,8 @@ async function _parentRsvp(input: {
   if (error) throw new Error(`Failed to save RSVP: ${error.message}`)
 
   // Coaches get a quiet push with the headline so they can adjust the
-  // session plan. We don't email — that would spam coaches with one
-  // mail per parent confirmation.
+  // session plan. We don't email, that would spam coaches with one
+  // mail per player confirmation.
   let notifiedCoaches = 0
   if (input.response === 'going') {
     const service = createServiceClient()
@@ -140,10 +142,10 @@ async function _parentRsvp(input: {
 
     const coachIds = (coaches ?? []).map(c => c.profile_id)
     if (coachIds.length > 0) {
-      const kidNames = ownedPlayers.map(p => p.first_name).join(' & ')
+      const playerNames = ownedPlayers.map(p => p.first_name).join(' & ')
       await sendPushToProfiles(coachIds, {
         title: 'OffPitchOS',
-        message: `${kidNames} confirmed for ${event?.title ?? 'an event'}`,
+        message: `${playerNames} confirmed for ${event?.title ?? 'an event'}`,
         url: '/dashboard/schedule',
         tag: 'rsvp_going',
       })
@@ -176,7 +178,7 @@ async function _getRsvpTalliesForEvents(eventIds: string[]): Promise<Record<stri
     .select('event_id, player_id, response')
     .in('event_id', eventIds)
 
-  // Total kids per team — one query per club is fine since teams are few.
+  // Total players per team. One query per club is fine since teams are few.
   const { data: events } = await supabase
     .from('events')
     .select('id, team_id')

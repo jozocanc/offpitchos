@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { ROLES } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
@@ -39,15 +40,20 @@ export interface GearData {
   teams: TeamGearSummary[]
   userRole: string
   lastRequestedAt: string | null
-  lastRequestedParentCount: number
+  /** Player accounts notified by the last "Request sizes" send. */
+  lastRequestedPlayerCount: number
   respondedSinceRequest: number
   /**
-   * Players with a linked parent account. At a college program this is 0, and
-   * the parent fan-out is then a button that provably notifies nobody, so the
-   * UI leads with the per-player links instead.
+   * Players whose row is linked to their own login (players.parent_id points
+   * at a player account). When this is 0 the in-app request would notify
+   * nobody, so the UI leads with the per-player collect links instead.
    */
-  playersWithParents: number
+  playersWithAccounts: number
 }
+
+// Roles whose account a player row can be linked to. 'parent' is legacy and
+// only kept so old linked rows still count.
+const MEMBER_ROLES = [ROLES.PLAYER, ROLES.PARENT]
 
 export async function getGearData(): Promise<GearData> {
   const { user, profile, supabase } = await getUserProfile()
@@ -109,12 +115,22 @@ export async function getGearData(): Promise<GearData> {
     .maybeSingle()
 
   const lastRequestedAt = settings?.last_gear_size_request_at ?? null
-  const lastRequestedParentCount = settings?.last_gear_size_request_parent_count ?? 0
+  // Column name predates the team-only product; it now stores player accounts.
+  const lastRequestedPlayerCount = settings?.last_gear_size_request_parent_count ?? 0
+
+  // Unlinked rows keep parent_id pointing at the staff member who added them,
+  // so "has an account" means parent_id belongs to a player (member) profile.
+  const { data: memberProfiles } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('club_id', profile.club_id)
+    .in('role', MEMBER_ROLES)
+  const memberUserIds = new Set((memberProfiles ?? []).map(p => p.user_id))
 
   let respondedSinceRequest = 0
   if (lastRequestedAt) {
-    // Count distinct parents whose kids had a row update since the request AND
-    // whose kids now have both sizes filled.
+    // Count distinct linked player accounts whose row was updated since the
+    // request AND now has both sizes filled.
     const { data: updatedPlayers } = await supabase
       .from('players')
       .select('parent_id')
@@ -123,17 +139,21 @@ export async function getGearData(): Promise<GearData> {
       .not('shorts_size', 'is', null)
       .gt('updated_at', lastRequestedAt)
 
-    const parentSet = new Set((updatedPlayers ?? []).map(p => p.parent_id))
-    respondedSinceRequest = parentSet.size
+    const responded = new Set(
+      (updatedPlayers ?? [])
+        .map(p => p.parent_id)
+        .filter((id): id is string => !!id && memberUserIds.has(id)),
+    )
+    respondedSinceRequest = responded.size
   }
 
   return {
     teams: teamSummaries,
     userRole: await getEffectiveRole(profile.role),
     lastRequestedAt,
-    lastRequestedParentCount,
+    lastRequestedPlayerCount,
     respondedSinceRequest,
-    playersWithParents: (players ?? []).filter(p => p.parent_id).length,
+    playersWithAccounts: (players ?? []).filter(p => p.parent_id && memberUserIds.has(p.parent_id)).length,
   }
 }
 
@@ -161,10 +181,12 @@ async function _updatePlayerSize(playerId: string, jerseySize: string | null, sh
 }
 
 export interface RequestSizesResult {
+  // Player accounts notified. Key name kept because attention-panel reads it.
   parentsNotified: number
+  // Players missing at least one size (linked or not).
   kidsNeedingSizes: number
   alreadyComplete: boolean
-  // Count of Resend rejections across the per-parent fan-out. Part 1.5.
+  // Count of Resend rejections across the per-player fan-out. Part 1.5.
   emailFailed: number
 }
 
@@ -182,7 +204,7 @@ async function _requestMissingSizes(): Promise<RequestSizesResult> {
   const { profile } = await getUserProfile()
 
   if (profile.role !== 'doc') {
-    throw new Error('Only directors can request sizes from parents')
+    throw new Error('Only directors can request sizes from players')
   }
 
   const service = createServiceClient()
@@ -199,70 +221,71 @@ async function _requestMissingSizes(): Promise<RequestSizesResult> {
     return { parentsNotified: 0, kidsNeedingSizes: 0, alreadyComplete: true, emailFailed: 0 }
   }
 
-  // Group kids by parent auth-user id
-  const kidsByParent = new Map<string, typeof players>()
+  // Group player rows by linked account (players.parent_id = the player's
+  // own login). Normally one row per account.
+  const rowsByAccount = new Map<string, typeof players>()
   for (const p of players) {
     if (!p.parent_id) continue
-    const existing = kidsByParent.get(p.parent_id) ?? []
+    const existing = rowsByAccount.get(p.parent_id) ?? []
     existing.push(p)
-    kidsByParent.set(p.parent_id, existing)
+    rowsByAccount.set(p.parent_id, existing)
   }
 
-  if (kidsByParent.size === 0) {
+  if (rowsByAccount.size === 0) {
     return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false, emailFailed: 0 }
   }
 
-  // Get parent profile ids (for push + email helpers). We specifically
-  // filter on `role='parent'` so that unlinked players — whose `parent_id`
-  // still points at the DOC who added them — don't trigger a notification
-  // to the DOC about their own roster. Once the parent claims the kid via
-  // the parent attention panel, they'll start getting the reminders.
-  const parentUserIds = Array.from(kidsByParent.keys())
-  const { data: parentProfiles } = await service
+  // Resolve player profile ids (for push + email helpers). We filter on
+  // member roles so that unlinked players, whose `parent_id` still points at
+  // the DOC who added them, don't trigger a notification to the DOC about
+  // their own roster. Once the player joins and is linked, they start
+  // getting the reminders. Unlinked players are reached via collect links.
+  const accountUserIds = Array.from(rowsByAccount.keys())
+  const { data: playerProfiles } = await service
     .from('profiles')
     .select('id, user_id')
-    .in('user_id', parentUserIds)
-    .eq('role', 'parent')
+    .in('user_id', accountUserIds)
+    .in('role', MEMBER_ROLES)
 
-  if (!parentProfiles || parentProfiles.length === 0) {
+  if (!playerProfiles || playerProfiles.length === 0) {
     return { parentsNotified: 0, kidsNeedingSizes: players.length, alreadyComplete: false, emailFailed: 0 }
   }
 
-  // Notify each parent individually — personalized message per parent,
-  // but only one push+email per parent. Part 1.5: await the email send
-  // and sum per-parent `failed.length` so the UI can surface delivery
-  // failures across the whole batch.
+  // Notify each player individually, one push+email per account. Part 1.5:
+  // await the email send and sum per-account `failed.length` so the UI can
+  // surface delivery failures across the whole batch.
   let emailFailed = 0
   const sends = await Promise.allSettled(
-    parentProfiles.map(async parent => {
-      const kids = kidsByParent.get(parent.user_id) ?? []
-      if (kids.length === 0) return { failed: 0 }
+    playerProfiles.map(async account => {
+      const rows = rowsByAccount.get(account.user_id) ?? []
+      if (rows.length === 0) return { failed: 0 }
 
-      const kidNames = kids.map(k => `${k.first_name} ${k.last_name}`).join(' and ')
-      const firstKidId = kids[0].id
+      const firstRowId = rows[0].id
       const title = 'Gear sizes needed'
-      const message = `Please submit jersey and shorts sizes for ${kidNames}.`
+      const message = rows.length === 1
+        ? 'Please submit your jersey and shorts sizes.'
+        : `Please submit jersey and shorts sizes for ${rows.map(r => `${r.first_name} ${r.last_name}`).join(' and ')}.`
 
-      await sendPushToProfiles([parent.id], {
+      await sendPushToProfiles([account.id], {
         title,
         message,
-        url: `/dashboard/players/${firstKidId}`,
+        url: `/dashboard/players/${firstRowId}`,
         tag: 'gear_sizes_requested',
       })
 
       const emailResult = await sendEmailToProfiles(
-        [parent.id],
-        'OffPitchOS — Gear sizes needed',
+        [account.id],
+        'OffPitchOS: Gear sizes needed',
         message + ' Open OffPitchOS and tap the notification to submit.',
-        `https://offpitchos.com/dashboard/players/${firstKidId}`,
+        `https://offpitchos.com/dashboard/players/${firstRowId}`,
       )
       return { failed: emailResult.failed.length }
     })
   )
   for (const r of sends) {
     if (r.status === 'fulfilled') emailFailed += r.value.failed
-    // Rejected settlements mean the push send itself threw — treat as
-    // an email delivery failure for UI purposes (the parent reached via
+    // Rejected settlements mean the push send itself threw. Treat as
+    // an email delivery failure for UI purposes (the player reached via
     // push isn't actually confirmed here either).
     else emailFailed += 1
   }
@@ -274,7 +297,7 @@ async function _requestMissingSizes(): Promise<RequestSizesResult> {
       {
         club_id: profile.club_id,
         last_gear_size_request_at: new Date().toISOString(),
-        last_gear_size_request_parent_count: parentProfiles.length,
+        last_gear_size_request_parent_count: playerProfiles.length,
       },
       { onConflict: 'club_id' }
     )
@@ -282,7 +305,7 @@ async function _requestMissingSizes(): Promise<RequestSizesResult> {
   revalidatePath('/dashboard/gear')
 
   return {
-    parentsNotified: parentProfiles.length,
+    parentsNotified: playerProfiles.length,
     kidsNeedingSizes: players.length,
     alreadyComplete: false,
     emailFailed,

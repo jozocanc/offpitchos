@@ -2,9 +2,12 @@
 'use server'
 
 // IMPORTANT: This module follows the demo-seed pattern (see
-// app-next/app/dashboard/demo-seed-actions.ts) for parent creation:
+// app-next/app/dashboard/demo-seed-actions.ts) for account creation:
 // admin.auth.admin.createUser with email_confirm=true + random password
-// for each unique parent email, then profiles + team_members + players.
+// for each unique player email, then profiles + team_members + players.
+// Each player account owns its roster row via players.parent_id (the column
+// name is historical; it means "the account linked to this player row").
+// Parent/guardian columns are no longer imported.
 // Spec: docs/superpowers/specs/2026-05-04-roster-import-design.md.
 
 import { createClient } from '@/lib/supabase/server'
@@ -22,13 +25,14 @@ import {
   CommitResult,
   REQUIRED_FIELDS,
 } from './lib/types'
-import { normalizeEmail, normalizePhone, normalizeDate, trimName, teamKey } from './lib/normalize'
+import { normalizeEmail, normalizeDate, trimName, teamKey } from './lib/normalize'
+import { ROLES, NO_AGE_GROUP } from '@/lib/constants'
 import { sendRosterRecoveryEmail } from '@/lib/email'
 
 const MAX_ROWS = 1000
 
 function cryptoRandomPassword(): string {
-  // 24 random bytes -> base64url. Long enough to be unguessable; parent will reset.
+  // 24 random bytes -> base64url. Long enough to be unguessable; the player will reset.
   const bytes = new Uint8Array(24)
   crypto.getRandomValues(bytes)
   return Buffer.from(bytes).toString('base64url')
@@ -103,7 +107,7 @@ export async function previewImport(
   let skippedRows = 0
   const seenPlayerKeys = new Set<string>()
   const teamsToCreateMap = new Map<string, { name: string; age_group: string }>()
-  const parentEmails = new Set<string>()
+  const playerEmails = new Set<string>()
   const playersByEmail = new Map<string, number>()
   let importablePlayerCount = 0
 
@@ -112,8 +116,7 @@ export async function previewImport(
     const lastName = trimName(get(row, 'player_last_name'))
     const teamName = trimName(get(row, 'team_name'))
     const ageGroupRaw = trimName(get(row, 'team_age_group'))
-    const parent1EmailRaw = get(row, 'parent1_email')
-    const parent2EmailRaw = get(row, 'parent2_email')
+    const emailRaw = get(row, 'player_email')
 
     if (!firstName || !lastName) {
       warnings.push({ rowNumber: row.rowNumber, message: 'Missing player name — row skipped' })
@@ -125,18 +128,16 @@ export async function previewImport(
       skippedRows++
       continue
     }
-    const parent1Email = normalizeEmail(parent1EmailRaw)
-    if (!parent1Email) {
-      // Imported as an unlinked player rather than skipped. Only flag it when
-      // an email was supplied but could not be parsed — a blank column is the
-      // normal case for a college roster and is not worth a warning per row.
-      if (parent1EmailRaw) {
-        warnings.push({
-          rowNumber: row.rowNumber,
-          field: 'parent1_email',
-          message: 'Invalid parent email — player imported without a parent link',
-        })
-      }
+    const email = normalizeEmail(emailRaw)
+    if (!email && emailRaw) {
+      // Imported as an unclaimed player rather than skipped. Only flag it when
+      // an email was supplied but could not be parsed; a blank cell is normal
+      // and not worth a warning per row.
+      warnings.push({
+        rowNumber: row.rowNumber,
+        field: 'player_email',
+        message: 'Invalid email. Player imported without an account',
+      })
     }
 
     // Player dedup within CSV
@@ -153,16 +154,9 @@ export async function previewImport(
     const existing = teamByKey.get(tk)
     if (!existing) {
       if (!teamsToCreateMap.has(tk)) {
-        if (!ageGroupRaw) {
-          warnings.push({
-            rowNumber: row.rowNumber,
-            field: 'team_age_group',
-            message: `New team "${teamName}" — age group required, row skipped`,
-          })
-          skippedRows++
-          continue
-        }
-        teamsToCreateMap.set(tk, { name: teamName, age_group: ageGroupRaw })
+        // Age group is optional: a college or first-team roster has none.
+        // teams.age_group is NOT NULL, so blank is stored as NO_AGE_GROUP.
+        teamsToCreateMap.set(tk, { name: teamName, age_group: ageGroupRaw || NO_AGE_GROUP })
       }
     } else if (ageGroupRaw && ageGroupRaw !== existing.age_group) {
       warnings.push({
@@ -172,11 +166,7 @@ export async function previewImport(
       })
     }
 
-    // Phone, DOB warnings (don't skip)
-    const phoneRaw = get(row, 'parent1_phone')
-    if (phoneRaw && !/\d/.test(phoneRaw)) {
-      warnings.push({ rowNumber: row.rowNumber, field: 'parent1_phone', message: 'Phone not parseable — stored as-is' })
-    }
+    // DOB warnings (don't skip)
     const dobRaw = get(row, 'date_of_birth')
     if (dobRaw) {
       const dob = normalizeDate(dobRaw)
@@ -189,14 +179,16 @@ export async function previewImport(
       }
     }
 
-    if (parent1Email) {
-      parentEmails.add(parent1Email)
-      playersByEmail.set(parent1Email, (playersByEmail.get(parent1Email) ?? 0) + 1)
-    }
-    const parent2Email = normalizeEmail(parent2EmailRaw)
-    if (parent2Email && parent2Email !== parent1Email) {
-      parentEmails.add(parent2Email)
-      playersByEmail.set(parent2Email, (playersByEmail.get(parent2Email) ?? 0) + 1)
+    if (email) {
+      if (playerEmails.has(email)) {
+        warnings.push({
+          rowNumber: row.rowNumber,
+          field: 'player_email',
+          message: `Email ${email} is already used by an earlier row. Player imported without an account`,
+        })
+      }
+      playerEmails.add(email)
+      playersByEmail.set(email, (playersByEmail.get(email) ?? 0) + 1)
     }
 
     importablePlayerCount++
@@ -206,7 +198,7 @@ export async function previewImport(
     blockingErrors.push({ rowNumber: 0, message: 'No importable rows after validation' })
   }
 
-  const siblingGroups = Array.from(playersByEmail.entries())
+  const sharedEmails = Array.from(playersByEmail.entries())
     .filter(([, count]) => count > 1)
     .map(([email, playerCount]) => ({ email, playerCount }))
 
@@ -216,12 +208,12 @@ export async function previewImport(
       counts: {
         newTeams: teamsToCreateMap.size,
         newPlayers: importablePlayerCount,
-        uniqueParentEmails: parentEmails.size,
+        playerAccounts: playerEmails.size,
         existingPlayerCount: existingPlayerCount ?? 0,
       },
       teamsToCreate: Array.from(teamsToCreateMap.values()),
       teamsExisting: (existingTeams ?? []).map(t => ({ name: t.name, id: t.id })),
-      siblingGroups,
+      sharedEmails,
       warnings,
       skippedRows,
       blockingErrors,
@@ -287,22 +279,22 @@ export async function commitImport(
   }
   const teamIdByKey = new Map(allTeams.map(t => [teamKey(t.name), t.id]))
 
-  // 2) Pass 1 -- collect unique parents (deduped by email) + which teams each is on
-  type ParentRecord = {
+  // 2) Pass 1 -- collect one account per unique player email. The first row
+  //    with an email owns it; later rows reusing it import without an account.
+  type AccountRecord = {
     email: string
     firstName: string
     lastName: string
-    phone: string
-    teamIds: Set<string>
+    teamId: string
   }
-  const parentByEmail = new Map<string, ParentRecord>()
+  const accountByEmail = new Map<string, AccountRecord>()
   const seenPlayerKeys = new Set<string>()
 
   for (const row of rows) {
     const firstName = trimName(get(row, 'player_first_name'))
     const lastName = trimName(get(row, 'player_last_name'))
     const teamName = trimName(get(row, 'team_name'))
-    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
+    const email = normalizeEmail(get(row, 'player_email'))
     if (!firstName || !lastName || !teamName) continue
     const teamId = teamIdByKey.get(teamKey(teamName))
     if (!teamId) continue
@@ -311,84 +303,54 @@ export async function commitImport(
     if (seenPlayerKeys.has(playerKey)) continue
     seenPlayerKeys.add(playerKey)
 
-    // No parent email on this row: the player is still imported below, just
-    // without a parent account to create or link.
-    if (!parent1Email) continue
-
-    let p1 = parentByEmail.get(parent1Email)
-    if (!p1) {
-      p1 = {
-        email: parent1Email,
-        firstName: trimName(get(row, 'parent1_first_name')) || 'Parent',
-        lastName: lastName,  // best guess: parent shares player's last name
-        phone: normalizePhone(get(row, 'parent1_phone')),
-        teamIds: new Set(),
-      }
-      parentByEmail.set(parent1Email, p1)
-    }
-    p1.teamIds.add(teamId)
-
-    const parent2Email = normalizeEmail(get(row, 'parent2_email'))
-    if (parent2Email && parent2Email !== parent1Email) {
-      let p2 = parentByEmail.get(parent2Email)
-      if (!p2) {
-        p2 = {
-          email: parent2Email,
-          firstName: 'Parent',
-          lastName: lastName,
-          phone: '',
-          teamIds: new Set(),
-        }
-        parentByEmail.set(parent2Email, p2)
-      }
-      p2.teamIds.add(teamId)
-    }
+    // No email on this row: the player is still imported below, just
+    // without an account (shows as "not claimed" on the roster).
+    if (!email || accountByEmail.has(email)) continue
+    accountByEmail.set(email, { email, firstName, lastName, teamId })
   }
 
-  // 3) Create auth.users + profiles + team_members for each unique parent.
+  // 3) Create auth.users + profiles + team_members for each player account.
   // Pattern matches demo-seed-actions.ts lines 208-244.
-  const parentUserIdByEmail = new Map<string, string>()
-  for (const parent of parentByEmail.values()) {
+  const accountUserIdByEmail = new Map<string, string>()
+  for (const account of accountByEmail.values()) {
+    const fullName = `${account.firstName} ${account.lastName}`.trim()
     const { data: created, error: authErr } = await service.auth.admin.createUser({
-      email: parent.email,
+      email: account.email,
       password: cryptoRandomPassword(),
       email_confirm: true,
       user_metadata: {
-        full_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        full_name: fullName,
         imported_at: new Date().toISOString(),
       },
     })
     if (authErr || !created.user) {
-      return { ok: false, error: `Failed to create parent ${parent.email}: ${authErr?.message ?? 'unknown'}` }
+      return { ok: false, error: `Failed to create account for ${account.email}: ${authErr?.message ?? 'unknown'}` }
     }
     const authId = created.user.id
-    parentUserIdByEmail.set(parent.email, authId)
+    accountUserIdByEmail.set(account.email, authId)
 
     const { data: insertedProfile, error: profileErr } = await service
       .from('profiles')
       .insert({
         user_id: authId,
         club_id: clubId,
-        role: 'parent',
-        display_name: `${parent.firstName} ${parent.lastName}`.trim(),
+        role: ROLES.PLAYER,
+        display_name: fullName,
         onboarding_complete: true,
       })
       .select('id')
       .single()
     if (profileErr || !insertedProfile) {
-      return { ok: false, error: `Failed to create profile for ${parent.email}: ${profileErr?.message}` }
+      return { ok: false, error: `Failed to create profile for ${account.email}: ${profileErr?.message}` }
     }
 
-    if (parent.teamIds.size > 0) {
-      const memberInserts = Array.from(parent.teamIds).map(tId => ({
-        team_id: tId,
-        profile_id: insertedProfile.id,
-        role: 'parent',
-      }))
-      const { error: memberErr } = await service.from('team_members').insert(memberInserts)
-      if (memberErr) {
-        return { ok: false, error: `Failed to link ${parent.email} to teams: ${memberErr.message}` }
-      }
+    const { error: memberErr } = await service.from('team_members').insert({
+      team_id: account.teamId,
+      profile_id: insertedProfile.id,
+      role: ROLES.PLAYER,
+    })
+    if (memberErr) {
+      return { ok: false, error: `Failed to add ${account.email} to their team: ${memberErr.message}` }
     }
   }
 
@@ -396,8 +358,8 @@ export async function commitImport(
   type PlayerInsert = {
     club_id: string
     team_id: string
-    // Nullable: a roster row with no parent email imports as an unlinked
-    // player, which is the normal case for a college squad.
+    // The player's own account, or null for a row with no (or a reused)
+    // email. The roster page shows those as "not claimed".
     parent_id: string | null
     first_name: string
     last_name: string
@@ -407,12 +369,13 @@ export async function commitImport(
   }
   const playerInserts: PlayerInsert[] = []
   const seenPlayerKeys2 = new Set<string>()
+  const claimedEmails = new Set<string>()
 
   for (const row of rows) {
     const firstName = trimName(get(row, 'player_first_name'))
     const lastName = trimName(get(row, 'player_last_name'))
     const teamName = trimName(get(row, 'team_name'))
-    const parent1Email = normalizeEmail(get(row, 'parent1_email'))
+    const email = normalizeEmail(get(row, 'player_email'))
     if (!firstName || !lastName || !teamName) continue
 
     const playerKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${teamKey(teamName)}`
@@ -421,16 +384,19 @@ export async function commitImport(
 
     const teamId = teamIdByKey.get(teamKey(teamName))
     if (!teamId) continue
-    // null for a roster row with no parent email — players.parent_id is
-    // nullable and the roster page already renders these as "unlinked".
-    const parentId = parent1Email ? (parentUserIdByEmail.get(parent1Email) ?? null) : null
+    // Only the first row with a given email gets that account, matching pass 1.
+    let accountId: string | null = null
+    if (email && !claimedEmails.has(email)) {
+      accountId = accountUserIdByEmail.get(email) ?? null
+      claimedEmails.add(email)
+    }
 
     const dob = normalizeDate(get(row, 'date_of_birth'))
     const jerseyRaw = get(row, 'jersey_number').replace(/\D/g, '')
     playerInserts.push({
       club_id: clubId,
       team_id: teamId,
-      parent_id: parentId ?? null,
+      parent_id: accountId,
       first_name: firstName,
       last_name: lastName,
       jersey_number: jerseyRaw ? parseInt(jerseyRaw, 10) : null,
@@ -440,7 +406,7 @@ export async function commitImport(
   }
 
   if (playerInserts.length === 0) {
-    return { ok: false, error: 'No importable rows after parent creation' }
+    return { ok: false, error: 'No importable rows after account creation' }
   }
 
   const { data: insertedPlayers, error: playerErr } = await service
@@ -459,19 +425,21 @@ export async function commitImport(
     data: {
       teamsCreated,
       playersCreated: insertedPlayers?.length ?? 0,
-      parentsCreated: parentByEmail.size,
-      parentUserIds: Array.from(parentUserIdByEmail.values()),
+      accountsCreated: accountByEmail.size,
+      accountUserIds: Array.from(accountUserIdByEmail.values()),
     },
   }
 }
 
+// Sends each imported player a "set your password" email. Exported name kept
+// for compatibility; it no longer targets parents.
 export async function sendParentRecoveryEmails(
-  parentUserIds: string[]
+  userIds: string[]
 ): Promise<
   | { ok: true; data: { sent: number; failed: number; failures: { email: string; reason: string }[] } }
   | ActionFailure
 > {
-  if (parentUserIds.length === 0) {
+  if (userIds.length === 0) {
     return { ok: true, data: { sent: 0, failed: 0, failures: [] } }
   }
 
@@ -488,17 +456,18 @@ export async function sendParentRecoveryEmails(
     return { ok: false, error: 'DOC role required' }
   }
 
-  // Security: verify these parent profiles all belong to the DOC's club
-  const { data: parentProfiles, error: profilesErr } = await supabase
+  // Security: verify these member profiles all belong to the DOC's club.
+  // Legacy 'parent' accounts are still accepted so old imports can resend.
+  const { data: memberProfiles, error: profilesErr } = await supabase
     .from('profiles')
     .select('user_id')
     .eq('club_id', profile.club_id)
-    .eq('role', 'parent')
-    .in('user_id', parentUserIds)
+    .in('role', [ROLES.PLAYER, ROLES.PARENT])
+    .in('user_id', userIds)
   if (profilesErr) return { ok: false, error: profilesErr.message }
 
-  const allowed = new Set((parentProfiles ?? []).map(p => p.user_id))
-  const filteredIds = parentUserIds.filter(id => allowed.has(id))
+  const allowed = new Set((memberProfiles ?? []).map(p => p.user_id))
+  const filteredIds = userIds.filter(id => allowed.has(id))
 
   // Get club name for email body
   const { data: club } = await supabase

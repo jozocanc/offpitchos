@@ -16,6 +16,7 @@ import PublicShareCard from './public-share-card'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
+import { isMember } from '@/lib/constants'
 
 interface Member {
   profile_id: string
@@ -38,7 +39,7 @@ interface Player {
   shorts_size: string | null
 }
 
-interface ParentInvite {
+interface TeamInvite {
   id: string
   token: string
   expires_at: string | null
@@ -48,7 +49,7 @@ interface ParentInvite {
 // Per-player roster signal, computed on the server so the list can show
 // at-risk badges without the client having to refetch anything.
 interface PlayerSignals {
-  unlinked: boolean       // parent_id does not point to a parent team_member
+  unlinked: boolean       // parent_id is not a player account on this team (profile not claimed)
   missingSizes: boolean   // jersey_size or shorts_size is null
   attendanceRate: number | null  // last 30 days; null when we have no data
 }
@@ -95,14 +96,15 @@ export default async function TeamDetailPage({
     user_id: (m.profiles as any)?.user_id ?? '',
   })) as unknown as Member[]
 
-  // Fetch active parent invite links
-  const { data: parentInvites } = await supabase
+  // Fetch active player invite links. Legacy 'parent' invites are included so
+  // any still-pending ones stay visible and revocable.
+  const { data: playerInvites } = await supabase
     .from('invites')
     .select('id, token, expires_at, created_at')
     .eq('team_id', id)
-    .eq('role', 'parent')
+    .in('role', ['player', 'parent'])
     .eq('status', 'pending')
-    .order('created_at', { ascending: false }) as { data: ParentInvite[] | null }
+    .order('created_at', { ascending: false }) as { data: TeamInvite[] | null }
 
   // Fetch players on this team (including size fields so we can flag gear gaps inline).
   const { data: playersRaw } = await supabase
@@ -145,10 +147,11 @@ export default async function TeamDetailPage({
     }
   }
 
-  // "Linked" parent user_ids = team_members with role='parent'. A player is
-  // "unlinked" if its parent_id doesn't belong to that set (typically because
-  // the DOC added the kid and no real parent has been associated yet).
-  const linkedParentIds = new Set(members.filter(m => m.role === 'parent').map(m => m.user_id))
+  // players.parent_id is the account linked to the roster row (the player's
+  // own login). A player is "unclaimed" if that id isn't a member account on
+  // this team, typically because the DOC added the row and the player hasn't
+  // accepted an invite yet. isMember() also accepts legacy 'parent' rows.
+  const linkedAccountIds = new Set(members.filter(m => isMember(m.role)).map(m => m.user_id))
 
   const signals: Record<string, PlayerSignals> = {}
   let unlinkedCount = 0
@@ -157,7 +160,7 @@ export default async function TeamDetailPage({
   for (const p of players) {
     const t = perPlayerTotals[p.id]
     const rate = t && t.total > 0 ? Math.round((t.present / t.total) * 100) : null
-    const unlinked = !linkedParentIds.has(p.parent_id)
+    const unlinked = !linkedAccountIds.has(p.parent_id)
     const missingSizes = !p.jersey_size || !p.shorts_size
     signals[p.id] = { unlinked, missingSizes, attendanceRate: rate }
     if (unlinked) unlinkedCount += 1
@@ -168,15 +171,19 @@ export default async function TeamDetailPage({
   const baseUrl = appUrl()
 
   const isDOC = profile?.role === 'doc'
-  const isParent = profile?.role === 'parent'
+  const isSquadMember = isMember(profile?.role)
   const coaches = members.filter(m => m.role === 'coach')
-  const parents = members.filter(m => m.role === 'parent')
+  const playerAccounts = members.filter(m => isMember(m.role))
 
-  // Build options for the "link parent" menu on unlinked players.
-  const parentOptions = parents.map(p => ({
-    userId: p.user_id,
-    displayName: p.profiles?.display_name ?? 'Unknown parent',
-  }))
+  // Options for the claim menu on unclaimed players: joined player accounts
+  // that aren't already linked to a roster row on this team.
+  const claimedIds = new Set(players.map(p => p.parent_id))
+  const accountOptions = playerAccounts
+    .filter(m => !claimedIds.has(m.user_id))
+    .map(m => ({
+      userId: m.user_id,
+      displayName: m.profiles?.display_name ?? 'Unknown player',
+    }))
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -201,13 +208,13 @@ export default async function TeamDetailPage({
         </div>
       </div>
 
-      {/* Invite code — DOC can share this code or link with parents */}
+      {/* Invite code: DOC shares this code or link with players */}
       {isDOC && (team as any).invite_code && (
         <InviteCodeCard code={(team as any).invite_code} />
       )}
 
-      {/* Group chat link — prominent for parents, compact for DOC */}
-      {(isParent || isDOC) && (
+      {/* Group chat link: prominent for players, compact for DOC */}
+      {(isSquadMember || isDOC) && (
         <div className="mb-6">
           <GroupChatLink
             teamId={team.id}
@@ -261,12 +268,12 @@ export default async function TeamDetailPage({
               {isDOC && <AddPlayerForm teamId={team.id} />}
             </div>
 
-            {/* Health summary — DOC only, parents don't need to see admin stats about other families' kids. */}
+            {/* Health summary: DOC only, players don't need admin stats about teammates. */}
             {isDOC && players.length > 0 && (unlinkedCount > 0 || missingSizeCount > 0 || lowAttendanceCount > 0) && (
               <div className="flex flex-wrap gap-2 mb-3 text-xs">
                 {unlinkedCount > 0 && (
                   <span className="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-1 rounded-full font-bold">
-                    {unlinkedCount} unlinked
+                    {unlinkedCount} not claimed
                   </span>
                 )}
                 {missingSizeCount > 0 && (
@@ -316,7 +323,7 @@ export default async function TeamDetailPage({
                           {p.position && <p className="text-gray text-xs">{p.position}</p>}
                           {isDOC && sig?.unlinked && (
                             <span className="text-[10px] font-bold uppercase tracking-wide bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded">
-                              Unlinked
+                              Not claimed
                             </span>
                           )}
                           {isDOC && sig?.missingSizes && (
@@ -344,7 +351,7 @@ export default async function TeamDetailPage({
                           playerId={p.id}
                           teamId={team.id}
                           playerName={`${p.first_name} ${p.last_name}`}
-                          parentOptions={parentOptions}
+                          parentOptions={accountOptions}
                         />
                       )}
                       {canRemove && <RemovePlayerButton playerId={p.id} teamId={team.id} />}
@@ -355,16 +362,16 @@ export default async function TeamDetailPage({
             )}
           </section>
 
-          {/* Parents */}
+          {/* Player accounts: players who have joined the app */}
           <section>
-            <h2 className="text-lg font-bold mb-3">Parents</h2>
-            {parents.length === 0 ? (
+            <h2 className="text-lg font-bold mb-3">Player accounts</h2>
+            {playerAccounts.length === 0 ? (
               <div className="bg-dark-secondary rounded-2xl p-6 text-center border border-white/5">
-                <p className="text-gray text-sm">No parents joined yet. Share an invite link!</p>
+                <p className="text-gray text-sm">No players have joined the app yet. Share an invite link!</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {parents.map(m => (
+                {playerAccounts.map(m => (
                   <div
                     key={m.user_id}
                     className="bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-center gap-3"
@@ -376,7 +383,7 @@ export default async function TeamDetailPage({
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{m.profiles?.display_name ?? 'Unknown'}</p>
-                      <p className="text-gray text-xs">Parent</p>
+                      <p className="text-gray text-xs">Player</p>
                     </div>
                     {isDOC && <RemoveMemberButton teamId={team.id} userId={m.user_id} />}
                   </div>
@@ -386,8 +393,8 @@ export default async function TeamDetailPage({
           </section>
         </div>
 
-        {/* Right column: Invite links + public share — DOC only since
-            coaches and parents shouldn't be generating/revoking join
+        {/* Right column: Invite links + public share. DOC only since
+            coaches and players shouldn't be generating/revoking join
             links or publishing the team. */}
         {isDOC && <div>
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
@@ -396,16 +403,16 @@ export default async function TeamDetailPage({
               <GenerateInviteButton teamId={team.id} />
             </div>
             <p className="text-gray text-sm mb-5">
-              Generate a link for parents to join this team. Anyone with the link can join as a parent.
+              Generate a link for your players to join this team. Anyone with the link can join as a player.
             </p>
 
-            {!parentInvites || parentInvites.length === 0 ? (
+            {!playerInvites || playerInvites.length === 0 ? (
               <div className="bg-dark rounded-xl p-4 text-center border border-white/5">
                 <p className="text-gray text-sm">No active invite links. Click &quot;Generate Invite Link&quot; to create one.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {parentInvites.map(invite => (
+                {playerInvites.map(invite => (
                   <div key={invite.id} className="space-y-2">
                     <CopyLink url={`${baseUrl}/join/${invite.token}`} />
                     <div className="flex items-center justify-between pl-1">

@@ -20,7 +20,7 @@ export default async function PublicCampPage({
             <p className="text-[#5C6660] text-sm">
               {camp?.status === 'cancelled'
                 ? 'This camp has been cancelled.'
-                : 'This registration link is invalid. Check with your club for the correct link.'}
+                : 'This registration link is invalid. Check with the coaching staff for the correct link.'}
             </p>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default async function PublicCampPage({
           {camp.isFull ? (
             <div className="text-center py-6">
               <p className="text-red-600 font-semibold text-lg tracking-[-0.02em]">This camp is full</p>
-              <p className="text-[#5C6660] text-sm mt-2">Contact the club to be added to the waitlist.</p>
+              <p className="text-[#5C6660] text-sm mt-2">Contact the coaching staff to be added to the waitlist.</p>
             </div>
           ) : (
             <RegisterForm campDetailId={camp.detailId} feeCents={camp.feeCents} />

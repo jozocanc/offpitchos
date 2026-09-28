@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <h2 className="text-lg font-bold mb-2">Roster import</h2>
             <p className="text-gray text-sm mb-4">
-              Bulk-import teams, players, and parents from a CSV.
+              Bulk-import teams and players from a CSV.
             </p>
             <Link
               href="/dashboard/roster-import"
@@ -87,7 +87,7 @@ export default async function SettingsPage() {
 
         {profile?.role === 'doc' && <CoverageSettings />}
 
-        <DangerZone userRole={profile?.role ?? 'parent'} />
+        <DangerZone userRole={profile?.role ?? 'player'} />
 
         <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
           <h2 className="text-lg font-bold mb-2">Legal</h2>

@@ -5,7 +5,7 @@ import { addPlayer, createParentInviteReturningUrl } from './player-actions'
 import { useToast } from '@/components/toast'
 
 // Tracks the last successfully-added player so we can show an inline
-// "invite their parent" prompt. This collapses the two-step enroll flow
+// "invite the player" prompt. This collapses the two-step enroll flow
 // (add player → separately generate invite link from the right column)
 // into a single continuous action.
 interface JustAdded {
@@ -37,7 +37,7 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
     })
   }
 
-  async function handleInviteParent() {
+  async function handleInvitePlayer() {
     if (invitePending) return
     setInvitePending(true)
     try {
@@ -74,11 +74,11 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
         </p>
         {copiedUrl ? (
           <p className="text-xs text-gray">
-            Invite link copied. Send it to the parent so they can join the team.
+            Invite link copied. Send it to the player so they can join the team.
           </p>
         ) : (
           <p className="text-xs text-gray">
-            Need to invite their parent? Generate a join link — we&apos;ll copy it to your clipboard.
+            Want {justAdded.firstName} on the app? Generate a join link and we&apos;ll copy it to your clipboard.
           </p>
         )}
         <div className="flex flex-wrap gap-2 justify-end">
@@ -106,11 +106,11 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
           {!copiedUrl && (
             <button
               type="button"
-              onClick={handleInviteParent}
+              onClick={handleInvitePlayer}
               disabled={invitePending}
               className="text-xs font-bold bg-green text-dark px-4 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
-              {invitePending ? 'Generating…' : 'Get parent invite link'}
+              {invitePending ? 'Generating…' : 'Get player invite link'}
             </button>
           )}
         </div>

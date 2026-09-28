@@ -11,9 +11,10 @@ interface Player {
   jersey_number: number | null
 }
 
-// Mirror of ParentCantAttendModal but for the positive flow. Submitting
-// writes to event_rsvps as 'going' and lets the parent flip a kid to
-// 'not_going' inline if plans change.
+// Mirror of ParentCantAttendModal but for the positive flow ("I'll be
+// there"). Submitting writes to event_rsvps as 'going'. A player normally
+// has exactly one linked row, which is confirmed directly with no picker;
+// a checkbox list only appears when several rows are linked (legacy data).
 export default function ParentGoingModal({
   eventId,
   teamId,
@@ -25,7 +26,7 @@ export default function ParentGoingModal({
   eventTitle: string
   onClose: () => void
 }) {
-  const [kids, setKids] = useState<Player[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -33,15 +34,15 @@ export default function ParentGoingModal({
 
   useEffect(() => {
     async function load() {
-      const kidsRes = await getMyKidsOnTeamForRsvp(teamId)
-      if (!kidsRes.ok) return
-      const data = kidsRes.data
-      setKids(data)
+      const playersRes = await getMyKidsOnTeamForRsvp(teamId)
+      if (!playersRes.ok) { setLoading(false); return }
+      const data = playersRes.data
+      setPlayers(data)
       const existingRes = await getMyExistingRsvps(eventId, data.map(k => k.id))
-      if (!existingRes.ok) return
+      if (!existingRes.ok) { setLoading(false); return }
       const existing = existingRes.data
-      // Preselect kids already marked 'going' so a save doesn't blow them
-      // away. New kids default to selected when there's only one — same
+      // Preselect players already marked 'going' so a save doesn't blow
+      // them away. A single linked player is always selected, same
       // shortcut as the can't-attend modal.
       const initial = new Set<string>()
       for (const k of data) {
@@ -65,7 +66,7 @@ export default function ParentGoingModal({
 
   function handleSubmit(response: RsvpResponse) {
     if (selected.size === 0) {
-      toast('Select at least one child', 'error')
+      toast('Select at least one player', 'error')
       return
     }
     startTransition(async () => {
@@ -79,7 +80,7 @@ export default function ParentGoingModal({
         if (!rsvpRes.ok) { toast(rsvpRes.error, 'error'); return }
         const result = rsvpRes.data
         const verb = response === 'going' ? 'confirmed' : 'marked not going'
-        const parts = [`${result.saved} ${verb}`]
+        const parts = [players.length === 1 ? (response === 'going' ? 'You\'re confirmed' : 'Marked not going') : `${result.saved} ${verb}`]
         if (result.notifiedCoaches > 0) {
           parts.push(`coach${result.notifiedCoaches === 1 ? '' : 'es'} notified`)
         }
@@ -98,31 +99,35 @@ export default function ParentGoingModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-2">We&apos;ll Be There</h2>
+        <h2 className="text-xl font-bold mb-2">I&apos;ll Be There</h2>
         <p className="text-gray text-sm mb-6">{eventTitle}</p>
 
         {loading ? (
           <div className="animate-pulse space-y-3">
             {[1, 2].map(i => <div key={i} className="h-12 bg-dark rounded-xl" />)}
           </div>
-        ) : kids.length === 0 ? (
+        ) : players.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
             <p className="text-gray text-sm">
-              Nobody is linked to your account on this team yet. Claim from the dashboard first.
+              Your account isn&apos;t linked to a player on this team yet. Ask your coach to send you an invite.
             </p>
           </div>
+        ) : players.length === 1 ? (
+          <p className="text-sm text-gray mb-6">
+            Confirm you&apos;ll be there. Your coaches will see it on the schedule.
+          </p>
         ) : (
           <>
             <p className="text-xs text-gray uppercase tracking-wide mb-3">
-              {kids.length === 1 ? 'Confirm attendance' : 'Who is coming?'}
+              Who is coming?
             </p>
             <div className="space-y-2 mb-6">
-              {kids.map(kid => {
-                const isSelected = selected.has(kid.id)
+              {players.map(p => {
+                const isSelected = selected.has(p.id)
                 return (
                   <button
-                    key={kid.id}
-                    onClick={() => toggle(kid.id)}
+                    key={p.id}
+                    onClick={() => toggle(p.id)}
                     disabled={isPending}
                     className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                       isSelected
@@ -130,16 +135,16 @@ export default function ParentGoingModal({
                         : 'border-white/10 hover:border-white/20'
                     }`}
                   >
-                    {kid.jersey_number !== null ? (
+                    {p.jersey_number !== null ? (
                       <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center shrink-0">
-                        <span className="text-green font-bold text-xs">{kid.jersey_number}</span>
+                        <span className="text-green font-bold text-xs">{p.jersey_number}</span>
                       </div>
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                        <span className="text-gray font-bold text-xs">{kid.first_name.charAt(0)}</span>
+                        <span className="text-gray font-bold text-xs">{p.first_name.charAt(0)}</span>
                       </div>
                     )}
-                    <span className="text-sm font-medium flex-1">{kid.first_name} {kid.last_name}</span>
+                    <span className="text-sm font-medium flex-1">{p.first_name} {p.last_name}</span>
                     <span
                       className={`w-5 h-5 rounded-md border flex items-center justify-center ${
                         isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
@@ -165,7 +170,7 @@ export default function ParentGoingModal({
           >
             Cancel
           </button>
-          {kids.length > 0 && (
+          {players.length > 0 && (
             <button
               onClick={() => handleSubmit('going')}
               disabled={isPending || selected.size === 0}

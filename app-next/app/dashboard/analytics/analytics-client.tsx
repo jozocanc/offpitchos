@@ -23,7 +23,7 @@ interface AnalyticsData {
     totalTeams: number
     totalPlayers: number
     totalCoaches: number
-    totalParents: number
+    totalPlayerAccounts: number
   }
   activity: {
     eventsInRange: number
@@ -118,7 +118,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
           <StatCard label="Teams" value={overview.totalTeams} />
           <StatCard label="Players" value={overview.totalPlayers} />
           <StatCard label="Coaches" value={overview.totalCoaches} />
-          <StatCard label="Parents" value={overview.totalParents} />
+          <StatCard label="Player accounts" value={overview.totalPlayerAccounts} />
         </div>
       </section>
 

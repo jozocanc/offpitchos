@@ -4,20 +4,22 @@ import { useState, useTransition } from 'react'
 import { linkPlayerToParent, createPlayerScopedInvite } from './player-actions'
 import { useToast } from '@/components/toast'
 
-interface ParentOption {
+interface AccountOption {
   userId: string
   displayName: string
 }
 
-// Inline menu shown next to "Unlinked" players. Two paths:
-//   1) Link an already-joined parent team_member to this player (updates
-//      players.parent_id to the target user immediately).
-//   2) Generate a player-scoped invite URL and clipboard-copy it, so the DOC
-//      can send it to a parent who hasn't joined yet — on accept, acceptInvite
-//      auto-claims this specific player for the arriving user.
+// Inline menu shown next to players who haven't claimed their profile yet.
+// Two paths:
+//   1) Generate a player-scoped invite URL and clipboard-copy it, so the DOC
+//      can send it to the player. On accept, the join RPC sets
+//      players.parent_id to the player's own account (claims the profile).
+//   2) Link a player account that already joined the team (e.g. via the team
+//      code) to this roster row, updating players.parent_id immediately.
 //
-// Both paths turn the "Unlinked" warning into an action rather than forcing
-// the DOC to bounce out to the invites panel.
+// Both paths turn the "Not claimed" badge into an action rather than forcing
+// the DOC to bounce out to the invites panel. Component/file names are kept
+// for import compatibility.
 export default function LinkParentMenu({
   playerId,
   teamId,
@@ -27,22 +29,22 @@ export default function LinkParentMenu({
   playerId: string
   teamId: string
   playerName: string
-  parentOptions: ParentOption[]
+  parentOptions: AccountOption[]
 }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [invitePending, setInvitePending] = useState(false)
   const { toast } = useToast()
 
-  function handlePick(parentUserId: string, displayName: string) {
+  function handlePick(accountUserId: string, displayName: string) {
     startTransition(async () => {
       try {
-        const r = await linkPlayerToParent(playerId, parentUserId, teamId)
+        const r = await linkPlayerToParent(playerId, accountUserId, teamId)
         if (!r.ok) { toast(r.error, 'error'); return }
         toast(`${playerName} linked to ${displayName}`, 'success')
         setOpen(false)
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to link parent'
+        const msg = err instanceof Error ? err.message : 'Failed to link account'
         toast(msg, 'error')
       }
     })
@@ -66,7 +68,7 @@ export default function LinkParentMenu({
         document.execCommand('copy')
         document.body.removeChild(input)
       }
-      toast(`Invite for ${playerName} copied — send it to the parent`, 'success')
+      toast(`Invite for ${playerName} copied. Send it to them to claim their profile`, 'success')
       setOpen(false)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create invite'
@@ -82,7 +84,7 @@ export default function LinkParentMenu({
         onClick={() => setOpen(true)}
         className="text-[10px] font-bold text-green hover:opacity-80 transition-opacity uppercase tracking-wide"
       >
-        Link
+        Invite
       </button>
     )
   }
@@ -91,24 +93,24 @@ export default function LinkParentMenu({
     <div className="relative">
       <div className="absolute right-0 top-0 z-10 bg-dark border border-white/10 rounded-xl shadow-xl p-2 min-w-[220px]">
         <p className="text-[10px] text-gray uppercase tracking-wide px-2 pt-1 pb-2">
-          Link {playerName} to:
+          {playerName} hasn&apos;t claimed their profile
         </p>
 
-        {/* Invite-new path is always available. Auto-claims the player when
-            the parent accepts, so the DOC never has to chase a second step. */}
+        {/* Invite path is always available. The player's account claims this
+            roster row on accept, so the DOC never has to chase a second step. */}
         <button
           onClick={handleGenerateInvite}
           disabled={invitePending}
           className="block w-full text-left text-xs text-green hover:bg-green/5 rounded-lg px-2 py-1.5 transition-colors disabled:opacity-50 font-bold"
         >
-          {invitePending ? 'Generating…' : `+ Invite a new parent`}
+          {invitePending ? 'Generating…' : '+ Copy claim link for player'}
         </button>
 
         {parentOptions.length > 0 && (
           <>
             <div className="border-t border-white/5 my-1" />
             <p className="text-[10px] text-gray uppercase tracking-wide px-2 pt-1 pb-1">
-              Already on team
+              Or link an account already on the team
             </p>
             {parentOptions.map(opt => (
               <button

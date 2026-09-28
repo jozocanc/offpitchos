@@ -2,8 +2,14 @@
 
 ## What this is
 
-OffPitchOS is a soccer-club operating system for clubs and programs (DOC + coaches
-+ parents). Live at https://offpitchos.com.
+OffPitchOS is a soccer operating system for teams (head coach/DOC + coaches +
+players). Live at https://offpitchos.com.
+
+**2026-09-28: TEAMS ONLY.** Jozo removed parent mode from the product. Members are
+players, who hold their own accounts. First pilot: **Tyler Junior College men's
+soccer**. `players.parent_id` keeps its name but means "the account linked to this
+player row" (the player's own login). `ROLES.PARENT` survives only for legacy rows.
+Do not reintroduce parent UI or copy. This supersedes the youth/`club_type` notes below.
 
 **Team:** Jozo (builds everything) and **Rob Tomlin, co-founder since day one
 (April 2026)**. Rob is non-technical — soccer and business side. He shaped what the

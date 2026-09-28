@@ -89,7 +89,7 @@ STRICT RULES:
 
 URGENCY GUIDANCE (by signal type):
 - "critical" — time pressure or breakdowns. Examples: coverage requests that are EXPIRED or expire in <30 min; events starting in <2 hours without coverage resolved.
-- "important" — act this week. Examples: coverage pending with time, new parent replies, upcoming games in next 48h, past events with no attendance marked (coach may have forgotten), gear sizes missing for many players, camps with unpaid registrations.
+- "important" — act this week. Examples: coverage pending with time, new player replies, upcoming games in next 48h, past events with no attendance marked (coach may have forgotten), gear sizes missing for many players, camps with unpaid registrations.
 - "routine" — awareness / FYI. Examples: upcoming events going smoothly, stale pending invites that may need a resend, 1-2 gear sizes missing, small camp payment gap.
 
 DEDUPLICATION:
@@ -101,7 +101,7 @@ ACTION LABELS:
 - Clicking a card ONLY navigates the user to the relevant page. The card itself does NOT take the action.
 - Use ONLY these labels (pick the most appropriate one):
   - "Review" — for most things (coverage, gear, camps, invites, attendance gaps)
-  - "Open" — for parent replies on announcements
+  - "Open" — for player replies on announcements
   - "View" — for upcoming scheduled events
 - Do NOT use labels like "Confirm", "Assign", "Cancel", "Reply", "Send", "Approve" — these imply the card itself does the action, which is wrong.
 
@@ -299,7 +299,7 @@ export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: b
     const signalId = `gear-missing`
     hrefBySignalId.set(signalId, '/dashboard/gear')
     signalParts.push(`\n## Gear sizes missing`)
-    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players in the club are missing jersey or shorts sizes. DOC can request them from parents with one click on the Gear page.`)
+    signalParts.push(`- signalId=${signalId} | ${missingGearCount} players in the club are missing jersey or shorts sizes. DOC can request them from the players with one click on the Gear page.`)
   }
 
   // Pending invites (older than 3 days)
@@ -307,7 +307,7 @@ export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: b
     signalParts.push(`\n## Pending invites older than 3 days (${pendingInvites.length})`)
     for (const inv of pendingInvites) {
       const signalId = `invite-${inv.id}`
-      // Coaches go to coaches page, parents go to the team page
+      // Coaches go to coaches page, players go to the team page
       hrefBySignalId.set(signalId, inv.role === 'coach' ? '/dashboard/coaches' : '/dashboard/teams')
       const daysOld = Math.floor((now.getTime() - new Date(inv.created_at).getTime()) / 86400000)
       signalParts.push(`- signalId=${signalId} | ${inv.role} invite to ${inv.email ?? 'unknown email'} is ${daysOld} days old and still pending`)

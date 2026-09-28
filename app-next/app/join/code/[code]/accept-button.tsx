@@ -7,10 +7,10 @@ import MoreTeams from './more-teams'
 
 export default function AcceptCodeButton({
   code,
-  joinAs = 'parent',
+  joinAs = 'player',
 }: {
   code: string
-  joinAs?: 'parent' | 'player'
+  joinAs?: 'player'
 }) {
   const [isPending, startTransition] = useTransition()
   const [joinResult, setJoinResult] = useState<{ clubId: string; teamId: string } | null>(null)

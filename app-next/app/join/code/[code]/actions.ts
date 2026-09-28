@@ -42,8 +42,8 @@ async function _getTeamByCode(code: string) {
 }
 
 // Accept an invite code: creates/updates the user's profile for this club,
-// adds them as a parent team_member, then redirects to the dashboard where
-// the claim-your-kids modal will handle linking their specific child.
+// adds them as a player team_member, then the dashboard's "find yourself on
+// the roster" modal links them to their own roster row.
 export async function acceptInviteCode(
   ...args: Parameters<typeof _acceptInviteCode>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _acceptInviteCode>>>> {
@@ -54,13 +54,13 @@ export async function acceptInviteCode(
   }
 }
 
-// 'player' is a self-declaration, not a privilege. A player and a parent
-// resolve to the same RLS (both are `parent_id = auth.uid()` on their own
-// player row), so choosing the wrong one changes labels and navigation, never
-// access. Defaults to 'parent' so existing youth invite links are unaffected.
-type JoinRole = 'parent' | 'player'
+// Team invite codes always join as 'player'. The product is team-only (staff
+// + players); 'parent' is legacy and no longer offered. The parameter stays so
+// existing callers keep compiling. A member's access comes from RLS on their
+// own player row (`parent_id = auth.uid()`), not from this label.
+type JoinRole = 'player'
 
-async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
+async function _acceptInviteCode(code: string, joinAs: JoinRole = 'player') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -75,7 +75,7 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
     user.email?.split('@')[0] ||
-    (joinAs === 'player' ? 'Player' : 'Parent')
+    'Player'
 
   // NEVER demote existing staff. This upsert overwrites role, so a DOC or
   // coach who opens their own team's join link — entirely likely, since they
@@ -83,9 +83,7 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'parent') {
   // lost the club: DOC authority comes from clubs.created_by, but every
   // *_doc_* policy is reached through profiles.role.
   //
-  // Pre-existing hazard, not new: before the player role it would have set
-  // them to 'parent'. It matters more now that the link is being handed to a
-  // whole squad.
+  // It matters all the more because the link is handed to the whole squad.
   const { data: existing } = await supabase
     .from('profiles')
     .select('role')

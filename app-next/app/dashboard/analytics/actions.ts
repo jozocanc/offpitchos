@@ -68,11 +68,13 @@ export async function getAnalyticsData(period: string = '30d') {
     .eq('club_id', clubId)
     .eq('role', 'coach')
 
-  const { count: totalParents } = await supabase
+  // Signed-up player accounts. 'parent' is a legacy member role, counted so
+  // old rows aren't dropped.
+  const { count: totalPlayerAccounts } = await supabase
     .from('profiles')
     .select('id', { count: 'exact', head: true })
     .eq('club_id', clubId)
-    .eq('role', 'parent')
+    .in('role', ['player', 'parent'])
 
   // --- Events in range ---
   const { data: rangeEvents } = await supabase
@@ -266,7 +268,7 @@ export async function getAnalyticsData(period: string = '30d') {
       totalTeams: totalTeams ?? 0,
       totalPlayers: totalPlayers ?? 0,
       totalCoaches: totalCoaches ?? 0,
-      totalParents: totalParents ?? 0,
+      totalPlayerAccounts: totalPlayerAccounts ?? 0,
     },
     activity: {
       eventsInRange,

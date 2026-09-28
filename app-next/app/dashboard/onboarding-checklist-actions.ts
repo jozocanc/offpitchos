@@ -7,7 +7,7 @@ export type OnboardingState = {
   visible: boolean
   hasTeam: boolean
   hasCoach: boolean
-  hasParent: boolean
+  hasPlayer: boolean
   hasEvent: boolean
   allComplete: boolean
 }
@@ -20,7 +20,7 @@ export async function getOnboardingState(): Promise<OnboardingState> {
     visible: false,
     hasTeam: false,
     hasCoach: false,
-    hasParent: false,
+    hasPlayer: false,
     hasEvent: false,
     allComplete: false,
   }
@@ -56,7 +56,7 @@ export async function getOnboardingState(): Promise<OnboardingState> {
   const hasTeam = teamIds.length > 0
 
   let hasCoach = false
-  let hasParent = false
+  let hasPlayer = false
   if (hasTeam) {
     const { count: coachCount } = await supabase
       .from('team_members')
@@ -65,12 +65,13 @@ export async function getOnboardingState(): Promise<OnboardingState> {
       .eq('role', 'coach')
     hasCoach = (coachCount ?? 0) > 0
 
-    const { count: parentCount } = await supabase
+    // 'parent' is a legacy member role, still counted.
+    const { count: playerCount } = await supabase
       .from('team_members')
       .select('id', { count: 'exact', head: true })
       .in('team_id', teamIds)
-      .eq('role', 'parent')
-    hasParent = (parentCount ?? 0) > 0
+      .in('role', ['player', 'parent'])
+    hasPlayer = (playerCount ?? 0) > 0
   }
 
   const { count: eventCount } = await supabase
@@ -79,13 +80,13 @@ export async function getOnboardingState(): Promise<OnboardingState> {
     .eq('club_id', profile.club_id)
   const hasEvent = (eventCount ?? 0) > 0
 
-  const allComplete = hasTeam && hasCoach && hasParent && hasEvent
+  const allComplete = hasTeam && hasCoach && hasPlayer && hasEvent
 
   return {
     visible: true,
     hasTeam,
     hasCoach,
-    hasParent,
+    hasPlayer,
     hasEvent,
     allComplete,
   }

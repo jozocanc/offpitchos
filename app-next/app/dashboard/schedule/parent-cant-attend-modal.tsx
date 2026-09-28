@@ -11,12 +11,13 @@ interface Player {
   jersey_number: number | null
 }
 
-// Member-facing modal: who can't make it. Used by a parent for their
-// children and by a player for themselves, hence the neutral wording.
-// Lists the parent's claimed kids on this event's team with checkboxes,
-// plus an optional reason field. On submit, marks each selected kid as
-// "excused" in the attendance table and pushes a notification to the
-// team's coaches with the reason.
+// Player-facing "I can't make it" modal. Loads the player row(s) linked
+// to the viewer's account on this event's team. A player normally has
+// exactly one linked row, in which case it is acted on directly with no
+// picker. If several rows are linked (legacy data) a checkbox list is
+// shown instead. On submit, marks the selected player(s) as "excused" in
+// the attendance table and pushes a notification to the team's coaches
+// with the optional reason.
 export default function ParentCantAttendModal({
   eventId,
   teamId,
@@ -28,7 +29,7 @@ export default function ParentCantAttendModal({
   eventTitle: string
   onClose: () => void
 }) {
-  const [kids, setKids] = useState<Player[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(true)
@@ -40,8 +41,8 @@ export default function ParentCantAttendModal({
       .then(res => {
         if (!res.ok) return
         const data = res.data
-        setKids(data)
-        // Auto-select all if the parent only has one kid on this team.
+        setPlayers(data)
+        // One linked player (the normal case): act on it directly.
         if (data.length === 1) setSelected(new Set([data[0].id]))
       })
       .finally(() => setLoading(false))
@@ -58,7 +59,7 @@ export default function ParentCantAttendModal({
 
   function handleSubmit() {
     if (selected.size === 0) {
-      toast('Select at least one child', 'error')
+      toast('Select at least one player', 'error')
       return
     }
     startTransition(async () => {
@@ -71,7 +72,7 @@ export default function ParentCantAttendModal({
         })
         if (!excuseRes.ok) { toast(excuseRes.error, 'error'); return }
         const result = excuseRes.data
-        const parts = [`${result.excused} marked excused`]
+        const parts = [players.length === 1 ? 'Marked as not attending' : `${result.excused} marked excused`]
         if (result.notifiedCoaches > 0) {
           parts.push(`coach${result.notifiedCoaches === 1 ? '' : 'es'} notified`)
         }
@@ -90,31 +91,48 @@ export default function ParentCantAttendModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-2">Can&apos;t Attend</h2>
+        <h2 className="text-xl font-bold mb-2">I Can&apos;t Make It</h2>
         <p className="text-gray text-sm mb-6">{eventTitle}</p>
 
         {loading ? (
           <div className="animate-pulse space-y-3">
             {[1, 2].map(i => <div key={i} className="h-12 bg-dark rounded-xl" />)}
           </div>
-        ) : kids.length === 0 ? (
+        ) : players.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
             <p className="text-gray text-sm">
-              Nobody is linked to your account on this team yet. Claim from the dashboard first.
+              Your account isn&apos;t linked to a player on this team yet. Ask your coach to send you an invite.
             </p>
           </div>
+        ) : players.length === 1 ? (
+          <>
+            <p className="text-sm text-gray mb-4">
+              Your coaches will be notified that you can&apos;t make it.
+            </p>
+            <label className="block text-xs text-gray uppercase tracking-wide mb-2">
+              Reason (optional)
+            </label>
+            <input
+              type="text"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="e.g. Class conflict, injury, travel"
+              maxLength={200}
+              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6"
+            />
+          </>
         ) : (
           <>
             <p className="text-xs text-gray uppercase tracking-wide mb-3">
-              {kids.length === 1 ? 'Confirm absence' : 'Who can\'t make it?'}
+              Who can&apos;t make it?
             </p>
             <div className="space-y-2 mb-4">
-              {kids.map(kid => {
-                const isSelected = selected.has(kid.id)
+              {players.map(p => {
+                const isSelected = selected.has(p.id)
                 return (
                   <button
-                    key={kid.id}
-                    onClick={() => toggle(kid.id)}
+                    key={p.id}
+                    onClick={() => toggle(p.id)}
                     disabled={isPending}
                     className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                       isSelected
@@ -122,16 +140,16 @@ export default function ParentCantAttendModal({
                         : 'border-white/10 hover:border-white/20'
                     }`}
                   >
-                    {kid.jersey_number !== null ? (
+                    {p.jersey_number !== null ? (
                       <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center shrink-0">
-                        <span className="text-green font-bold text-xs">{kid.jersey_number}</span>
+                        <span className="text-green font-bold text-xs">{p.jersey_number}</span>
                       </div>
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                        <span className="text-gray font-bold text-xs">{kid.first_name.charAt(0)}</span>
+                        <span className="text-gray font-bold text-xs">{p.first_name.charAt(0)}</span>
                       </div>
                     )}
-                    <span className="text-sm font-medium flex-1">{kid.first_name} {kid.last_name}</span>
+                    <span className="text-sm font-medium flex-1">{p.first_name} {p.last_name}</span>
                     <span
                       className={`w-5 h-5 rounded-md border flex items-center justify-center ${
                         isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
@@ -155,7 +173,7 @@ export default function ParentCantAttendModal({
               type="text"
               value={reason}
               onChange={e => setReason(e.target.value)}
-              placeholder="e.g. Doctor appointment, family trip"
+              placeholder="e.g. Class conflict, injury, travel"
               maxLength={200}
               className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6"
             />
@@ -169,7 +187,7 @@ export default function ParentCantAttendModal({
           >
             Cancel
           </button>
-          {kids.length > 0 && (
+          {players.length > 0 && (
             <button
               onClick={handleSubmit}
               disabled={isPending || selected.size === 0}

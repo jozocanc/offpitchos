@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export const metadata = {
   title: 'Privacy Policy — OffPitchOS',
-  description: 'How OffPitchOS collects, stores, and protects your club data.',
+  description: 'How OffPitchOS collects, stores, and protects your team data.',
 }
 
 export default function PrivacyPage() {
@@ -12,12 +12,12 @@ export default function PrivacyPage() {
         <Link href="/" className="text-green hover:underline text-sm">← Back</Link>
 
         <h1 className="text-4xl font-black uppercase tracking-tight mt-6 mb-2">Privacy Policy</h1>
-        <p className="text-gray text-sm mb-10">Last updated: April 15, 2026</p>
+        <p className="text-gray text-sm mb-10">Last updated: September 28, 2026</p>
 
         <div className="space-y-8 text-white/90 leading-relaxed">
           <section>
             <p className="text-lg">
-              OffPitchOS is built for youth soccer clubs, which means a lot of the people in our system are minors and their families. We take that seriously. This policy explains exactly what we collect, why, where it lives, and what we will never do with it.
+              OffPitchOS is built for soccer teams: the coaching staff and the players on the roster. Some of those players, and some athletes who register for a team&rsquo;s ID camps, may be under 18. We take that seriously. This policy explains exactly what we collect, why, where it lives, and what we will never do with it.
             </p>
           </section>
 
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold text-white mb-3">The short version</h2>
             <ul className="list-disc pl-6 space-y-2">
               <li>We <strong>will never sell</strong> your data or your players&rsquo; data. Not to advertisers, not to data brokers, not to anyone.</li>
-              <li>We <strong>do not use</strong> club or player data to train AI models.</li>
+              <li>We <strong>do not use</strong> team or player data to train AI models.</li>
               <li>We only collect what the app needs to do its job.</li>
               <li>You own your data. You can export or delete it at any time.</li>
             </ul>
@@ -34,8 +34,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">What we collect</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Account info:</strong> name, email, role (DOC, coach, parent, player), and password hash.</li>
-              <li><strong>Club data:</strong> teams, rosters, schedules, attendance, feedback notes, gear sizes, camp registrations.</li>
+              <li><strong>Account info:</strong> name, email, role on the team (for example director, coach, or player), and password hash.</li>
+              <li><strong>Team data:</strong> teams, rosters, schedules, attendance, feedback notes, gear sizes, travel details, and camp registrations, including an optional guardian contact for camp registrants under 18.</li>
               <li><strong>Communications:</strong> messages, announcements, and notification preferences.</li>
               <li><strong>Payment data:</strong> processed by Stripe. We never see or store card numbers — only a transaction ID and status.</li>
               <li><strong>Device data:</strong> IP address and browser type for security; push notification tokens when you opt in.</li>
@@ -66,9 +66,12 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-3">Children&rsquo;s privacy (COPPA)</h2>
+            <h2 className="text-2xl font-bold text-white mb-3">Minors and children&rsquo;s privacy (COPPA)</h2>
+            <p className="mb-3">
+              OffPitchOS is not directed at children under 13, and we do not knowingly create accounts for or collect personal information from children under 13. If we learn that we have, we will delete it. If you believe a child under 13 has provided us information, email us.
+            </p>
             <p>
-              OffPitchOS is designed for use by clubs whose players may be under 13. We do not create accounts directly for children under 13. Player profiles are created and managed by verified parents, coaches, or club directors. We collect only the information the club needs to run operations — name, age group, attendance, gear size, and feedback notes. Parents can review, export, or request deletion of their child&rsquo;s data at any time by emailing us.
+              Players and camp registrants under 18 may appear in a team&rsquo;s roster or camp list. We collect only what the team needs to run operations: name, age, contact details, attendance, gear size, and feedback notes, plus an optional guardian contact at camp registration. A player under 18, or their parent or legal guardian, can review, export, or request deletion of that player&rsquo;s data at any time by emailing us.
             </p>
           </section>
 

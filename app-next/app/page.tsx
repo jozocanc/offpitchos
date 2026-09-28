@@ -80,14 +80,14 @@ export default async function Home() {
           style={{ color: subtext }}
           className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] mb-8"
         >
-          Built for the whole organisation
+          Built for teams with a coaching staff
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
           {[
-            { k: 'Youth clubs', v: 'Multiple age groups, one directory' },
-            { k: 'Academies', v: 'Full-time staff and training blocks' },
             { k: 'College programs', v: 'Season schedule, film and tactics' },
-            { k: 'Multi-site clubs', v: 'Several venues, one source of truth' },
+            { k: 'Junior colleges', v: 'A full squad run by a small staff' },
+            { k: 'Academies', v: 'Full-time staff and training blocks' },
+            { k: 'Club first teams', v: 'One squad, one staff, one plan' },
           ].map((x) => (
             <div key={x.k} style={{ backgroundColor: cream }} className="px-6 py-7 text-center">
               <p style={{ color: ink }} className="font-semibold text-[15px] tracking-[-0.01em]">{x.k}</p>
@@ -97,16 +97,16 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── The week a club actually has ────────────────────────────────── */}
+      {/* ── The week a team actually has ────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
         <div className="max-w-3xl mb-14">
           <SectionLabel n="01">The problem</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
-            A club does not fail on the pitch. It fails on Sunday night.
+            A team does not fail on the pitch. It fails on Sunday night.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-            A coach pulls out. A field floods. A fixture moves. Every one of those is
-            twenty messages, four apps and an hour your director does not have — and it
+            A bus time changes. A field floods. A fixture moves. Every one of those is
+            twenty messages, four apps and an hour your head coach does not have. And it
             happens every single week of the season.
           </p>
         </div>
@@ -121,8 +121,8 @@ export default async function Home() {
               d: 'The schedule lives in one tool, the roster in another, the conversation in a group chat nobody reads twice.',
             },
             {
-              t: 'The director becomes the system',
-              d: 'When the software cannot react, a person has to. That person is the one who should be building the club.',
+              t: 'The head coach becomes the system',
+              d: 'When the software cannot react, a person has to. That person is the one who should be coaching the team.',
             },
           ].map((x) => (
             <div
@@ -146,7 +146,7 @@ export default async function Home() {
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5 max-w-xl mx-auto">
             No forms to fill in, no chat to copy-paste into. The change propagates to
-            every person it touches, and the club carries on.
+            every person it touches, and the team carries on.
           </p>
         </div>
         <div
@@ -186,7 +186,7 @@ export default async function Home() {
             reverse
             label="Decisions, surfaced"
             title="The five things that actually need you."
-            body="Instead of a feed to scroll, the club opens on a ranked list: who is short a coach, which sessions are unconfirmed, what is unanswered. Everything else waits."
+            body="Instead of a feed to scroll, your day opens on a ranked list: who is unavailable, which players still owe forms, what is unanswered. Everything else waits."
             mockup={<AttentionMockup />}
           />
           <Feature
@@ -204,33 +204,28 @@ export default async function Home() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <SectionLabel n="04" center>Every role</SectionLabel>
             <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
-              One system. Four points of view.
+              One system. Three points of view.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
               Everyone sees precisely what their job requires — and nothing that belongs
               to someone else.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid md:grid-cols-3 gap-5">
             <RoleCard
-              label="Director"
-              title="Runs the club"
-              points={['The week at a glance', 'Coverage gaps before they bite', 'Every team, one directory', 'Reporting without spreadsheets']}
+              label="Head coach"
+              title="Runs the program"
+              points={['The week at a glance', 'Travel, kit and forms in one place', 'The whole roster, one directory', 'Reporting without spreadsheets']}
             />
             <RoleCard
-              label="Coach"
+              label="Assistant coach"
               title="Runs the session"
-              points={['Squad and availability', 'Tactics board with Pep AI', 'Session plans as PDF', 'Request cover in one tap']}
+              points={['Squad and availability', 'Tactics board with Pep AI', 'Session plans as PDF', 'Feedback logged per player']}
             />
             <RoleCard
               label="Player"
               title="Knows the plan"
-              points={['Schedule and location', 'Session plans and clips', 'Feedback from staff', 'Availability in a tap']}
-            />
-            <RoleCard
-              label="Parent"
-              title="Stays informed"
-              points={['Changes pushed instantly', 'RSVP without a group chat', 'Payments and forms', 'Only their own child']}
+              points={['Schedule, travel and location', 'Changes pushed instantly', 'Availability and forms in a tap', 'Feedback from staff']}
             />
           </div>
         </div>
@@ -244,8 +239,8 @@ export default async function Home() {
             Four tools that have never met.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-            Most clubs are running a registration platform, a scheduling app, a group
-            chat and a spreadsheet. None of them know the others exist, so the director
+            Most programs are running a scheduling app, a group chat, a shared drive
+            and a spreadsheet. None of them know the others exist, so the head coach
             is the integration layer.
           </p>
         </div>
@@ -261,8 +256,8 @@ export default async function Home() {
               {[
                 'Open four apps to answer one question',
                 'Copy the same update into every chat',
-                'Find cover by texting coaches one by one',
-                'Chase the same parents every week',
+                'Collect travel docs and forms by hand',
+                'Chase players for sizes, travel docs and availability',
                 'Rebuild the picture from memory each Sunday',
               ].map((t) => (
                 <li key={t} className="flex items-start gap-3 text-[15px]" style={{ color: subtext }}>
@@ -287,10 +282,10 @@ export default async function Home() {
               </p>
               <ul className="space-y-4">
                 {[
-                  'One place that already knows your club',
+                  'One place that already knows your team',
                   'Everyone notified in seconds, nothing typed twice',
-                  'Cover requested automatically when a coach drops',
-                  'Answers pulled from the club, not from memory',
+                  'Players send sizes, forms and availability themselves',
+                  'Answers pulled from the team, not from memory',
                   'The season stays current without being maintained',
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3 text-[15px]" style={{ color: cream }}>
@@ -310,19 +305,19 @@ export default async function Home() {
           <div className="max-w-3xl mb-14">
             <SectionLabel n="06">Your data</SectionLabel>
             <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
-              A club roster is not a mailing list.
+              A team roster is not a mailing list.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-              You are handing over the names, ages and whereabouts of children and the
-              contact details of every family in your club. That deserves more than a
-              privacy policy nobody reads.
+              You are handing over the names, dates of birth, travel plans and contact
+              details of every player on your roster. That deserves more than a privacy
+              policy nobody reads.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { t: 'Isolated by club', d: 'Separation is enforced in the database itself, not by application code that can be bypassed.' },
-              { t: 'Scoped to the role', d: 'A parent reaches their own child. A coach reaches their own squad. Enforced per request.' },
-              { t: 'Never sold on', d: 'No advertising, no data brokering, no third party gets your families. That is not the business model.' },
+              { t: 'Isolated by team', d: 'Separation is enforced in the database itself, not by application code that can be bypassed.' },
+              { t: 'Scoped to the role', d: 'A player sees their own profile. A coach reaches their own squad. Enforced per request.' },
+              { t: 'Never sold on', d: 'No advertising, no data brokering, no third party gets your players. That is not the business model.' },
               { t: 'Yours to take', d: 'Export your roster and schedule whenever you want, and delete the account permanently if you leave.' },
             ].map((x) => (
               <div key={x.t} style={{ backgroundColor: cream, borderColor: border }} className="rounded-3xl border p-7">
@@ -358,9 +353,9 @@ export default async function Home() {
             portraitAlt="Jozo Cancar, co-founder of OffPitchOS"
             priority
           >
-            Played Division I at Florida Atlantic. Years around real clubs, as a player and
+            Played Division I at Florida Atlantic. Years around real teams, as a player and
             on staff, showed me where the existing tools give up: coaches dropping out the
-            night before, families lost in group chats, a director opening six apps to
+            night before, players lost in group chats, a head coach opening six apps to
             answer one question. I build the thing that should have existed already.
           </Founder>
 
@@ -375,7 +370,7 @@ export default async function Home() {
             Played college soccer at Palm Beach Atlantic and now coaches at Florida
             Atlantic. Rob has been in this since day one, and the sharpest ideas in the
             product are his: that the software should react to chaos on its own rather
-            than wait to be told, and that a club&rsquo;s whole week is really decided on a
+            than wait to be told, and that a team&rsquo;s whole week is really decided on a
             Sunday night.
           </Founder>
         </div>
@@ -405,11 +400,11 @@ export default async function Home() {
           />
           <div className="relative max-w-2xl mx-auto">
             <h2 style={{ color: cream }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05]">
-              See it run your club.
+              See it run your team.
             </h2>
             <p style={{ color: '#B7C0BA' }} className="text-[17px] leading-relaxed mt-5">
               Fifteen minutes, your actual season, your actual roster. If it does not save
-              your director a night a week, do not buy it.
+              your staff a night a week, do not buy it.
             </p>
             <div className="mt-10 flex items-center justify-center gap-3 flex-wrap">
               <a
@@ -445,7 +440,7 @@ export default async function Home() {
                 <Wordmark size="sm" />
               </span>
               <p style={{ color: subtext }} className="text-[14px] leading-relaxed mt-4">
-                The operating system for soccer clubs, academies and college programs.
+                The operating system for soccer teams: the coaching staff and every player.
               </p>
             </div>
             <div className="flex gap-10 sm:gap-14 text-[14px]">
@@ -640,7 +635,7 @@ function VoiceMockup() {
             Listening
           </p>
           <p style={{ color: mockText }} className="text-sm font-medium">
-            &ldquo;Cancel U14 practice tonight&rdquo;
+            &ldquo;Cancel training tonight&rdquo;
           </p>
         </div>
       </div>
@@ -657,12 +652,12 @@ function VoiceMockup() {
           >
             Cancelled
           </span>
-          <p style={{ color: mockMuted }} className="text-xs">U14 Tigers</p>
+          <p style={{ color: mockMuted }} className="text-xs">Men&rsquo;s Soccer</p>
         </div>
         <p style={{ color: mockText }} className="text-base font-semibold line-through opacity-60">
-          Practice · 6:00 – 7:30 PM
+          Training · 3:30 – 5:30 PM
         </p>
-        <p style={{ color: mockMuted }} className="text-xs mt-1">Bayshore Park · Field 3</p>
+        <p style={{ color: mockMuted }} className="text-xs mt-1">Main Stadium · Field 1</p>
       </div>
 
       {/* Toast */}
@@ -674,7 +669,7 @@ function VoiceMockup() {
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <p style={{ color: mockText }} className="text-xs">
-          <span className="font-semibold">12 parents</span> notified · Coach Mike updated
+          <span className="font-semibold">24 players</span> notified · Coach Mike updated
         </p>
       </div>
     </MockShell>
@@ -705,9 +700,9 @@ function AttentionMockup() {
           </span>
           <div className="flex-1 min-w-0">
             <p style={{ color: mockText }} className="text-sm font-semibold">
-              Coach Mike unavailable for U12 game tomorrow
+              4 players missing travel docs for Friday
             </p>
-            <p style={{ color: mockMuted }} className="text-xs mt-0.5">3 candidates ranked · top: Coach Sara</p>
+            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Reminder ready · send in 1 tap</p>
           </div>
         </div>
 
@@ -724,7 +719,7 @@ function AttentionMockup() {
           </span>
           <div className="flex-1 min-w-0">
             <p style={{ color: mockText }} className="text-sm font-semibold">
-              3 parents asked about Saturday tournament
+              3 players asked about Saturday&rsquo;s travel
             </p>
             <p style={{ color: mockMuted }} className="text-xs mt-0.5">Reply to all in one tap</p>
           </div>
@@ -743,7 +738,7 @@ function AttentionMockup() {
           </span>
           <div className="flex-1 min-w-0">
             <p style={{ color: mockText }} className="text-sm font-semibold">
-              2 unpaid camp registrations
+              2 unpaid ID camp registrations
             </p>
             <p style={{ color: mockMuted }} className="text-xs mt-0.5">Send reminder · 1-tap</p>
           </div>
@@ -758,11 +753,11 @@ function EventMockup() {
     <MockShell>
       <div className="flex items-center gap-2 mb-3">
         <span style={{ backgroundColor: mockGreen }} className="w-2 h-2 rounded-full" />
-        <p style={{ color: mockText }} className="text-sm font-semibold">U14 Tigers</p>
-        <span style={{ color: mockMuted }} className="text-xs">· Practice</span>
+        <p style={{ color: mockText }} className="text-sm font-semibold">Men&rsquo;s Soccer</p>
+        <span style={{ color: mockMuted }} className="text-xs">· Training</span>
       </div>
 
-      <p style={{ color: mockText }} className="text-xl font-semibold mb-1">Tue · 6:00 – 7:30 PM</p>
+      <p style={{ color: mockText }} className="text-xl font-semibold mb-1">Tue · 3:30 – 5:30 PM</p>
       <p
         style={{ color: mockGreen }}
         className="inline-flex items-center gap-1.5 text-sm font-medium mb-5"
@@ -771,7 +766,7 @@ function EventMockup() {
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
-        Bayshore Park · Open in Maps
+        Main Stadium · Open in Maps
       </p>
 
       <div className="border-t pt-4" style={{ borderColor: mockBorder }}>

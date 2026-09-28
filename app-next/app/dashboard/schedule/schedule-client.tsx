@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { ROLES } from '@/lib/constants'
+import { ROLES, isMember } from '@/lib/constants'
 import type { EventType } from '@/lib/constants'
 import Filters from './filters'
 import { useVoiceFocus } from '@/components/voice-context'
@@ -96,7 +96,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
   const canCreate = userRole === ROLES.DOC
-  const isParent = userRole === ROLES.PARENT
+  // Players (and legacy 'parent' rows) get the member RSVP buttons.
+  const isPlayer = isMember(userRole)
 
   // Scroll to and flash-highlight an event when arriving via "Needs your attention".
   // Agenda is the default view and the only one that renders scrollable event
@@ -145,7 +146,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   }
 
   function handleCancel(eventId: string) {
-    if (!confirm('Cancel this event? Coaches and parents on this team will be notified.')) return
+    if (!confirm('Cancel this event? Coaches and players on this team will be notified.')) return
     startTransition(async () => {
       try {
         const cRes = await cancelEvent(eventId)
@@ -162,7 +163,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   }
 
   function handleRestore(eventId: string) {
-    if (!confirm('Bring this event back? Coaches and parents on this team will be notified.')) return
+    if (!confirm('Bring this event back? Coaches and players on this team will be notified.')) return
     startTransition(async () => {
       try {
         const rRes = await restoreEvent(eventId)
@@ -269,11 +270,11 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           onRestore={handleRestore}
           isDoc={userRole === ROLES.DOC}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
-          onParentCantAttend={isParent ? ((eventId: string, teamId: string) => {
+          onParentCantAttend={isPlayer ? ((eventId: string, teamId: string) => {
             const ev = [...events, ...pastEvents].find(e => e.id === eventId)
             setParentCantAttendEvent({ eventId, teamId, title: ev?.title ?? '' })
           }) : undefined}
-          onParentGoing={isParent ? ((eventId: string, teamId: string) => {
+          onParentGoing={isPlayer ? ((eventId: string, teamId: string) => {
             const ev = [...events, ...pastEvents].find(e => e.id === eventId)
             setParentGoingEvent({ eventId, teamId, title: ev?.title ?? '' })
           }) : undefined}
@@ -306,7 +307,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
         />
       )}
 
-      {/* Parent: Can't Attend → excuse kids + notify coach */}
+      {/* Player: I can't make it → mark excused + notify coaches */}
       {parentCantAttendEvent && (
         <ParentCantAttendModal
           eventId={parentCantAttendEvent.eventId}
@@ -316,7 +317,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
         />
       )}
 
-      {/* Parent: We'll Be There → record positive RSVP */}
+      {/* Player: I'll be there → record positive RSVP */}
       {parentGoingEvent && (
         <ParentGoingModal
           eventId={parentGoingEvent.eventId}

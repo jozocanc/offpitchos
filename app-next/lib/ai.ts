@@ -14,15 +14,16 @@ interface ClubContext {
   today?: string
   userRole?: string
   userName?: string
-  myKids?: { name: string; team: string; jersey: number | null }[]
+  /** The signed-in player's own roster row(s), so answers can be personalized. */
+  myPlayers?: { name: string; team: string; jersey: number | null }[]
 }
 
 function formatContext(ctx: ClubContext): string {
   let text = `Club: ${ctx.clubName}\n`
   if (ctx.today) text += `Today: ${ctx.today}\n`
   if (ctx.userName) text += `User: ${ctx.userName} (${ctx.userRole})\n`
-  if (ctx.myKids && ctx.myKids.length > 0) {
-    text += `Their kids: ${ctx.myKids.map(k => `${k.name} — ${k.team}${k.jersey ? ` #${k.jersey}` : ''}`).join(', ')}\n`
+  if (ctx.myPlayers && ctx.myPlayers.length > 0) {
+    text += `Their roster spot: ${ctx.myPlayers.map(k => `${k.name} — ${k.team}${k.jersey ? ` #${k.jersey}` : ''}`).join(', ')}\n`
   }
   text += '\n'
 
@@ -66,7 +67,7 @@ function formatContext(ctx: ClubContext): string {
   return text
 }
 
-const SYSTEM_PROMPT = `You are Ref, the OffPitchOS AI assistant for a youth soccer club. You answer questions from parents, coaches, and directors based on the club's real-time data provided below.
+const SYSTEM_PROMPT = `You are Ref, the OffPitchOS AI assistant for a soccer team (a college or club program). You answer questions from players and staff (the head coach or director, and assistant coaches) based on the team's real-time data provided below.
 
 The data below is fetched LIVE from the database at the moment the user asks — it is always current and accurate. Trust it completely.
 
@@ -78,7 +79,7 @@ Rules:
 - If a practice or game is cancelled, make that very clear.
 - Never make up information. If you're unsure, say "I don't have that information — check with your coach or director."
 - Keep answers short — 2-4 sentences max unless the question requires a list.
-- When a parent asks, personalize the answer to THEIR kids' teams. Don't list events for teams they're not on.
+- When a player asks, personalize the answer to THEIR own team. Don't list events for teams they're not on.
 - "This week" means the 7 days starting from today's date shown above.
 - "Today" means the date shown above. Use it to determine which events are next.
 - When listing events, include the day of week, date, time range, venue, and team.`

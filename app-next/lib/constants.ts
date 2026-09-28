@@ -9,16 +9,18 @@ export const ROLES = {
  * Staff run the club; members belong to it.
  *
  * Most role checks in the UI mean "is this person staff?", not "is this person
- * specifically a parent". They were written as `role === 'parent'` only because
- * parent was the sole non-staff role. Adding 'player' in migration 045 made
- * that assumption wrong: a player would have fallen through every one of those
- * checks and been treated as staff.
+ * specifically a player". Use these helpers rather than comparing role strings.
+ *
+ * PARENT is legacy: the product is team-only (staff + players) and nothing in
+ * the UI offers or defaults to it any more. It stays so existing 'parent' rows
+ * keep resolving as members instead of falling through and being treated as
+ * staff.
  */
 export function isStaff(role: string | null | undefined): boolean {
   return role === ROLES.DOC || role === ROLES.COACH;
 }
 
-/** A parent or a player — belongs to the club, does not run it. */
+/** A player (or a legacy 'parent' row). Belongs to the team, does not run it. */
 export function isMember(role: string | null | undefined): boolean {
   return role === ROLES.PARENT || role === ROLES.PLAYER;
 }

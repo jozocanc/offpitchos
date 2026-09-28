@@ -34,8 +34,8 @@ export default async function DashboardLayout({
     redirect('/onboarding')
   }
 
-  // "Preview as" — a DOC can view the app as one of their coaches or parents.
-  const actualRole = profile.role ?? 'parent'
+  // "Preview as" — a DOC can view the app as one of their coaches or players.
+  const actualRole = profile.role ?? 'player'
   const effectiveRole = await getEffectiveRole(actualRole)
 
   // Supabase returns a to-one embed as an object or a one-element array

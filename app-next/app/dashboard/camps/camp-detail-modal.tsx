@@ -88,16 +88,16 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
       if (result.nudged === 0 && result.skipped === 0) {
         toast('No unpaid registrations', 'success')
       } else if (result.nudged === 0) {
-        toast(`Couldn't nudge anyone — ${result.skipped} unlinked player(s)`, 'error')
+        toast(`Couldn't nudge anyone. ${result.skipped} player(s) have no linked account.`, 'error')
       } else if (result.emailFailed >= result.nudged) {
         // Every email bounced. Push still went out, so the data action
-        // completed, but the parents who check email first won't see it.
+        // completed, but the players who check email first won't see it.
         toast(
-          `Reminders sent to ${result.nudged} parent${result.nudged === 1 ? '' : 's'}, but emails didn't deliver. Push notifications went out — nudge again in a few minutes to retry emails.`,
+          `Reminders sent to ${result.nudged} player${result.nudged === 1 ? '' : 's'}, but emails didn't deliver. Push notifications went out, so nudge again in a few minutes to retry emails.`,
           'error',
         )
       } else {
-        const parts = [`Nudged ${result.nudged} parent${result.nudged === 1 ? '' : 's'}`]
+        const parts = [`Nudged ${result.nudged} player${result.nudged === 1 ? '' : 's'}`]
         if (result.skipped > 0) parts.push(`skipped ${result.skipped} unlinked`)
         if (result.emailFailed > 0) parts.push(`${result.emailFailed} email${result.emailFailed === 1 ? '' : 's'} failed`)
         toast(parts.join(' · '), result.emailFailed > 0 ? 'error' : 'success')
@@ -169,8 +169,8 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
             )}
           </div>
 
-          {/* Nudge unpaid parents — one-click push + email reminder. Skips
-              registrations whose player.parent_id is still the DOC (unlinked),
+          {/* Nudge unpaid players: one-click push + email reminder. Skips
+              registrations whose player row has no linked player account,
               and reports the count so the DOC knows who couldn't be reached. */}
           {camp.feeCents > 0 && unpaidCount > 0 && (
             <div className="mb-3 bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-3 flex items-center justify-between gap-3">
@@ -182,7 +182,7 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
                 disabled={nudging}
                 className="text-xs font-bold bg-yellow-400/20 text-yellow-400 px-3 py-1.5 rounded-lg hover:bg-yellow-400/30 transition-colors disabled:opacity-50"
               >
-                {nudging ? 'Sending…' : 'Nudge unpaid parents'}
+                {nudging ? 'Sending…' : 'Nudge unpaid players'}
               </button>
             </div>
           )}
@@ -202,8 +202,13 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
                         : `${reg.players?.first_name} ${reg.players?.last_name}`}
                     </p>
                     <p className="text-xs text-gray">
-                      {(reg as any).guest_parent_name
-                        ? `Guest — ${(reg as any).guest_parent_name}`
+                      {(reg as any).guest_kid_name
+                        ? [
+                            'Guest',
+                            (reg as any).guest_kid_age ? `age ${(reg as any).guest_kid_age}` : null,
+                            (reg as any).guest_parent_email,
+                            (reg as any).guest_parent_name ? `guardian: ${(reg as any).guest_parent_name}` : null,
+                          ].filter(Boolean).join(' · ')
                         : (() => {
                             const t = reg.players?.teams
                             if (!t) return ''

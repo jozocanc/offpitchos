@@ -20,7 +20,7 @@ interface Venue {
 // Inline "Create Camp" — replaces the old "+ Create Camp" link that dumped the
 // DOC onto /dashboard/schedule and made them come back to set fee/capacity.
 // This modal does both in one submit and uses the existing notification path
-// to tell parents a new camp is open for registration.
+// to tell the team a new camp is open for registration.
 export default function CreateCampModal({
   teams,
   venues,
@@ -95,7 +95,7 @@ export default function CreateCampModal({
         toast(
           formatRecipientToast({
             action: 'camp_created',
-            parents: result.parents,
+            parents: result.players,
             coaches: result.coaches,
             emailFailed: result.emailFailed,
           }),
@@ -125,7 +125,7 @@ export default function CreateCampModal({
           required
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder="e.g. Summer Skills Camp"
+          placeholder="e.g. Fall ID Camp"
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
         />
 
@@ -135,7 +135,7 @@ export default function CreateCampModal({
           onChange={e => setTeamId(e.target.value)}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors mb-4"
         >
-          <option value="">Club-wide (no specific team)</option>
+          <option value="">Program-wide (no specific team)</option>
           {teams.map(t => (
             <option key={t.id} value={t.id}>
               {teamLabel(t.name, t.age_group)}
@@ -147,7 +147,7 @@ export default function CreateCampModal({
         <input
           value={description}
           onChange={e => setDescription(e.target.value)}
-          placeholder="e.g. Boys ages 5-13, Girls U10-U12, All players 8-14"
+          placeholder="e.g. Class of 2027 and 2028 prospects, all positions"
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
         />
 
@@ -249,7 +249,7 @@ export default function CreateCampModal({
           value={notes}
           onChange={e => setNotes(e.target.value)}
           rows={2}
-          placeholder="Equipment to bring, meeting point, etc."
+          placeholder="Boots, shin guards, check-in time, parking, etc."
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6 resize-none"
         />
 

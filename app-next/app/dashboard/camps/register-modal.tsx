@@ -87,16 +87,16 @@ export default function RegisterModal({ camp, onClose }: { camp: Camp; onClose: 
         {success ? (
           <div className="text-center py-6">
             <p className="text-green font-semibold mb-2">Registered!</p>
-            <p className="text-sm text-gray">Your child has been registered for this camp.</p>
+            <p className="text-sm text-gray">You're registered for this camp.</p>
             <button onClick={onClose} className="mt-4 text-sm text-gray hover:text-white transition-colors">Close</button>
           </div>
         ) : loading ? (
-          <p className="text-sm text-gray">Loading your players...</p>
+          <p className="text-sm text-gray">Loading your profile...</p>
         ) : players.length === 0 ? (
-          <p className="text-sm text-gray">No players found. Add a player first in your profile.</p>
+          <p className="text-sm text-gray">Your account isn't linked to a roster spot yet. Ask your coach to link you.</p>
         ) : (
           <>
-            <label className="block text-sm font-medium text-gray mb-2">Select player</label>
+            <label className="block text-sm font-medium text-gray mb-2">Registering</label>
             <select
               value={selectedPlayerId}
               onChange={e => setSelectedPlayerId(e.target.value)}

@@ -14,8 +14,8 @@ interface AccountSettingsProps {
 function roleLabel(role?: string): string {
   if (role === 'doc') return 'Director of Coaching'
   if (role === 'coach') return 'Coach'
-  if (role === 'player') return 'Player'
-  if (role === 'parent') return 'Parent'
+  // 'parent' is a legacy member role; members are players now.
+  if (role === 'player' || role === 'parent') return 'Player'
   return 'Member'
 }
 

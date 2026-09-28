@@ -190,7 +190,7 @@ const navItems: NavItem[] = [
   { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
   { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
   { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
-  { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'parent', 'player'] },
+  { label: 'Ask', href: '/dashboard/ask', icon: <AskIcon />, roles: ['doc', 'coach', 'player'] },
   { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <SettingsIcon />, roles: ['doc', 'coach'] },
 ]
@@ -219,7 +219,10 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: 
     Reflect.set(document, 'cookie', `viewAsRole=${role};path=/;max-age=86400`)
     router.refresh()
   }
-  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(activeRole))
+  // A legacy 'parent' account navigates as a player; nav lists no longer
+  // name the parent role.
+  const navRole = activeRole === 'parent' ? 'player' : activeRole
+  const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(navRole))
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -274,9 +277,9 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false }: 
           <div className="mb-3">
             <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">Preview as</p>
             <div className="flex gap-1">
-            {/* Player is its own preview: a college program has no parents at
-                all, so previewing as one showed a view nobody there will see. */}
-            {(['doc', 'coach', 'parent', 'player'] as const).map(role => (
+            {/* Staff (DOC, coach) and players only: the product is team-only,
+                there is no parent view to preview. */}
+            {(['doc', 'coach', 'player'] as const).map(role => (
               <button
                 key={role}
                 onClick={() => switchRole(role)}

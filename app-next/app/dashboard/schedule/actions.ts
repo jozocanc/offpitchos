@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { isMember } from '@/lib/constants'
 import { checkAndEscalateTimeouts } from '../coverage/actions'
 import { checkConflicts } from './conflict-actions'
 import { sendPushToProfiles } from '@/lib/push'
@@ -62,10 +63,13 @@ async function getUserProfile() {
 }
 
 export interface NotifyCounts {
+  // Member (player) recipients. The key is still named `parents` because
+  // formatRecipientToast() and the camps flow share this shape; it counts
+  // players plus any legacy 'parent' rows.
   parents: number
   coaches: number
   // Count of email-delivery failures (Resend rejections) across the
-  // bulk send. Independent of push delivery — a parent whose email
+  // bulk send. Independent of push delivery: a player whose email
   // failed may still have gotten the push notification. Part 1.5.
   emailFailed: number
 }
@@ -78,7 +82,7 @@ async function notifyTeamMembers(
 ): Promise<NotifyCounts> {
   const service = createServiceClient()
 
-  // Get all team members (coaches + parents)
+  // Get all team members (coaches + players)
   const { data: members } = await service
     .from('team_members')
     .select('profile_id')
@@ -99,20 +103,20 @@ async function notifyTeamMembers(
   await sendPushToProfiles(memberIds, { title: 'OffPitchOS', message, url: '/dashboard/schedule', tag: type })
   const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — Schedule', message, 'https://offpitchos.com/dashboard/schedule')
 
-  // Count by role so the caller can report "notified N parents and M coaches"
+  // Count by role so the caller can report "notified N players and M coaches"
   const { data: profiles } = await service
     .from('profiles')
     .select('role')
     .in('id', memberIds)
 
-  let parents = 0
+  let players = 0
   let coaches = 0
   for (const p of profiles ?? []) {
-    if (p.role === 'parent') parents++
+    if (isMember(p.role)) players++
     else if (p.role === 'coach' || p.role === 'doc') coaches++
   }
 
-  return { parents, coaches, emailFailed: emailResult.failed.length }
+  return { parents: players, coaches, emailFailed: emailResult.failed.length }
 }
 
 // ---------- Actions ----------
@@ -333,7 +337,7 @@ async function _updateEvent(input: UpdateEventInput): Promise<NotifyCounts> {
     if (seriesError) throw new Error(`Failed to update the series: ${seriesError.message}`)
 
     // Checked before notifying. The old code skipped its loop silently when the
-    // fetch failed and then messaged every parent that the schedule had moved.
+    // fetch failed and then messaged every player that the schedule had moved.
     if (!updatedCount) {
       throw new Error('No events were updated. You may not have permission to edit this series.')
     }

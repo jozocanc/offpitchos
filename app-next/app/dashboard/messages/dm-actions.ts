@@ -35,7 +35,8 @@ export interface DMableUser {
 
 // ------------------------------------------------------------
 // Permission: who can the current user DM?
-// Rules: parent <-> coach if they share a team. DOC <-> anyone in club.
+// Rules: player <-> coach if they share a team. DOC <-> anyone in club.
+// Legacy 'parent' team_members rows are treated as players.
 // ------------------------------------------------------------
 
 async function getDMableUserIds(myUserId: string, myRole: string, myClubId: string): Promise<Set<string>> {
@@ -53,8 +54,8 @@ async function getDMableUserIds(myUserId: string, myRole: string, myClubId: stri
     return allowed
   }
 
-  // Coach or parent: collect teams I'm on, then the complementary
-  // role on each of those teams.
+  // Coach or player: collect teams I'm on, then the complementary
+  // role(s) on each of those teams.
   const { data: myProfile } = await service
     .from('profiles')
     .select('id')
@@ -69,12 +70,12 @@ async function getDMableUserIds(myUserId: string, myRole: string, myClubId: stri
   const myTeams = (myMemberships ?? []).map(m => m.team_id)
   if (myTeams.length === 0) return allowed
 
-  const otherRole = myRole === 'coach' ? 'parent' : 'coach'
+  const otherRoles = myRole === 'coach' ? ['player', 'parent'] : ['coach']
   const { data: peers } = await service
     .from('team_members')
     .select('profile_id, profiles!inner(user_id)')
     .in('team_id', myTeams)
-    .eq('role', otherRole)
+    .in('role', otherRoles)
   for (const p of peers ?? []) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const uid = (p as any).profiles?.user_id

@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     .single()
 
   // Respect the "preview as" switcher (same helper as the layout)
-  const userRole = await getEffectiveRole(profile?.role ?? 'parent')
+  const userRole = await getEffectiveRole(profile?.role ?? 'player')
 
   const displayName = profile?.display_name
     ?? claims.user_metadata?.full_name
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-black tracking-tight">
           Welcome back, <span className="text-green">{displayName}</span>
         </h1>
-        <p className="text-gray mt-1 text-sm">Here&apos;s what&apos;s happening with your club today.</p>
+        <p className="text-gray mt-1 text-sm">Here&apos;s what&apos;s happening with your team today.</p>
       </div>
 
       {/* PWA install CTA — self-contained, hides itself if already installed,
@@ -124,7 +124,7 @@ async function DashboardBody({
   const myTeams = (myTeamsRes.data ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
   const myTeamIds = myTeams.map(tm => tm.team_id)
 
-  // Wave 2: today's events — scoped to the viewer's teams for coach/parent so
+  // Wave 2: today's events — scoped to the viewer's teams for coach/player so
   // they don't see other teams' events. Depends on myTeamIds, so it follows.
   let todayEventsQuery = supabase
     .from('events')
@@ -160,7 +160,7 @@ async function DashboardBody({
       {/* Coach-scoped attention panel. */}
       {userRole === 'coach' && <CoachAttentionPanel />}
 
-      {/* Parent-scoped attention panel. */}
+      {/* Player-scoped attention panel. */}
       {isMember(userRole) && <ParentAttentionPanel />}
 
       {/* Stat cards. */}
@@ -184,7 +184,7 @@ async function DashboardBody({
         )}
       </div>
 
-      {/* My Teams (for coaches and parents) */}
+      {/* My Teams (for coaches and players) */}
       {!isDoc && myTeams.length > 0 && (
         <div className="mb-10">
           <h2 className="text-lg font-bold mb-4">My Teams</h2>
@@ -197,7 +197,7 @@ async function DashboardBody({
               >
                 <div>
                   <p className="font-medium">{tm.teams.name}</p>
-                  <p className="text-gray text-xs mt-0.5 capitalize">{tm.role}</p>
+                  <p className="text-gray text-xs mt-0.5 capitalize">{tm.role === 'parent' ? 'player' : tm.role}</p>
                 </div>
                 <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
                   {ageGroupLabel(tm.teams.age_group) ?? 'Team'}

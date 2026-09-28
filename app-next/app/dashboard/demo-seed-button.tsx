@@ -29,14 +29,14 @@ export default function DemoSeedButton({ state }: Props) {
         <div>
           <p className="text-sm font-bold text-yellow-400">Demo data loaded</p>
           <p className="text-xs text-gray mt-0.5">
-            This club has seeded players, parents, coaches, and events for demo purposes.
+            This team has seeded players, coaches, and events for demo purposes.
           </p>
         </div>
         <button
           type="button"
           disabled={isPending}
           onClick={() => {
-            if (!confirm('Clear all seeded demo data from this club?')) return
+            if (!confirm('Clear all seeded demo data from this team?')) return
             setLoading('clear')
             startTransition(async () => {
               try {
@@ -65,9 +65,9 @@ export default function DemoSeedButton({ state }: Props) {
   return (
     <div className="mb-6 rounded-2xl bg-dark-secondary border border-white/10 border-dashed p-4 flex items-center justify-between gap-4">
       <div>
-        <p className="text-sm font-bold">Try it with a sample club</p>
+        <p className="text-sm font-bold">Try it with a sample team</p>
         <p className="text-xs text-gray mt-0.5">
-          Loads 12 players, 3 parents, 2 coaches, and a week of events so you can explore.
+          Loads a 22-player college squad, 3 assistant coaches, and two weeks of training and games so you can explore.
         </p>
       </div>
       <button
@@ -81,7 +81,7 @@ export default function DemoSeedButton({ state }: Props) {
               if (!seedRes.ok) { toast(seedRes.error, 'error'); return }
               const result = seedRes.data
               toast(
-                `Loaded ${result.playersAdded} players, ${result.parentsAdded} parents, ${result.coachesAdded} coaches, ${result.eventsAdded} events`,
+                `Loaded ${result.playersAdded} players, ${result.coachesAdded} coaches, ${result.eventsAdded} events`,
                 'success',
               )
               router.refresh()

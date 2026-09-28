@@ -34,7 +34,8 @@ export async function getPlayerProfile(playerId: string) {
 
   if (!player) throw new Error('Player not found')
 
-  const isParent = player.parent_id === user.id
+  // players.parent_id is the account linked to this row: the player themselves.
+  const isOwner = player.parent_id === user.id
 
   // Get feedback history
   const { data: feedback } = await supabase
@@ -73,7 +74,7 @@ export async function getPlayerProfile(playerId: string) {
     categoryAverages,
     userRole: await getEffectiveRole(profile.role),
     userProfileId: profile.id,
-    isParent,
+    isOwner,
   }
 }
 
@@ -94,7 +95,8 @@ async function _submitPlayerSize(
 ) {
   const { user, profile, supabase } = await getUserProfile()
 
-  // Verify the caller is either the parent of this player OR staff (doc/coach in this club)
+  // Verify the caller owns this player row (players.parent_id = the player's own
+  // account) OR is staff (doc/coach in this club)
   const { data: player } = await supabase
     .from('players')
     .select('parent_id, club_id')
@@ -103,10 +105,11 @@ async function _submitPlayerSize(
 
   if (!player) throw new Error('Player not found')
 
-  const isParent = player.parent_id === user.id
+  // players.parent_id is the account linked to this row: the player themselves.
+  const isOwner = player.parent_id === user.id
   const isStaff = (profile.role === 'doc' || profile.role === 'coach') && player.club_id === profile.club_id
 
-  if (!isParent && !isStaff) {
+  if (!isOwner && !isStaff) {
     throw new Error('You are not authorized to update this player')
   }
 

@@ -8,7 +8,7 @@ import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 
 export const dynamic = 'force-dynamic'
 // Public pages should never get cached at the framework level — schedule
-// changes need to be reflected on the next page load even if a parent's
+// changes need to be reflected on the next page load even if a player's
 // browser opens the link an hour later.
 
 interface RosterRow {

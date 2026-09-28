@@ -44,7 +44,7 @@ export const getClubTimezone = cache(async (): Promise<string> => {
  * Uses the service client deliberately. Those visitors are `anon`, and clubs
  * has no anon read policy, so the user-scoped client would return nothing and
  * silently fall back to the default — printing UTC-derived times on exactly
- * the pages shown to parents who are not signed in yet. Reading one timezone
+ * the pages shown to players who are not signed in yet. Reading one timezone
  * string for a club id the caller already holds exposes nothing: the id itself
  * came from a share token or invite token that already gates access, and the
  * value is a zone name, not member data.

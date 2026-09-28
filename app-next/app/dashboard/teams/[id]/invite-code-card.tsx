@@ -13,7 +13,7 @@ export default function InviteCodeCard({ code }: { code: string }) {
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
-      toast('Invite link copied — send it to parents', 'success')
+      toast('Invite link copied. Send it to your players', 'success')
       setTimeout(() => setCopied(false), 2000)
     } catch {
       toast('Failed to copy', 'error')
@@ -30,7 +30,7 @@ export default function InviteCodeCard({ code }: { code: string }) {
   return (
     <div className="mb-4 bg-dark-secondary border border-white/5 rounded-xl p-4 flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="text-xs text-gray mb-1">Parent invite code</p>
+        <p className="text-xs text-gray mb-1">Team invite code</p>
         <button
           onClick={copyCode}
           title="Tap to copy code"

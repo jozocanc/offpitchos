@@ -47,16 +47,16 @@ export default function GearClient({
   teams,
   userRole,
   lastRequestedAt,
-  lastRequestedParentCount,
+  lastRequestedPlayerCount,
   respondedSinceRequest,
-  playersWithParents,
+  playersWithAccounts,
 }: {
   teams: TeamGearSummary[]
   userRole: string
   lastRequestedAt: string | null
-  lastRequestedParentCount: number
+  lastRequestedPlayerCount: number
   respondedSinceRequest: number
-  playersWithParents: number
+  playersWithAccounts: number
 }) {
   const timezone = useClubTimezone()
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null)
@@ -65,7 +65,9 @@ export default function GearClient({
   const [copiedLinks, setCopiedLinks] = useState(false)
   const { toast } = useToast()
   const isDoc = userRole === 'doc'
-  const hasParents = playersWithParents > 0
+  // Any player linked to their own login? If not, the in-app request would
+  // notify nobody and the collect links become the primary action.
+  const hasAccounts = playersWithAccounts > 0
 
   // Club-wide totals
   const totalPlayers = teams.reduce((sum, t) => sum + t.playerCount, 0)
@@ -94,16 +96,16 @@ export default function GearClient({
       if (result.alreadyComplete) {
         toast('All sizes already submitted · nothing to request', 'success')
       } else if (result.parentsNotified === 0) {
-        toast('No parents with notifications enabled were found', 'error')
+        toast('No players with linked accounts were found. Send the player links instead.', 'error')
       } else if (result.emailFailed >= result.parentsNotified) {
         // Every email failed. Push still went out, so the request is
-        // logged and parents may still see it on mobile.
+        // logged and players may still see it on mobile.
         toast(
           `Sizes requested, but emails didn't deliver. Push notifications went out — tap 'Request sizes' again in a few minutes to retry emails.`,
           'error',
         )
       } else {
-        const base = `Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'} (${result.kidsNeedingSizes} ${result.kidsNeedingSizes === 1 ? 'kid' : 'kids'})`
+        const base = `Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'player' : 'players'}`
         if (result.emailFailed > 0) {
           toast(`${base} · ${result.emailFailed} email${result.emailFailed === 1 ? '' : 's'} failed`, 'error')
         } else {
@@ -198,24 +200,24 @@ export default function GearClient({
             <button
               onClick={handleCopyPlayerLinks}
               disabled={totalMissing === 0}
-              className={`${hasParents ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10' : 'bg-green text-dark hover:opacity-90'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
+              className={`${hasAccounts ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10' : 'bg-green text-dark hover:opacity-90'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
               title="Copy one private link per player to send them directly"
             >
               {copiedLinks ? '✓ Copied' : '🔗 Copy player links'}
               {totalMissing > 0 && (
-                <span className={`${hasParents ? 'bg-white/10 text-white' : 'bg-dark/20 text-dark'} px-1.5 py-0.5 rounded text-[10px] font-bold`}>{totalMissing}</span>
+                <span className={`${hasAccounts ? 'bg-white/10 text-white' : 'bg-dark/20 text-dark'} px-1.5 py-0.5 rounded text-[10px] font-bold`}>{totalMissing}</span>
               )}
             </button>
             <button
               onClick={handleRequestSizes}
-              disabled={requesting || totalMissing === 0 || !hasParents}
-              className={`${hasParents ? 'bg-green text-dark hover:opacity-90' : 'bg-white/5 text-white border border-white/10'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
+              disabled={requesting || totalMissing === 0 || !hasAccounts}
+              className={`${hasAccounts ? 'bg-green text-dark hover:opacity-90' : 'bg-white/5 text-white border border-white/10'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
               title={
-                !hasParents
-                  ? 'No player has a linked parent account, so this would notify nobody. Send the player links instead.'
+                !hasAccounts
+                  ? 'No player has joined with their own account yet, so this would notify nobody. Send the player links instead.'
                   : totalMissing === 0
                     ? 'All sizes already submitted'
-                    : `Request sizes from parents with ${totalMissing} missing`
+                    : `Request sizes from players (${totalMissing} missing)`
               }
             >
               {requesting ? (
@@ -225,7 +227,7 @@ export default function GearClient({
                 </>
               ) : (
                 <>
-                  📨 Request sizes from parents
+                  📨 Request sizes from players
                   {totalMissing > 0 && <span className="bg-dark/20 text-dark px-1.5 py-0.5 rounded text-[10px] font-bold">{totalMissing}</span>}
                 </>
               )}
@@ -245,23 +247,23 @@ export default function GearClient({
               <span className="text-gray">
                 Last requested <span className="text-white font-semibold">{formatRelative(lastRequestedAt)}</span>
               </span>
-              {lastRequestedParentCount > 0 && (
+              {lastRequestedPlayerCount > 0 && (
                 <>
                   <span className="w-px h-4 bg-white/10" />
                   <span className="text-gray">
                     Responses:{' '}
-                    <span className={`font-bold ${respondedSinceRequest >= lastRequestedParentCount ? 'text-green' : 'text-yellow-400'}`}>
-                      {respondedSinceRequest} of {lastRequestedParentCount}
+                    <span className={`font-bold ${respondedSinceRequest >= lastRequestedPlayerCount ? 'text-green' : 'text-yellow-400'}`}>
+                      {respondedSinceRequest} of {lastRequestedPlayerCount}
                     </span>{' '}
-                    {respondedSinceRequest === 1 ? 'parent' : 'parents'}
+                    {respondedSinceRequest === 1 ? 'player' : 'players'}
                   </span>
                   <div className="flex-1 min-w-[80px] max-w-[200px] h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        respondedSinceRequest >= lastRequestedParentCount ? 'bg-green' : 'bg-yellow-400'
+                        respondedSinceRequest >= lastRequestedPlayerCount ? 'bg-green' : 'bg-yellow-400'
                       }`}
                       style={{
-                        width: `${Math.min(100, Math.round((respondedSinceRequest / lastRequestedParentCount) * 100))}%`,
+                        width: `${Math.min(100, Math.round((respondedSinceRequest / lastRequestedPlayerCount) * 100))}%`,
                       }}
                     />
                   </div>

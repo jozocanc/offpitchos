@@ -74,9 +74,10 @@ export default function AttentionPanel() {
       if (result.alreadyComplete) {
         toast('All sizes already submitted', 'success')
       } else if (result.parentsNotified === 0) {
-        toast('No parents with notifications enabled', 'error')
+        toast('No players with notifications enabled', 'error')
       } else {
-        toast(`Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'parent' : 'parents'}`, 'success')
+        // parentsNotified is the gear action's legacy key: it counts players.
+        toast(`Requested sizes from ${result.parentsNotified} ${result.parentsNotified === 1 ? 'player' : 'players'}`, 'success')
       }
       setCompletedSignals(prev => new Set(prev).add(signalId))
     } catch (err: any) {

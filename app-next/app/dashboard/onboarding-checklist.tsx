@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getOnboardingState, dismissOnboardingForm } from './onboarding-checklist-actions'
 
 // Post-wizard setup checklist for DOCs. Auto-completes each step as the
-// underlying data appears (teams, coaches, parents, events) and can only
+// underlying data appears (teams, coaches, players, events) and can only
 // be dismissed once all four are done. Returns null when dismissed, when
 // the user is not a DOC, or when they have no club yet — the dashboard
 // can mount this unconditionally for DOC view.
@@ -11,14 +11,14 @@ export default async function OnboardingChecklist() {
   if (!state.visible) return null
 
   const steps: {
-    key: 'hasTeam' | 'hasCoach' | 'hasParent' | 'hasEvent'
+    key: 'hasTeam' | 'hasCoach' | 'hasPlayer' | 'hasEvent'
     title: string
     cta: string
     href: string
   }[] = [
     { key: 'hasTeam',   title: 'Add your first team',               cta: 'Add team',      href: '/dashboard/teams' },
     { key: 'hasCoach',  title: 'Invite your first coach',           cta: 'Invite coach',  href: '/dashboard/coaches' },
-    { key: 'hasParent', title: 'Invite your first parents',         cta: 'Pick a team',   href: '/dashboard/teams' },
+    { key: 'hasPlayer', title: 'Invite your players',               cta: 'Pick a team',   href: '/dashboard/teams' },
     { key: 'hasEvent',  title: 'Schedule your first event',         cta: 'Open schedule', href: '/dashboard/schedule' },
   ]
 
@@ -28,9 +28,9 @@ export default async function OnboardingChecklist() {
     <div className="mb-8 rounded-2xl bg-dark-secondary border border-green/20 p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-bold">Finish setting up your club</h2>
+          <h2 className="text-lg font-bold">Finish setting up your team</h2>
           <p className="text-gray text-xs mt-1">
-            {completedCount} of {steps.length} done — notifications work best once parents are in.
+            {completedCount} of {steps.length} done — notifications work best once your players are in.
           </p>
         </div>
         {state.allComplete && (

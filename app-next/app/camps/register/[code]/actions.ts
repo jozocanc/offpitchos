@@ -56,8 +56,17 @@ export async function getCampByCode(code: string) {
   }
 }
 
-// Guest registration — no auth, no account needed. Creates a
-// camp_registration row with guest fields instead of player_id.
+// Guest registration: no auth, no account needed. The registrant is the
+// athlete. Creates a camp_registration row with guest fields instead of
+// player_id.
+//
+// Column mapping (the guest_* column names predate the team pivot and are
+// kept to avoid a migration):
+//   guest_kid_name     athlete's full name
+//   guest_kid_age      athlete's age
+//   guest_parent_email athlete's contact email (used for the duplicate check)
+//   guest_parent_phone athlete's phone
+//   guest_parent_name  optional guardian contact, only for under-18 athletes
 export async function registerGuest(
   ...args: Parameters<typeof _registerGuest>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _registerGuest>>>> {
@@ -70,16 +79,15 @@ export async function registerGuest(
 
 async function _registerGuest(input: {
   campDetailId: string
-  parentName: string
-  parentEmail: string
-  parentPhone: string
-  kidName: string
-  kidAge: string
+  athleteName: string
+  athleteAge: string
+  email: string
+  phone: string
+  guardianContact: string
 }): Promise<{ success: boolean; message: string }> {
-  if (!input.parentName.trim()) throw new Error('Parent name is required')
-  if (!input.parentEmail.trim()) throw new Error('Email is required')
-  if (!input.kidName.trim()) throw new Error('Child name is required')
-  if (!input.kidAge.trim()) throw new Error('Child age is required')
+  if (!input.athleteName.trim()) throw new Error('Full name is required')
+  if (!input.athleteAge.trim()) throw new Error('Age is required')
+  if (!input.email.trim()) throw new Error('Email is required')
 
   const service = createServiceClient()
 
@@ -103,17 +111,17 @@ async function _registerGuest(input: {
     }
   }
 
-  // Check duplicate by email + kid name
+  // Check duplicate by email + athlete name
   const { data: existing } = await service
     .from('camp_registrations')
     .select('id')
     .eq('camp_detail_id', input.campDetailId)
-    .eq('guest_parent_email', input.parentEmail.trim().toLowerCase())
-    .eq('guest_kid_name', input.kidName.trim())
+    .eq('guest_parent_email', input.email.trim().toLowerCase())
+    .eq('guest_kid_name', input.athleteName.trim())
     .single()
 
   if (existing) {
-    return { success: false, message: 'This child is already registered for this camp.' }
+    return { success: false, message: "You're already registered for this camp." }
   }
 
   const { error } = await service
@@ -122,15 +130,15 @@ async function _registerGuest(input: {
       camp_detail_id: input.campDetailId,
       player_id: null,
       registered_by: null,
-      guest_parent_name: input.parentName.trim(),
-      guest_parent_email: input.parentEmail.trim().toLowerCase(),
-      guest_parent_phone: input.parentPhone.trim() || null,
-      guest_kid_name: input.kidName.trim(),
-      guest_kid_age: input.kidAge.trim(),
+      guest_kid_name: input.athleteName.trim(),
+      guest_kid_age: input.athleteAge.trim(),
+      guest_parent_email: input.email.trim().toLowerCase(),
+      guest_parent_phone: input.phone.trim() || null,
+      guest_parent_name: input.guardianContact.trim() || null,
       payment_status: 'unpaid',
     })
 
   if (error) throw new Error(`Registration failed: ${error.message}`)
 
-  return { success: true, message: 'Registered! You\'ll receive confirmation details from the club.' }
+  return { success: true, message: "Registered! You'll receive confirmation details from the coaching staff." }
 }

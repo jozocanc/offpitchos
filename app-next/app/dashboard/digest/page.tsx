@@ -32,7 +32,7 @@ export default async function DigestPage() {
 
   const isDoc = profile.role === 'doc'
 
-  // Service client read so parents who haven't joined a team_member yet
+  // Service client read so players who haven't joined a team_member yet
   // can still see the club-wide digest. RLS already filters by club.
   const service = createServiceClient()
   const { data: digestsRaw } = await service

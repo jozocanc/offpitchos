@@ -13,8 +13,8 @@ interface Team {
 }
 
 // After joining one team via invite code, this component shows the other
-// teams in the same club so the parent can join all their kids' teams
-// in one flow instead of entering multiple codes.
+// teams in the same club so a player on more than one squad can join them
+// all in one flow instead of entering multiple codes.
 export default function MoreTeams({ clubId, joinedTeamId }: { clubId: string; joinedTeamId: string }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [joined, setJoined] = useState<Set<string>>(new Set())
@@ -54,7 +54,7 @@ export default function MoreTeams({ clubId, joinedTeamId }: { clubId: string; jo
 
   return (
     <div className="mt-6 border-t border-white/5 pt-6">
-      <p className="text-sm font-bold text-white mb-3">Kids on other teams too?</p>
+      <p className="text-sm font-bold text-white mb-3">On another squad too?</p>
       <div className="space-y-2 mb-4">
         {teams.map(team => (
           <div

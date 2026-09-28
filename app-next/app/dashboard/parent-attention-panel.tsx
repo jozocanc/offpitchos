@@ -33,15 +33,17 @@ const URGENCY_STYLES: Record<ParentSignal['urgency'], { dot: string; labelColor:
 
 const TYPE_LABEL: Record<ParentSignal['type'], string> = {
   claim_kids: 'Setup',
+  rsvp_needed: 'RSVP',
   missing_sizes: 'Gear',
   unpaid_camps: 'Camps',
   new_feedback: 'Feedback',
 }
 
-// Parent dashboard panel: mirrors the DOC/coach attention panels but keyed
-// off the parent's own kids. Also owns the "Claim your kids" modal, which is
-// surfaced inline when the claim_kids signal fires. Navigating here with
-// `?claim=1` opens the modal directly (the signal's href does this).
+// Player dashboard panel (the filename is historical): mirrors the DOC/coach
+// attention panels but keyed off the player's own roster row. Also owns the
+// "Find yourself on the roster" modal, which is surfaced inline when the
+// claim_kids signal fires. Navigating here with `?claim=1` opens the modal
+// directly (the signal's href and the join flow both do this).
 export default function ParentAttentionPanel() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -168,10 +170,10 @@ export default function ParentAttentionPanel() {
         </div>
       )}
 
-      {claimedKids.length > 0 && <MyKidsSection kids={claimedKids} />}
+      {claimedKids.length > 0 && <MyRosterSpot rows={claimedKids} />}
 
       {claimOpen && (
-        <ClaimKidsModal
+        <ClaimSelfModal
           claimable={claimable}
           onClose={handleCloseClaim}
           onClaimed={handleClaimed}
@@ -181,33 +183,33 @@ export default function ParentAttentionPanel() {
   )
 }
 
-function MyKidsSection({ kids }: { kids: ClaimedKid[] }) {
+function MyRosterSpot({ rows }: { rows: ClaimedKid[] }) {
   return (
     <div className="mb-10">
-      <h2 className="text-lg font-bold mb-4">Linked to you</h2>
+      <h2 className="text-lg font-bold mb-4">Your roster spot</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {kids.map(kid => (
+        {rows.map(row => (
           <Link
-            key={kid.id}
-            href={`/dashboard/players/${kid.id}`}
+            key={row.id}
+            href={`/dashboard/players/${row.id}`}
             className="bg-dark-secondary rounded-xl p-4 border border-white/5 hover:border-green/20 transition-colors flex items-center gap-3"
           >
-            {kid.jerseyNumber !== null ? (
+            {row.jerseyNumber !== null ? (
               <div className="w-10 h-10 rounded-full bg-green/10 flex items-center justify-center shrink-0">
-                <span className="text-green font-bold">{kid.jerseyNumber}</span>
+                <span className="text-green font-bold">{row.jerseyNumber}</span>
               </div>
             ) : (
               <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                <span className="text-gray font-bold">{kid.firstName.charAt(0)}</span>
+                <span className="text-gray font-bold">{row.firstName.charAt(0)}</span>
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">
-                {kid.firstName} {kid.lastName}
+                {row.firstName} {row.lastName}
               </p>
               <p className="text-gray text-xs mt-0.5 truncate">
-                {kid.teamName}
-                {kid.ageGroup && <span> · {kid.ageGroup}</span>}
+                {row.teamName}
+                {row.ageGroup && <span> · {row.ageGroup}</span>}
               </p>
             </div>
           </Link>
@@ -217,7 +219,8 @@ function MyKidsSection({ kids }: { kids: ClaimedKid[] }) {
   )
 }
 
-function ClaimKidsModal({
+// Single-select: a player links exactly one roster row, their own.
+function ClaimSelfModal({
   claimable,
   onClose,
   onClaimed,
@@ -226,40 +229,32 @@ function ClaimKidsModal({
   onClose: () => void
   onClaimed: () => void
 }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
 
   function toggle(id: string) {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    setSelectedId(prev => (prev === id ? null : id))
   }
 
   function handleSubmit() {
-    if (selected.size === 0) {
-      toast('Select at least one child', 'error')
+    if (!selectedId) {
+      toast('Pick your name first', 'error')
       return
     }
     startTransition(async () => {
       try {
-        const claimRes = await claimPlayers(Array.from(selected))
+        const claimRes = await claimPlayers([selectedId])
         if (!claimRes.ok) { toast(claimRes.error, 'error'); return }
         const result = claimRes.data
         if (result.claimed > 0) {
-          toast(
-            `Linked ${result.claimed} child${result.claimed === 1 ? '' : 'ren'}`,
-            'success',
-          )
+          toast("You're linked to your roster spot", 'success')
           onClaimed()
         } else {
-          toast('Could not link those players', 'error')
+          toast('Could not link that roster spot', 'error')
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to claim players'
+        const msg = err instanceof Error ? err.message : 'Failed to link roster spot'
         toast(msg, 'error')
       }
     })
@@ -271,23 +266,23 @@ function ClaimKidsModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl max-h-[85vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-2">Claim from the roster</h2>
+        <h2 className="text-xl font-bold mb-2">Which one is you?</h2>
         <p className="text-gray text-sm mb-6">
-          Select yourself, or the players you are responsible for. We&apos;ll use this to send you
-          the right reminders, gear requests, and coach feedback.
+          Pick your name on the roster. We&apos;ll use it to send you your reminders, gear
+          requests, and coach feedback.
         </p>
 
         {claimable.length === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5">
             <p className="text-gray text-sm">
-              No unlinked players on your team — ask your director to add you to the roster, or
+              No open roster spots on your team. Ask your coach to add you to the roster, or
               you&apos;re already linked.
             </p>
           </div>
         ) : (
           <div className="space-y-2 mb-6">
             {claimable.map(player => {
-              const isSelected = selected.has(player.id)
+              const isSelected = selectedId === player.id
               return (
                 <button
                   key={player.id}
@@ -313,7 +308,7 @@ function ClaimKidsModal({
                     <p className="text-gray text-xs mt-0.5 truncate">{player.teamName}</p>
                   </div>
                   <span
-                    className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                    className={`w-5 h-5 rounded-full border flex items-center justify-center ${
                       isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
                     }`}
                   >
@@ -341,10 +336,10 @@ function ClaimKidsModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isPending || selected.size === 0}
+              disabled={isPending || !selectedId}
               className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              {isPending ? 'Linking…' : `Link ${selected.size || ''}`}
+              {isPending ? 'Linking…' : "That's me"
             </button>
           )}
         </div>

@@ -47,7 +47,7 @@ export interface DigestStats {
     notes: string
   }[]
   responseGap: {
-    rsvpResponseRate: number  // 0-100, % of (kids x events) that got a parent RSVP
+    rsvpResponseRate: number  // 0-100, % of (players x events) that got an RSVP
   }
 }
 
@@ -67,7 +67,7 @@ function fmtDate(d: Date) {
 export async function collectClubStats(clubId: string, anchor: Date = new Date()): Promise<DigestStats> {
   // Resolved from clubId rather than a session: this also runs from the digest
   // cron, where there is no signed-in user. Without it the "when" strings below
-  // would be built in the server's zone (UTC) and emailed to parents.
+  // would be built in the server's zone (UTC) and emailed to the team.
   const timezone = await getClubTimezoneById(clubId)
   const service = createServiceClient()
 
@@ -162,7 +162,7 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   })
 
   // RSVP response rate = (RSVPs received) / (player-event pairs in the
-  // week). Rough but useful — tells the DOC whether parents are even
+  // week). Rough but useful — tells the DOC whether players are even
   // engaging with the new feature.
   const { data: players } = await service
     .from('players')
@@ -184,7 +184,7 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
 
   // Feedback highlights — top 5 rated entries this week so the digest
   // can spotlight standouts. Coach gets to feel like the app sees their
-  // notes. Parent of a featured kid gets the warm-fuzzy.
+  // notes. A featured player gets the warm-fuzzy.
   const { data: highlights } = await service
     .from('player_feedback')
     .select('rating, notes, category, players(first_name, last_name, teams(name))')

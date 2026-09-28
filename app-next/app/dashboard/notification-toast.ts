@@ -26,12 +26,12 @@ const BASE_LABEL: Record<ToastAction, string> = {
 // Empty-state hint points the user at the fix. The checklist on the
 // dashboard also surfaces this, so the language stays consistent.
 const ZERO_HINT: Record<ToastAction, string> = {
-  event_created:       'No parents on this team yet — add them in Teams.',
-  event_updated:       'No parents on this team yet — add them in Teams.',
+  event_created:       'No players on this team yet. Add them in Teams.',
+  event_updated:       'No players on this team yet. Add them in Teams.',
   event_cancelled:     'No one on this team yet, so no notifications went out.',
   event_restored:      'No one on this team yet, so no notifications went out.',
-  announcement_posted: 'No one on this audience yet — invite parents in Teams.',
-  camp_created:        'No parents on this team yet — add them in Teams.',
+  announcement_posted: 'No one on this audience yet. Invite players in Teams.',
+  camp_created:        'No players on this team yet. Add them in Teams.',
 }
 
 // Total-failure copy: confirms the data action saved, names email as
@@ -51,7 +51,7 @@ const TOTAL_FAILURE_HINT: Record<ToastAction, string> = {
   announcement_posted:
     "Posted, but emails didn't deliver. The announcement is saved — repost in a few minutes to retry, or message the team directly.",
   camp_created:
-    "Camp created, but emails didn't deliver. The camp is saved — post an announcement to notify parents.",
+    "Camp created, but emails didn't deliver. The camp is saved — post an announcement to notify the team.",
 }
 
 function pluralize(n: number, singular: string, plural: string): string {
@@ -64,27 +64,30 @@ function joinParts(parts: string[]): string {
   return parts.join(' and ')
 }
 
-// Build "N parents and M coaches" from raw counts. Omits zero-count
-// roles entirely so we don't produce "0 parents and 3 coaches."
+// Build "N players and M coaches" from raw counts. Omits zero-count
+// roles entirely so we don't produce "0 players and 3 coaches."
+// The first argument is still named `parents` for caller compatibility; it
+// is the member (player) count.
 export function describeRecipients(parents: number, coaches: number): string {
   const parts: string[] = []
-  if (parents > 0) parts.push(pluralize(parents, 'parent', 'parents'))
+  if (parents > 0) parts.push(pluralize(parents, 'player', 'players'))
   if (coaches > 0) parts.push(pluralize(coaches, 'coach', 'coaches'))
   return joinParts(parts)
 }
 
 // Returns the final user-facing toast string for a notify-style action.
 // Three honesty branches:
-//   - total recipients 0 → zero-hint ("invite parents first").
+//   - total recipients 0 → zero-hint ("invite players first").
 //   - emailFailed === 0  → "N notified" unchanged from pre-1.5 behavior.
 //   - emailFailed > 0    → partial ("X of Y reached") or total-failure
 //     copy depending on whether any email landed at all.
 //
-// Push delivery is a separate channel. A parent whose email failed may
+// Push delivery is a separate channel. A player whose email failed may
 // still have gotten a push notification, so the copy deliberately says
-// "emails didn't deliver" rather than "parent wasn't notified."
+// "emails didn't deliver" rather than "player wasn't notified."
 export function formatRecipientToast(opts: {
   action: ToastAction
+  /** Member (player) recipient count. Key name kept for caller compatibility. */
   parents: number
   coaches: number
   emailFailed?: number

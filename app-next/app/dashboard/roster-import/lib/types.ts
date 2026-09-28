@@ -5,18 +5,15 @@ export type OffPitchField =
   | 'player_last_name'
   | 'team_name'
   | 'team_age_group'
-  | 'parent1_email'
-  | 'parent1_first_name'
-  | 'parent1_phone'
-  | 'parent2_email'
+  | 'player_email'
   | 'jersey_number'
   | 'position'
   | 'date_of_birth'
 
-// parent1_email is NOT required. A college roster has no parents, and youth
-// clubs routinely have players whose parent email the DOC does not have yet.
-// A row without one imports as an unlinked player, which the roster page
-// already displays and the DOC can link later.
+// player_email is NOT required. A row with an email gets its own player
+// account (players.parent_id = that account). A row without one imports as an
+// unclaimed player, which the roster page shows and the DOC can invite later.
+// Parent/guardian columns are no longer a concept; they're left unmapped.
 export const REQUIRED_FIELDS: OffPitchField[] = [
   'player_first_name',
   'player_last_name',
@@ -50,12 +47,13 @@ export interface PreviewResult {
     counts: {
       newTeams: number
       newPlayers: number
-      uniqueParentEmails: number  // = parents that will be created
+      playerAccounts: number  // = player accounts that will be created (one per unique email)
       existingPlayerCount: number  // for re-import dialog (Phase 2)
     }
     teamsToCreate: { name: string; age_group: string }[]
     teamsExisting: { name: string; id: string }[]
-    siblingGroups: { email: string; playerCount: number }[]
+    // Emails used on more than one row. Only the first row gets the account.
+    sharedEmails: { email: string; playerCount: number }[]
     warnings: RowWarning[]
     skippedRows: number
     blockingErrors: RowError[]
@@ -67,8 +65,8 @@ export interface CommitResult {
   data: {
     teamsCreated: number
     playersCreated: number
-    parentsCreated: number
-    parentUserIds: string[]  // for Phase 3 sendParentRecoveryEmails
+    accountsCreated: number
+    accountUserIds: string[]  // for sendParentRecoveryEmails (sends player set-password emails)
   }
 }
 

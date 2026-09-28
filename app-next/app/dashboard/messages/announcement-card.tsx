@@ -66,7 +66,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const replyCount = announcement.announcement_replies?.length ?? 0
   const isDoc = userRole === 'doc'
   const isAuthor = author?.id === userProfileId
-  const isParent = !isStaff(userRole)
+  const isPlayer = !isStaff(userRole)
   const readCount = announcement.read_count ?? 0
   const totalRecipients = announcement.total_recipients ?? 0
   const showReadReceipt = isAuthor && totalRecipients > 0
@@ -228,15 +228,18 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
             </div>
           )}
 
-          {/* Parents see per-kid buttons */}
-          {isParent && kids.length > 0 && (
+          {/* Players answer for themselves. A player normally has one linked
+              row, so the name label only shows when several are linked. */}
+          {isPlayer && kids.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray">Your response</p>
               {kids.map(kid => (
                 <div key={kid.playerId} className="flex items-center gap-3 flex-wrap">
-                  <p className="text-sm text-white font-medium min-w-[120px]">
-                    {kid.firstName} {kid.lastName}
-                  </p>
+                  {kids.length > 1 && (
+                    <p className="text-sm text-white font-medium min-w-[120px]">
+                      {kid.firstName} {kid.lastName}
+                    </p>
+                  )}
                   <div className="flex gap-1.5 flex-1">
                     {(['yes', 'no', 'maybe'] as const).map(opt => {
                       const selected = kid.response === opt
@@ -264,10 +267,10 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
             </div>
           )}
 
-          {/* Parents with no kids on this team (e.g., club-wide announcement, wrong team) */}
-          {isParent && kids.length === 0 && (
+          {/* Player with no linked row on this team (e.g. wrong team, not yet linked) */}
+          {isPlayer && kids.length === 0 && (
             <p className="text-xs text-gray italic">
-              No players linked for this announcement.
+              Your account isn&apos;t linked to a player on this team yet.
             </p>
           )}
         </div>

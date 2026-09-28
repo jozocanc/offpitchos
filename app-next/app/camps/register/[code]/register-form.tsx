@@ -3,11 +3,12 @@
 import { useState, useTransition } from 'react'
 import { registerGuest } from './actions'
 
-interface Kid {
-  name: string
-  age: string
-}
+const INPUT_CLASS =
+  'w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors'
 
+// Public ID camp / prospect camp registration. The registrant is the
+// athlete. A guardian contact is optional and only asked for when the
+// athlete is under 18.
 export default function RegisterForm({
   campDetailId,
   feeCents,
@@ -15,69 +16,38 @@ export default function RegisterForm({
   campDetailId: string
   feeCents: number
 }) {
-  const [parentName, setParentName] = useState('')
-  const [parentEmail, setParentEmail] = useState('')
-  const [parentPhone, setParentPhone] = useState('')
-  const [kids, setKids] = useState<Kid[]>([{ name: '', age: '' }])
+  const [athleteName, setAthleteName] = useState('')
+  const [athleteAge, setAthleteAge] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [guardianContact, setGuardianContact] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [registeredCount, setRegisteredCount] = useState(0)
   const [isPending, startTransition] = useTransition()
-
-  function addKid() {
-    setKids(prev => [...prev, { name: '', age: '' }])
-  }
-
-  function removeKid(index: number) {
-    if (kids.length <= 1) return
-    setKids(prev => prev.filter((_, i) => i !== index))
-  }
-
-  function updateKid(index: number, field: keyof Kid, value: string) {
-    setKids(prev => prev.map((k, i) => i === index ? { ...k, [field]: value } : k))
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    const validKids = kids.filter(k => k.name.trim() && k.age.trim())
-    if (validKids.length === 0) {
-      setError('Add at least one child')
-      return
-    }
-
     startTransition(async () => {
-      let succeeded = 0
-      let lastError = ''
-
-      for (const kid of validKids) {
-        try {
-          const regRes = await registerGuest({
-            campDetailId,
-            parentName,
-            parentEmail,
-            parentPhone,
-            kidName: kid.name,
-            kidAge: kid.age,
-          })
-          if (!regRes.ok) { lastError = regRes.error; continue }
-          const result = regRes.data
-          if (result.success) {
-            succeeded++
-          } else {
-            lastError = result.message
-          }
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : 'Something went wrong'
+      try {
+        const regRes = await registerGuest({
+          campDetailId,
+          athleteName,
+          athleteAge,
+          email,
+          phone,
+          guardianContact,
+        })
+        if (!regRes.ok) { setError(regRes.error); return }
+        const result = regRes.data
+        if (result.success) {
+          setSuccess(true)
+        } else {
+          setError(result.message)
         }
-      }
-
-      if (succeeded > 0) {
-        setRegisteredCount(succeeded)
-        setSuccess(true)
-      } else {
-        setError(lastError)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
   }
@@ -88,34 +58,44 @@ export default function RegisterForm({
         <div className="text-4xl mb-4 text-[#1F4E3D]">✓</div>
         <p className="text-[#1F4E3D] font-semibold text-xl mb-2 tracking-[-0.02em]">Registered!</p>
         <p className="text-[#5C6660] text-sm">
-          {registeredCount} {registeredCount === 1 ? 'child' : 'children'} signed up. The club will reach out with details before the camp.
+          You&apos;re signed up. The coaching staff will reach out with details before the camp.
         </p>
         {feeCents > 0 && (
           <p className="text-[#5C6660] text-xs mt-4">
-            Payment of ${((feeCents * registeredCount) / 100).toFixed(2)} total will be collected by the club.
+            The ${(feeCents / 100).toFixed(2)} camp fee will be collected by the program.
           </p>
         )}
       </div>
     )
   }
 
-  const totalFee = feeCents * kids.length
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="border-t border-[#E8E3DC] pt-4 mb-2">
-        <p className="text-xs text-[#5C6660] uppercase tracking-[0.14em] font-semibold mb-4">Parent / Guardian</p>
+        <p className="text-xs text-[#5C6660] uppercase tracking-[0.14em] font-semibold mb-4">Athlete</p>
       </div>
 
-      <div>
-        <label className="block text-sm text-[#5C6660] mb-1">Full Name</label>
-        <input
-          required
-          value={parentName}
-          onChange={e => setParentName(e.target.value)}
-          placeholder="John Smith"
-          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
-        />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2">
+          <label className="block text-sm text-[#5C6660] mb-1">Full Name</label>
+          <input
+            required
+            value={athleteName}
+            onChange={e => setAthleteName(e.target.value)}
+            placeholder="Alex Martinez"
+            className={INPUT_CLASS}
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-[#5C6660] mb-1">Age</label>
+          <input
+            required
+            value={athleteAge}
+            onChange={e => setAthleteAge(e.target.value)}
+            placeholder="17"
+            className={INPUT_CLASS}
+          />
+        </div>
       </div>
 
       <div>
@@ -123,10 +103,10 @@ export default function RegisterForm({
         <input
           required
           type="email"
-          value={parentEmail}
-          onChange={e => setParentEmail(e.target.value)}
-          placeholder="john@email.com"
-          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="alex@email.com"
+          className={INPUT_CLASS}
         />
       </div>
 
@@ -134,62 +114,22 @@ export default function RegisterForm({
         <label className="block text-sm text-[#5C6660] mb-1">Phone (optional)</label>
         <input
           type="tel"
-          value={parentPhone}
-          onChange={e => setParentPhone(e.target.value)}
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
           placeholder="(555) 123-4567"
-          className="w-full bg-[#FAF7F2] border border-[#E8E3DC] rounded-xl px-4 py-3 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
+          className={INPUT_CLASS}
         />
       </div>
 
       <div className="border-t border-[#E8E3DC] pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs text-[#5C6660] uppercase tracking-[0.14em] font-semibold">Children</p>
-          <button
-            type="button"
-            onClick={addKid}
-            className="text-xs font-semibold text-[#1F4E3D] hover:text-[#2D6B56] transition-colors"
-          >
-            + Add another child
-          </button>
-        </div>
+        <label className="block text-sm text-[#5C6660] mb-1">Guardian contact (if under 18)</label>
+        <input
+          value={guardianContact}
+          onChange={e => setGuardianContact(e.target.value)}
+          placeholder="Name and phone or email"
+          className={INPUT_CLASS}
+        />
       </div>
-
-      {kids.map((kid, index) => (
-        <div key={index} className="bg-[#FAF7F2] rounded-xl p-3 border border-[#E8E3DC]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-[#5C6660] font-semibold">Child {index + 1}</p>
-            {kids.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeKid(index)}
-                className="text-xs text-red-600 hover:text-red-700 transition-colors"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2">
-              <input
-                required
-                value={kid.name}
-                onChange={e => updateKid(index, 'name', e.target.value)}
-                placeholder="Child's full name"
-                className="w-full bg-[#FFFFFF] border border-[#E8E3DC] rounded-lg px-3 py-2.5 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
-              />
-            </div>
-            <div>
-              <input
-                required
-                value={kid.age}
-                onChange={e => updateKid(index, 'age', e.target.value)}
-                placeholder="Age"
-                className="w-full bg-[#FFFFFF] border border-[#E8E3DC] rounded-lg px-3 py-2.5 text-sm text-[#0F1510] placeholder-[#5C6660]/60 focus:outline-none focus:border-[#1F4E3D] transition-colors"
-              />
-            </div>
-          </div>
-        </div>
-      ))}
 
       {error && (
         <p className="text-red-600 text-sm">{error}</p>
@@ -202,9 +142,9 @@ export default function RegisterForm({
       >
         {isPending
           ? 'Registering...'
-          : totalFee > 0
-            ? `Register ${kids.length} ${kids.length === 1 ? 'child' : 'children'} — $${(totalFee / 100).toFixed(2)}`
-            : `Register ${kids.length} ${kids.length === 1 ? 'child' : 'children'} — Free`}
+          : feeCents > 0
+            ? `Register · $${(feeCents / 100).toFixed(2)}`
+            : 'Register · Free'}
       </button>
     </form>
   )

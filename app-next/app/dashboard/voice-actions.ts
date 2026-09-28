@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { cancelEvent, updateEvent, createEvent, restoreEvent } from './schedule/actions'
 import { createCoverageRequest } from './coverage/actions'
 import { createAnnouncement } from './messages/actions'
-import { ROLES } from '@/lib/constants'
+import { isMember } from '@/lib/constants'
 import { formatShortDate, formatTime } from '@/lib/format-datetime'
 import { unwrap } from '@/lib/action-result'
 
@@ -100,7 +100,7 @@ const tools: Anthropic.Messages.Tool[] = [
   },
   {
     name: 'send_announcement',
-    description: 'Post a new announcement to a specific team or to the entire club. Use when the user says things like "tell U14 parents ...", "send an announcement to ...", "let the team know ...", "message all parents ...", or "post to the club ...". Extract the audience (team name OR club-wide) and the message content from the transcript.',
+    description: 'Post a new announcement to a specific team or to the entire club. Use when the user says things like "tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ...", or "post to the club ...". Extract the audience (team name OR club-wide) and the message content from the transcript.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -185,7 +185,7 @@ Rules:
 - When updating time, preserve the event duration unless told otherwise.
 - When creating a new event: pick the team from the Teams list (fuzzy-match the name/age group). If no end time is specified, default to 90 minutes after start. Build a sensible title like "U14 Boys Practice" if none was provided. Use the venue from the Venues list if the user named one; otherwise omit venueId.
 - When the user says they themselves cannot make an event ("I can't make", "I'm sick", "I can't cover my U14 practice tonight", "need a replacement for my practice"), call request_coverage with the matching eventId. This will trigger the coverage flow and auto-assign a replacement. Do NOT cancel the event — coverage is different from cancellation.
-- When the user wants to send a message to a team or the whole club ("tell U14 parents ...", "send an announcement to ...", "let the team know ...", "message all parents ..."), call send_announcement. Match the team fuzzy (e.g. "U14 parents" → U14 Boys team). If the user says "all teams", "the whole club", "everyone", or does not name a team, omit teamId for a club-wide post. Build a short sensible title from the message.
+- When the user wants to send a message to a team or the whole club ("tell the squad ...", "send an announcement to ...", "let the team know ...", "message all the players ..."), call send_announcement. Match the team fuzzy (e.g. "the reserves" → Reserves team). If the user says "all teams", "the whole club", "everyone", or does not name a team, omit teamId for a club-wide post. Build a short sensible title from the message.
 - Only use tools when you're confident about the match. If multiple options could match, ask which one.
 - When you successfully execute a tool, respond with a short confirmation message describing what you did.
 
@@ -251,7 +251,7 @@ export async function interpretVoiceCommand(
 
   const { profile, supabase } = await getUserProfile()
 
-  if (profile.role === ROLES.PARENT) {
+  if (isMember(profile.role)) {
     return { kind: 'clarification', message: 'Voice commands are only available for directors and coaches.' }
   }
 
@@ -351,17 +351,17 @@ function buildPlanSummary(
   switch (toolName) {
     case 'cancel_event':
       return ev
-        ? `Cancel ${evLabel} (${formatEventTime(ev, timeZone)}) and notify parents + coaches.`
+        ? `Cancel ${evLabel} (${formatEventTime(ev, timeZone)}) and notify players + coaches.`
         : 'Cancel that event.'
     case 'update_event_time': {
       const newStart = new Date(input.newStartTime)
       const dateStr = newStart.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
       const timeStr = newStart.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
-      return `Move ${evLabel} to ${dateStr} at ${timeStr} and notify affected parents + coaches.`
+      return `Move ${evLabel} to ${dateStr} at ${timeStr} and notify affected players + coaches.`
     }
     case 'update_event_venue': {
       const venue = venues.find(v => v.id === input.venueId)
-      return `Change venue for ${evLabel} to ${venue?.name ?? 'the new venue'} and notify parents + coaches.`
+      return `Change venue for ${evLabel} to ${venue?.name ?? 'the new venue'} and notify players + coaches.`
     }
     case 'create_event': {
       const team = teams.find(t => t.id === input.teamId)
@@ -369,7 +369,7 @@ function buildPlanSummary(
       const dateStr = start.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' })
       const timeStr = start.toLocaleTimeString('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
       const venue = input.venueId ? venues.find(v => v.id === input.venueId) : null
-      return `Create "${input.title}" for ${team?.name ?? 'the team'} on ${dateStr} at ${timeStr}${venue ? ` at ${venue.name}` : ''} and notify parents.`
+      return `Create "${input.title}" for ${team?.name ?? 'the team'} on ${dateStr} at ${timeStr}${venue ? ` at ${venue.name}` : ''} and notify the players.`
     }
     case 'request_coverage':
       return ev
@@ -401,7 +401,7 @@ export async function executeVoicePlan(
 ): Promise<VoiceCommandResult> {
   const { profile, supabase } = await getUserProfile()
 
-  if (profile.role === ROLES.PARENT) {
+  if (isMember(profile.role)) {
     return { success: false, message: 'Voice commands are only available for directors and coaches.' }
   }
 
@@ -426,12 +426,13 @@ export async function executeVoicePlan(
   const teams = teamsRes.data ?? []
   const venues = venuesRes.data ?? []
 
-  const formatNotified = (parents: number, coaches: number, emailFailed = 0): string => {
-    if (parents === 0 && coaches === 0) {
-      return 'No parents on this team yet — invite them in Teams to start sending notifications.'
+  // `counts.parents` from the schedule actions is the member (player) count.
+  const formatNotified = (players: number, coaches: number, emailFailed = 0): string => {
+    if (players === 0 && coaches === 0) {
+      return 'No players on this team yet. Invite them in Teams to start sending notifications.'
     }
     const parts: string[] = []
-    if (parents > 0) parts.push(`${parents} ${parents === 1 ? 'parent' : 'parents'}`)
+    if (players > 0) parts.push(`${players} ${players === 1 ? 'player' : 'players'}`)
     if (coaches > 0) parts.push(`${coaches} ${coaches === 1 ? 'coach' : 'coaches'}`)
     const base = `Notified ${parts.join(' and ')}.`
     // Part 1.5: mention email-delivery failures inline so voice toasts
@@ -498,7 +499,8 @@ export async function executeVoicePlan(
           body: String(input.body ?? ''),
         }))
         const parts: string[] = []
-        if (result.parentCount > 0) parts.push(`${result.parentCount} ${result.parentCount === 1 ? 'parent' : 'parents'}`)
+        // parentCount is the announcement action's legacy key: it counts players.
+        if (result.parentCount > 0) parts.push(`${result.parentCount} ${result.parentCount === 1 ? 'player' : 'players'}`)
         if (result.coachCount > 0) parts.push(`${result.coachCount} ${result.coachCount === 1 ? 'coach' : 'coaches'}`)
         const audienceSuffix = parts.length > 0 ? ` Sent to ${parts.join(' and ')}.` : ''
         return {

@@ -174,7 +174,7 @@ async function _getCampRegistrations(eventId: string) {
 
   const { data: regs } = await supabase
     .from('camp_registrations')
-    .select('id, payment_status, created_at, guest_kid_name, guest_parent_name, guest_parent_email, players(first_name, last_name, team_id, teams(name))')
+    .select('id, payment_status, created_at, guest_kid_name, guest_kid_age, guest_parent_name, guest_parent_email, players(first_name, last_name, team_id, teams(name))')
     .eq('camp_detail_id', detail.id)
     .order('created_at', { ascending: true })
 
@@ -274,6 +274,10 @@ export async function getParentPlayers(
   }
 }
 
+// The player rows owned by the signed-in account. players.parent_id means
+// "the account linked to this player", so for a player login this is their
+// own roster row. Used by the in-app "Register" flow so a player can sign
+// themselves up.
 async function _getParentPlayers() {
   const { user, supabase } = await getUserProfile()
 
@@ -299,7 +303,7 @@ interface CreateCampInput {
 }
 
 // Inline camp creation: writes the event + camp_details in one step and
-// notifies the team (parents + coaches) via the existing push/email path.
+// notifies the team (players + coaches) via the existing push/email path.
 // Before this existed, a DOC had to open /dashboard/schedule, create the
 // event, come back to /dashboard/camps, find it, and set the fee/capacity.
 export async function createCamp(
@@ -367,10 +371,10 @@ async function _createCamp(input: CreateCampInput) {
     throw new Error(`Failed to set camp details: ${detailError.message}`)
   }
 
-  // 3) Notify the team so parents know registration is open. We reuse the
+  // 3) Notify the team so players know registration is open. We reuse the
   // 'event_created' notification type since that's what the notifications
   // table check constraint allows.
-  let parents = 0
+  let players = 0
   let coaches = 0
   let emailFailed = 0
   try {
@@ -406,14 +410,15 @@ async function _createCamp(input: CreateCampInput) {
       const emailResult = await sendEmailToProfiles(memberIds, 'OffPitchOS — New camp', message, 'https://offpitchos.com/dashboard/camps')
       emailFailed = emailResult.failed.length
 
-      // Split by role so the toast can say "notified N parents and M
+      // Split by role so the toast can say "notified N players and M
       // coaches" (matches the pattern used by schedule notifications).
+      // Legacy 'parent' rows still count as team members here.
       const { data: profiles } = await service
         .from('profiles')
         .select('role')
         .in('id', memberIds)
       for (const p of profiles ?? []) {
-        if (p.role === 'parent') parents++
+        if (p.role === 'player' || p.role === 'parent') players++
         else if (p.role === 'coach' || p.role === 'doc') coaches++
       }
     }
@@ -423,13 +428,14 @@ async function _createCamp(input: CreateCampInput) {
 
   revalidatePath('/dashboard/camps')
 
-  return { eventId: event.id, parents, coaches, emailFailed }
+  return { eventId: event.id, players, coaches, emailFailed }
 }
 
-// DOC action: nudge parents who haven't paid for a given camp yet.
-// Returns counts so the UI can show "Nudged N · skipped M unlinked" — the
-// skipped count catches kids whose parent_id still points at the DOC (i.e.
-// the Roster Ops "Unlinked" case).
+// DOC action: nudge registered players who haven't paid for a given camp
+// yet. Returns counts so the UI can show "Nudged N · skipped M". The
+// skipped count catches registrations whose player row has no linked
+// player account (parent_id empty or still pointing at the DOC, the Roster
+// Ops "Unlinked" case).
 export async function sendCampPaymentReminders(
   ...args: Parameters<typeof _sendCampPaymentReminders>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _sendCampPaymentReminders>>>> {
@@ -467,8 +473,8 @@ async function _sendCampPaymentReminders(eventId: string): Promise<{
 
   if (!detail) throw new Error('This camp has no details yet')
 
-  // Pull unpaid registrations + their player's current parent_id so we can
-  // resolve it to a real parent profile.
+  // Pull unpaid registrations + their player's linked account (parent_id)
+  // so we can resolve it to the player's own profile.
   const { data: unpaidRegs } = await supabase
     .from('camp_registrations')
     .select('id, players(id, first_name, last_name, parent_id)')
@@ -489,13 +495,14 @@ async function _sendCampPaymentReminders(eventId: string): Promise<{
     new Set(regs.map(r => r.players?.parent_id).filter((id): id is string => Boolean(id))),
   )
 
-  // Only nudge profiles whose role is actually 'parent' — this filters out
-  // the common case where player.parent_id still points at the DOC.
+  // Only nudge member accounts (players, plus legacy 'parent' rows). This
+  // filters out the common case where player.parent_id still points at
+  // the DOC.
   const { data: parentProfiles } = await supabase
     .from('profiles')
     .select('id, user_id, role')
     .in('user_id', candidateUserIds)
-    .eq('role', 'parent')
+    .in('role', ['player', 'parent'])
 
   const linkedParentProfileIds = new Set((parentProfiles ?? []).map(p => p.id))
   const linkedParentByUserId = new Map(

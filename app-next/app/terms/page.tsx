@@ -12,7 +12,7 @@ export default function TermsPage() {
         <Link href="/" className="text-green hover:underline text-sm">← Back</Link>
 
         <h1 className="text-4xl font-black uppercase tracking-tight mt-6 mb-2">Terms of Service</h1>
-        <p className="text-gray text-sm mb-10">Last updated: April 15, 2026</p>
+        <p className="text-gray text-sm mb-10">Last updated: September 28, 2026</p>
 
         <div className="space-y-8 text-white/90 leading-relaxed">
           <section>
@@ -24,14 +24,14 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">Who can use OffPitchOS</h2>
             <p>
-              You must be at least 18 years old to create an account. Accounts for minors must be created and managed by a parent, coach, or club director. You are responsible for keeping your login credentials secure and for everything that happens under your account.
+              You must be at least 18 years old to create an account on your own. A player under 18 may only use an account that their team&rsquo;s coaching staff has set up, and only with the permission of a parent or legal guardian. You are responsible for keeping your login credentials secure and for everything that happens under your account.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">Your content</h2>
             <p>
-              You own everything you upload — rosters, messages, photos, feedback, and club data. By uploading it, you grant us a limited license to store, display, and transmit that content solely to operate OffPitchOS on your behalf. We will never use your content for advertising or to train AI models.
+              You own everything you upload — rosters, messages, photos, feedback, and team data. By uploading it, you grant us a limited license to store, display, and transmit that content solely to operate OffPitchOS on your behalf. We will never use your content for advertising or to train AI models.
             </p>
           </section>
 
@@ -42,8 +42,8 @@ export default function TermsPage() {
               <li>Harass, bully, threaten, or harm anyone — especially minors.</li>
               <li>Upload content that is illegal, defamatory, sexually explicit, or violates another person&rsquo;s privacy.</li>
               <li>Attempt to break, reverse-engineer, or probe the security of the platform.</li>
-              <li>Scrape, resell, or use our data for any purpose other than running your club.</li>
-              <li>Impersonate another person or club.</li>
+              <li>Scrape, resell, or use our data for any purpose other than running your team.</li>
+              <li>Impersonate another person, team, or club.</li>
             </ul>
             <p className="mt-3">
               We can suspend or terminate accounts that violate these rules. Egregious violations (especially involving minors) will be reported to the appropriate authorities.
@@ -53,7 +53,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-3">Payments</h2>
             <p>
-              Camp registration payments are processed by Stripe. OffPitchOS charges a small platform fee per transaction, disclosed at checkout. Refunds for camp registrations are governed by each club&rsquo;s refund policy — contact your club director. Subscription fees (when applicable) are billed in advance and non-refundable except where required by law.
+              Camp registration payments are processed by Stripe. OffPitchOS charges a small platform fee per transaction, disclosed at checkout. Refunds for camp registrations are governed by each team&rsquo;s refund policy. Contact the team&rsquo;s coaching staff. Subscription fees (when applicable) are billed in advance and non-refundable except where required by law.
             </p>
           </section>
 

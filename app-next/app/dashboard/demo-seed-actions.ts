@@ -7,9 +7,10 @@ import { bustAttentionCache } from './attention-actions'
 import {
   DEMO_COACHES,
   DEMO_EVENTS,
-  DEMO_PARENTS,
   DEMO_PLAYERS,
+  DEMO_TEAM,
   DEMO_VENUE,
+  demoPlayerEmail,
   DEMO_FEEDBACK_TEMPLATES,
   DEMO_ANNOUNCEMENT,
 } from '@/lib/demo/seed-data'
@@ -25,7 +26,6 @@ export interface DemoSeedState {
 
 export interface DemoSeedResult {
   playersAdded: number
-  parentsAdded: number
   coachesAdded: number
   eventsAdded: number
   venuesAdded: number
@@ -168,7 +168,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     // to roll the row back.
     const { data: newTeam, error: teamError } = await admin
       .from('teams')
-      .insert({ club_id: clubId, name: 'U14 Boys', age_group: 'U14' })
+      .insert({ club_id: clubId, name: DEMO_TEAM.name, age_group: DEMO_TEAM.ageGroup })
       .select('id, name')
       .single()
     if (teamError || !newTeam) throw new Error(`Failed to create demo team: ${teamError?.message}`)
@@ -231,60 +231,57 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     coachUserIds.push(authId)
   }
 
-  // 4) Fake parents — same pattern, role='parent'. Collect their auth
-  // ids so players can reference them via players.parent_id.
-  const parentAuthIds: string[] = []
-  for (const parent of DEMO_PARENTS) {
+  // 4) Players. Each one holds their own login, the way a college squad
+  // works: auth.users + a 'player' profile + a 'player' team_members row,
+  // and the players row is owned through players.parent_id (which points
+  // at auth.users, not profiles, and means "the account linked to this
+  // player"). We capture ids so feedback, RSVPs and attendance can
+  // reference them.
+  const playerIds: { id: string; authId: string; firstName: string }[] = []
+  for (let index = 0; index < DEMO_PLAYERS.length; index++) {
+    const player = DEMO_PLAYERS[index]
+    const fullName = `${player.firstName} ${player.lastName}`
     const { data: created, error: authError } = await admin.auth.admin.createUser({
-      email: namespacedEmail(parent.email),
+      email: namespacedEmail(demoPlayerEmail(player, index)),
       password: cryptoRandomPassword(),
       email_confirm: true,
       user_metadata: {
         is_demo: true,
-        full_name: `${parent.firstName} ${parent.lastName}`,
+        full_name: fullName,
       },
     })
-    if (authError || !created.user) throw new Error(`Failed to create parent auth user: ${authError?.message}`)
+    if (authError || !created.user) throw new Error(`Failed to create player auth user: ${authError?.message}`)
     const authId = created.user.id
     await trackSeed('auth.users', authId)
 
-    const { data: parentProfile, error: profileError } = await admin
+    const { data: playerProfile, error: profileError } = await admin
       .from('profiles')
       .insert({
         user_id: authId,
         club_id: clubId,
-        role: 'parent',
-        display_name: `${parent.firstName} ${parent.lastName}`,
+        role: 'player',
+        display_name: fullName,
         onboarding_complete: true,
       })
       .select('id')
       .single()
-    if (profileError || !parentProfile) throw new Error(`Failed to create parent profile: ${profileError?.message}`)
-    await trackSeed('profiles', parentProfile.id)
+    if (profileError || !playerProfile) throw new Error(`Failed to create player profile: ${profileError?.message}`)
+    await trackSeed('profiles', playerProfile.id)
 
     const { data: member, error: memberError } = await admin
       .from('team_members')
-      .insert({ team_id: teamId, profile_id: parentProfile.id, role: 'parent' })
+      .insert({ team_id: teamId, profile_id: playerProfile.id, role: 'player' })
       .select('id')
       .single()
-    if (memberError || !member) throw new Error(`Failed to link parent to team: ${memberError?.message}`)
+    if (memberError || !member) throw new Error(`Failed to link player to team: ${memberError?.message}`)
     await trackSeed('team_members', member.id)
 
-    parentAuthIds.push(authId)
-  }
-
-  // 5) Players — split across the parents and capture inserted ids so
-  // the post-event seeding (feedback, RSVPs, attendance) can reference
-  // them. `parent_id` on players points at auth.users, not profiles.
-  const playerIds: { id: string; parentAuthId: string; parentIndex: number; firstName: string }[] = []
-  for (const player of DEMO_PLAYERS) {
-    const parentAuthId = parentAuthIds[player.parentIndex]
     const { data: inserted, error: playerError } = await admin
       .from('players')
       .insert({
         club_id: clubId,
         team_id: teamId,
-        parent_id: parentAuthId,
+        parent_id: authId,
         first_name: player.firstName,
         last_name: player.lastName,
         jersey_number: player.jerseyNumber,
@@ -294,15 +291,10 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
       .single()
     if (playerError || !inserted) throw new Error(`Failed to create player: ${playerError?.message}`)
     await trackSeed('players', inserted.id)
-    playerIds.push({
-      id: inserted.id,
-      parentAuthId,
-      parentIndex: player.parentIndex,
-      firstName: player.firstName,
-    })
+    playerIds.push({ id: inserted.id, authId, firstName: player.firstName })
   }
 
-  // 6) Events — realistic schedule anchored to today so the dashboard
+  // 5) Events — realistic schedule anchored to today so the dashboard
   // always has "upcoming" content. We capture event ids + their start
   // times so feedback can be back-dated to the event day (otherwise
   // every feedback row gets created_at=now and the development chart
@@ -338,7 +330,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
   }
   const pastEventIds = pastEvents.map(e => e.id)
 
-  // 7) Past attendance — most kids show up most of the time; we mark a
+  // 6) Past attendance — most players show up most of the time; we mark a
   // realistic ~85% present rate so the analytics + chart look alive.
   for (const eventId of pastEventIds) {
     const records = playerIds.map((p, i) => {
@@ -363,7 +355,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     }
   }
 
-  // 8) Past feedback — populates the new development chart. Two notes
+  // 7) Past feedback — populates the new development chart. Two notes
   // per player on two different past events so the chart has at least
   // two distinct days to draw a line. created_at is overridden to the
   // event's start time so bucketByDay() in the chart sees real spread.
@@ -409,17 +401,18 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     if (error) console.error('[demo-seed] feedback insert failed:', error.message)
   }
 
-  // 9) Upcoming RSVPs — most parents say "going", a few say "not_going"
-  // so the forecast badges on the schedule have texture. Service client
-  // because event_rsvps RLS is parent-only.
+  // 8) Upcoming RSVPs. Most players say "going", a few say "not_going"
+  // so the forecast badges on the schedule have texture. Each player
+  // answers for themselves. Service client because event_rsvps RLS only
+  // lets the row's owner write.
   for (const eventId of upcomingEventIds) {
     const rsvpRows = playerIds.map((p, i) => ({
       event_id: eventId,
       player_id: p.id,
-      // Most kids are coming. Every 9th + every 13th pre-flag as not
+      // Most players are coming. Every 9th + every 13th pre-flag as not
       // going so the staff forecast shows real numbers.
       response: (i % 9 === 0 || i % 13 === 0) ? 'not_going' : 'going',
-      responded_by: p.parentAuthId,
+      responded_by: p.authId,
     }))
     // Skip a few RSVPs entirely so the "no response" count > 0.
     const partial = rsvpRows.filter((_, i) => i % 5 !== 0)
@@ -429,7 +422,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     if (error) console.error('[demo-seed] rsvp insert failed:', error.message)
   }
 
-  // 10) Club-wide announcement with a poll attached. Adds a populated
+  // 9) Team-wide announcement with a poll attached. Adds a populated
   // Messages tab to the demo so prospects don't see an empty list.
   const { data: announcement, error: annErr } = await admin
     .from('announcements')
@@ -450,7 +443,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
     if (DEMO_ANNOUNCEMENT.pollEnabled) {
       // Mock a few poll responses so the tally on the announcement card
       // looks alive ("12 yes · 2 no · 4 maybe"). Service client because
-      // announcement_responses RLS is parent-only.
+      // announcement_responses RLS only lets the row's owner write.
       const pollRows = playerIds.map((p, i) => {
         const r = i % 6
         const response = r === 0 ? 'maybe' : r === 1 ? 'no' : 'yes'
@@ -458,7 +451,7 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
           announcement_id: announcement.id,
           player_id: p.id,
           response,
-          responded_by: p.parentAuthId,
+          responded_by: p.authId,
         }
       })
       const { error: pollErr } = await admin
@@ -478,7 +471,6 @@ async function _seedDemoData(): Promise<DemoSeedResult> {
 
   return {
     playersAdded: DEMO_PLAYERS.length,
-    parentsAdded: DEMO_PARENTS.length,
     coachesAdded: DEMO_COACHES.length,
     eventsAdded: DEMO_EVENTS.length,
     venuesAdded: 1,
@@ -525,8 +517,8 @@ async function _clearDemoData(): Promise<DemoClearResult> {
 
   // Delete in an order that minimizes FK-cascade surprises. auth.users
   // deletions cascade to profiles (via user_id FK), which cascade to
-  // team_members (via profile_id FK). players.parent_id also cascades
-  // from auth.users. So deleting auth.users handles four tables at
+  // team_members (via profile_id FK). players.parent_id (the player's
+  // own account) also cascades from auth.users. So deleting auth.users handles four tables at
   // once. Events + venues + teams still need explicit deletes.
   const byTable: Record<string, string[]> = {}
   for (const s of seeds) {
@@ -561,8 +553,8 @@ async function _clearDemoData(): Promise<DemoClearResult> {
     if (!error) cleared++
   }
 
-  // Players not linked to a demo parent (edge case) — explicit cleanup
-  // for any remaining ids that survived the parent cascade.
+  // Players whose account cascade missed them (edge case). Explicit
+  // cleanup for any remaining ids that survived the auth.users cascade.
   for (const id of byTable['players'] ?? []) {
     const { error } = await admin.from('players').delete().eq('id', id)
     if (!error) cleared++

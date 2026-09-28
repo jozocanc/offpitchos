@@ -14,10 +14,10 @@ export default async function GearPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
-  const role = await getEffectiveRole(prof?.role ?? 'parent')
+  const role = await getEffectiveRole(prof?.role ?? 'player')
   if (role !== 'doc') redirect('/dashboard')
 
-  const { teams, userRole, lastRequestedAt, lastRequestedParentCount, respondedSinceRequest, playersWithParents } = await getGearData()
+  const { teams, userRole, lastRequestedAt, lastRequestedPlayerCount, respondedSinceRequest, playersWithAccounts } = await getGearData()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
@@ -30,9 +30,9 @@ export default async function GearPage() {
         teams={teams}
         userRole={userRole}
         lastRequestedAt={lastRequestedAt}
-        lastRequestedParentCount={lastRequestedParentCount}
+        lastRequestedPlayerCount={lastRequestedPlayerCount}
         respondedSinceRequest={respondedSinceRequest}
-        playersWithParents={playersWithParents}
+        playersWithAccounts={playersWithAccounts}
       />
     </div>
   )

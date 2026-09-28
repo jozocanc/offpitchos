@@ -6,6 +6,7 @@ import AddTeamForm from './add-team-form'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
+import { isMember } from '@/lib/constants'
 
 export const metadata: Metadata = { title: 'Teams' }
 
@@ -63,15 +64,21 @@ export default async function TeamsPage() {
 
   const teams: Team[] = await Promise.all(
     (teamsRaw ?? []).map(async team => {
+      // team_members has profile_id, not user_id. Selecting a user_id column
+      // made this query error, so every count read 0 and every player showed
+      // as unclaimed. Join through profiles to get the account's user_id.
       const { data: teamMembers } = await supabase
         .from('team_members')
-        .select('user_id, role')
+        .select('role, profiles(user_id)')
         .eq('team_id', team.id)
 
       const memberCount = teamMembers?.length ?? 0
       const coachCount = teamMembers?.filter(m => m.role === 'coach').length ?? 0
-      const parentMemberIds = new Set(
-        (teamMembers ?? []).filter(m => m.role === 'parent').map(m => m.user_id),
+      // Player accounts on this team (isMember also accepts legacy 'parent' rows).
+      const playerAccountIds = new Set(
+        (teamMembers ?? [])
+          .filter(m => isMember(m.role))
+          .map(m => (m.profiles as unknown as { user_id: string | null } | null)?.user_id),
       )
 
       const { data: teamPlayers } = await supabase
@@ -81,9 +88,10 @@ export default async function TeamsPage() {
 
       const playerCount = teamPlayers?.length ?? 0
 
-      // Unlinked: parent_id is not one of the team's parent team_members.
+      // Unclaimed: parent_id (the account linked to the player row) is not a
+      // player account on this team, i.e. the player hasn't joined yet.
       // Missing sizes: jersey_size or shorts_size is null.
-      const unlinkedCount = (teamPlayers ?? []).filter(p => !parentMemberIds.has(p.parent_id)).length
+      const unlinkedCount = (teamPlayers ?? []).filter(p => !playerAccountIds.has(p.parent_id)).length
       const missingSizesCount = (teamPlayers ?? []).filter(p => !p.jersey_size || !p.shorts_size).length
 
       const { data: nextEvents } = await supabase
@@ -186,8 +194,8 @@ export default async function TeamsPage() {
 function TeamCard({ team, timezone }: { team: Team; timezone: string }) {
   const rateColor = team.attendance_rate >= 80 ? 'text-green' : team.attendance_rate >= 60 ? 'text-yellow-400' : 'text-red-400'
   const issueCount = team.unlinked_count + team.missing_sizes_count + team.low_attendance_count
-  // "Needs attention" if there are any unlinked players (the biggest silent
-  // notification risk) or low-attendance kids; missing sizes alone is softer.
+  // "Needs attention" if any players haven't claimed their account (they get
+  // no notifications) or attendance is low; missing sizes alone is softer.
   const issueTone = team.unlinked_count > 0 || team.low_attendance_count > 0 ? 'warn' : 'soft'
 
   return (
@@ -199,7 +207,7 @@ function TeamCard({ team, timezone }: { team: Team; timezone: string }) {
             {issueCount > 0 && (
               <span
                 title={[
-                  team.unlinked_count > 0 ? `${team.unlinked_count} unlinked` : null,
+                  team.unlinked_count > 0 ? `${team.unlinked_count} not claimed` : null,
                   team.missing_sizes_count > 0 ? `${team.missing_sizes_count} missing sizes` : null,
                   team.low_attendance_count > 0 ? `${team.low_attendance_count} low attendance` : null,
                 ].filter(Boolean).join(' · ')}

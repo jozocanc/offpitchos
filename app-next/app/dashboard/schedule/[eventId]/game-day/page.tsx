@@ -52,7 +52,7 @@ export default async function GameDayPage({ params }: { params: Promise<{ eventI
   const attendanceMap: Record<string, string> = {}
   for (const a of attendance ?? []) attendanceMap[a.player_id] = a.status
 
-  // Pre-load existing feedback so the coach can spot which kids already
+  // Pre-load existing feedback so the coach can spot which players already
   // have a rating and which are still missing one. We only need today's
   // entries against this event so the UI can paint a "Done" check.
   const { data: feedback } = await supabase

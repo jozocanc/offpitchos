@@ -5,7 +5,7 @@ import { updateGroupChatLink } from './actions'
 import { useToast } from '@/components/toast'
 
 // DOC sees an editable field to paste the WhatsApp (or any) group invite URL.
-// Parents + coaches see a "Join Parent Group Chat" button that opens the link.
+// Players + coaches see a "Join Team Group Chat" button that opens the link.
 export default function GroupChatLink({
   teamId,
   teamName,
@@ -52,7 +52,7 @@ export default function GroupChatLink({
     if (editing) {
       return (
         <div className="bg-dark rounded-xl border border-green/20 p-3 space-y-2">
-          <p className="text-xs text-gray">Paste a WhatsApp, GroupMe, or Telegram invite link. Parents will see a button to join.</p>
+          <p className="text-xs text-gray">Paste a WhatsApp, GroupMe, or Telegram invite link. Players will see a button to join.</p>
           <input
             type="url"
             value={link}
@@ -101,7 +101,7 @@ export default function GroupChatLink({
     )
   }
 
-  // Parent / Coach: show join button if link exists
+  // Player / Coach: show join button if link exists
   if (!currentLink) return null
 
   return (
@@ -114,7 +114,7 @@ export default function GroupChatLink({
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
-      Join {teamName} Parent Group Chat
+      Join the {teamName} Group Chat
     </a>
   )
 }

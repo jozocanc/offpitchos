@@ -1,17 +1,27 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { isMember } from '@/lib/constants'
+import { getClubTimezone } from '@/lib/club-timezone-server'
+import { formatShortDate } from '@/lib/format-datetime'
 
-// Parent-scoped prioritization. Mirrors the DOC and coach attention panels
-// but keyed off "the kids this parent has claimed" rather than club-wide
-// state. When a parent first joins, only the claim_kids signal fires; once
-// they link their children, the rest unlock automatically.
+// Player-scoped prioritization. Mirrors the DOC and coach attention panels
+// but keyed off the player's own roster row rather than team-wide state.
+// (File and export names still say "parent" for historical reasons; the
+// product is team-only now and this panel is the player's.)
+//
+// "Linked" means players.parent_id = this user's auth id: the column name is
+// legacy, it now just means "the account linked to this player row". When a
+// player first joins, only the claim_kids ("find yourself on the roster")
+// signal fires; once they link their row, the rest unlock automatically.
 
 export type ParentSignalType =
   | 'claim_kids'
+  | 'rsvp_needed'
   | 'missing_sizes'
   | 'unpaid_camps'
   | 'new_feedback'
@@ -67,13 +77,14 @@ async function getParentContext() {
 export async function getParentAttention(): Promise<ParentAttentionResult> {
   const { user, profile, supabase } = await getParentContext()
 
-  // Teams this parent is a member of. Used both to scope the claim flow
-  // (only show kids on teams they belong to) and to key downstream signals.
+  // Teams this player is a member of. Used both to scope the claim flow
+  // (only show roster rows on teams they belong to) and to key downstream
+  // signals. 'parent' is a legacy member role, still accepted.
   const { data: memberships } = await supabase
     .from('team_members')
     .select('team_id')
     .eq('profile_id', profile.id)
-    .eq('role', 'parent')
+    .in('role', ['player', 'parent'])
 
   const teamIds = (memberships ?? []).map(m => m.team_id)
 
@@ -86,8 +97,8 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
     }
   }
 
-  // Pull every player on the parent's teams in a single round trip; we'll
-  // split them into "mine" vs "unclaimed" on the client side. `teams` is a
+  // Pull every player on the viewer's teams in a single round trip; we'll
+  // split them into "me" vs "unclaimed" below. `teams` is a
   // joined relation and comes back either as a single object or an array
   // depending on Supabase version — we normalize with Array.isArray.
   const { data: teamPlayers } = await supabase
@@ -110,32 +121,34 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
 
   const players = (teamPlayers ?? []) as PlayerRow[]
 
-  // Which players already belong to this parent?
+  // The roster row(s) already linked to this account. Normally exactly one.
   const myPlayers = players.filter(p => p.parent_id === user.id)
 
-  // Which players on their team are still "unclaimed" — i.e. parent_id does
-  // not resolve to a real parent profile? We check profile role rather than
-  // just "not me" so that we don't try to reassign a kid a different parent
-  // has already claimed.
+  // Which rows on their team are still "unclaimed", i.e. parent_id does not
+  // resolve to a member (player) account? Unclaimed rows point at whoever
+  // created them, usually the DOC. We check profile role rather than just
+  // "not me" so we never offer a row a teammate has already linked.
+  // Service client: members can't necessarily read teammates' profiles, and
+  // a silently empty read here would offer every row as claimable.
   let claimable: ClaimablePlayer[] = []
-  const candidateParentIds = Array.from(
+  const candidateOwnerIds = Array.from(
     new Set(players.filter(p => p.parent_id !== user.id).map(p => p.parent_id)),
   )
 
-  if (candidateParentIds.length > 0) {
-    const { data: candidateProfiles } = await supabase
+  if (candidateOwnerIds.length > 0) {
+    const { data: candidateProfiles } = await createServiceClient()
       .from('profiles')
       .select('user_id, role')
-      .in('user_id', candidateParentIds)
+      .in('user_id', candidateOwnerIds)
 
-    const realParentUserIds = new Set(
+    const linkedUserIds = new Set(
       (candidateProfiles ?? [])
-        .filter(p => p.role === 'parent')
+        .filter(p => isMember(p.role))
         .map(p => p.user_id as string),
     )
 
     const unclaimedPlayers = players.filter(
-      p => p.parent_id !== user.id && !realParentUserIds.has(p.parent_id),
+      p => p.parent_id !== user.id && !linkedUserIds.has(p.parent_id),
     )
 
     claimable = unclaimedPlayers.map(p => {
@@ -152,38 +165,83 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
 
   const signals: ParentSignal[] = []
 
-  // --- Signal 1: Claim your kids ----------------------------------------
-  // Only show if the parent has ZERO claimed kids. Once they've linked at
-  // least one child, the remaining unlinked players on the team belong to
-  // other families — not this parent's problem.
+  // --- Signal 1: Find yourself on the roster ---------------------------
+  // Only while this account has NO linked row. Once they've linked theirs,
+  // the remaining unlinked rows belong to teammates, not to them.
   if (claimable.length > 0 && myPlayers.length === 0) {
     signals.push({
       id: `claim:${profile.id}`,
       type: 'claim_kids',
-      title:
-        claimable.length === 1
-          ? 'Claim your child'
-          : `Claim your children (${claimable.length} unlinked)`,
-      subtitle: 'Link your family to the right player so we can send the right reminders.',
+      title: 'Find yourself on the roster',
+      subtitle: 'Link your account to your roster spot so you get your reminders and coach feedback.',
       urgency: 'critical',
       href: '/dashboard?claim=1',
     })
   }
 
-  // --- Signal 2: Missing gear sizes for claimed kids --------------------
+  // --- Signal 2: RSVP for upcoming sessions ----------------------------
+  // Sessions in the next 7 days on the player's team that they haven't
+  // answered yet. One signal per session, capped so a busy week doesn't
+  // bury everything else.
+  if (myPlayers.length > 0) {
+    const nowIso = new Date().toISOString()
+    const weekOut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const myTeamIds = Array.from(new Set(myPlayers.map(p => p.team_id)))
+    const myPlayerIds = myPlayers.map(p => p.id)
+
+    const { data: upcoming } = await supabase
+      .from('events')
+      .select('id, title, start_time, status, team_id')
+      .in('team_id', myTeamIds)
+      .gte('start_time', nowIso)
+      .lte('start_time', weekOut)
+      .neq('status', 'cancelled')
+      .order('start_time', { ascending: true })
+      .limit(10)
+
+    const upcomingEvents = upcoming ?? []
+    if (upcomingEvents.length > 0) {
+      const timezone = await getClubTimezone()
+      const { data: rsvps } = await supabase
+        .from('event_rsvps')
+        .select('event_id, player_id')
+        .in('event_id', upcomingEvents.map(e => e.id))
+        .in('player_id', myPlayerIds)
+
+      const answered = new Set((rsvps ?? []).map(r => `${r.event_id}:${r.player_id}`))
+      let added = 0
+      for (const ev of upcomingEvents) {
+        if (added >= 3) break
+        const me = myPlayers.find(p => p.team_id === ev.team_id)
+        if (!me || answered.has(`${ev.id}:${me.id}`)) continue
+        const when = formatShortDate(ev.start_time, timezone)
+        signals.push({
+          id: `rsvp:${ev.id}`,
+          type: 'rsvp_needed',
+          title: `Are you in for ${ev.title ?? 'the session'}?`,
+          subtitle: `${when}. Let your coaches know if you're going.`,
+          urgency: 'important',
+          href: '/dashboard/schedule',
+        })
+        added++
+      }
+    }
+  }
+
+  // --- Signal 3: Missing gear sizes ------------------------------------
   for (const p of myPlayers) {
     if (p.jersey_size && p.shorts_size) continue
     signals.push({
       id: `sizes:${p.id}`,
       type: 'missing_sizes',
-      title: `Submit gear sizes for ${p.first_name}`,
-      subtitle: 'Your director needs jersey and shorts sizes to place the club order.',
+      title: 'Submit your gear sizes',
+      subtitle: 'Your coaches need your jersey and shorts sizes to place the team order.',
       urgency: 'important',
       href: `/dashboard/players/${p.id}`,
     })
   }
 
-  // --- Signal 3: Unpaid camps for claimed kids --------------------------
+  // --- Signal 4: Unpaid camps ------------------------------------------
   if (myPlayers.length > 0) {
     const { data: regs } = await supabase
       .from('camp_registrations')
@@ -210,20 +268,18 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
       const ev = Array.isArray(detail.events) ? detail.events[0] : detail.events
       const title = (ev as { title?: string } | null)?.title ?? 'a camp'
       const fee = detail.fee_cents > 0 ? ` ($${(detail.fee_cents / 100).toFixed(2)})` : ''
-      const kid = myPlayers.find(p => p.id === regRaw.player_id)
-      const kidLabel = kid ? ` for ${kid.first_name}` : ''
       signals.push({
         id: `camp:${regRaw.id}`,
         type: 'unpaid_camps',
-        title: `Pay ${title}${kidLabel}${fee}`,
-        subtitle: 'Outstanding camp fee — tap to pay.',
+        title: `Pay ${title}${fee}`,
+        subtitle: 'Outstanding camp fee. Tap to pay.',
         urgency: 'important',
         href: '/dashboard/camps',
       })
     }
   }
 
-  // --- Signal 4: New feedback in the last 7 days on claimed kids --------
+  // --- Signal 5: New coach feedback in the last 7 days -----------------
   if (myPlayers.length > 0) {
     const nowDate = new Date()
     const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -235,22 +291,21 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
       .order('created_at', { ascending: false })
       .limit(10)
 
-    const seenPerKid = new Map<string, number>()
+    const seenPerPlayer = new Map<string, number>()
     for (const fb of feedbackRows ?? []) {
-      const count = (seenPerKid.get(fb.player_id) ?? 0) + 1
-      seenPerKid.set(fb.player_id, count)
+      const count = (seenPerPlayer.get(fb.player_id) ?? 0) + 1
+      seenPerPlayer.set(fb.player_id, count)
     }
 
-    for (const [kidId, count] of seenPerKid.entries()) {
-      const kid = myPlayers.find(p => p.id === kidId)
-      if (!kid) continue
+    for (const [playerId, count] of seenPerPlayer.entries()) {
+      if (!myPlayers.some(p => p.id === playerId)) continue
       signals.push({
-        id: `feedback:${kidId}`,
+        id: `feedback:${playerId}`,
         type: 'new_feedback',
-        title: `${count} new note${count === 1 ? '' : 's'} about ${kid.first_name}`,
-        subtitle: 'Coach added feedback this week — tap to read.',
+        title: `${count} new coach note${count === 1 ? '' : 's'} for you`,
+        subtitle: 'Your coach added feedback this week. Tap to read.',
         urgency: 'routine',
-        href: `/dashboard/players/${kidId}`,
+        href: `/dashboard/players/${playerId}`,
       })
     }
   }
@@ -276,10 +331,11 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
 }
 
 /**
- * Claim one or more players as your children. Validates that each target
- * player is on a team the current user is a `role='parent'` member of before
- * flipping `players.parent_id` to the caller's auth user id. Refuses to
- * overwrite a link that already points at a different real parent.
+ * Link the caller's account to their own roster row ("this is me"). Takes an
+ * array for signature compatibility but a player links exactly one row.
+ * Validates that the target is on a team the caller is a member of, that the
+ * caller isn't already linked, and refuses to overwrite a row a teammate has
+ * already linked, before flipping `players.parent_id` to the caller's auth id.
  */
 export async function claimPlayers(
   ...args: Parameters<typeof _claimPlayers>
@@ -296,22 +352,36 @@ async function _claimPlayers(playerIds: string[]): Promise<{
   skipped: number
 }> {
   const { user, profile, supabase } = await getParentContext()
-  if (profile.role !== 'parent') throw new Error('Only parents can claim players')
+  if (!isMember(profile.role)) throw new Error('Only players can link a roster spot')
   if (playerIds.length === 0) return { claimed: 0, skipped: 0 }
+  if (playerIds.length > 1) throw new Error('Pick just one roster spot: yours')
 
-  // Teams this parent is a member of — scopes which players they can claim.
+  // Already linked? A player owns one row; relinking goes through staff.
+  const { data: alreadyMine } = await supabase
+    .from('players')
+    .select('id')
+    .eq('parent_id', user.id)
+    .limit(1)
+  if (alreadyMine && alreadyMine.length > 0) {
+    throw new Error('Your account is already linked to a roster spot. Ask your coach to change it.')
+  }
+
+  // Teams this player is a member of. Scopes which rows they can claim.
   const { data: memberships } = await supabase
     .from('team_members')
     .select('team_id')
     .eq('profile_id', profile.id)
-    .eq('role', 'parent')
+    .in('role', ['player', 'parent'])
 
   const allowedTeamIds = new Set((memberships ?? []).map(m => m.team_id))
   if (allowedTeamIds.size === 0) throw new Error('You are not on any team yet')
 
   // Load the target players so we can verify team membership + check their
-  // current parent_id before overwriting.
-  const { data: targetPlayers } = await supabase
+  // current parent_id before overwriting. Service client: a member can only
+  // read rows they already own (players_parent_own), so a user-scoped read of
+  // an unclaimed row always came back empty. allowedTeamIds scopes it below.
+  const service = createServiceClient()
+  const { data: targetPlayers } = await service
     .from('players')
     .select('id, team_id, parent_id')
     .in('id', playerIds)
@@ -320,19 +390,19 @@ async function _claimPlayers(playerIds: string[]): Promise<{
     return { claimed: 0, skipped: playerIds.length }
   }
 
-  // Resolve current parent_ids to profiles so we know whether to skip any
-  // that already belong to a different real parent.
-  const existingParentIds = Array.from(
+  // Resolve current parent_ids (linked accounts) to profiles so we skip any
+  // row a teammate has already linked.
+  const existingOwnerIds = Array.from(
     new Set(targetPlayers.map(p => p.parent_id).filter(id => id && id !== user.id)),
   )
   const lockedUserIds = new Set<string>()
-  if (existingParentIds.length > 0) {
-    const { data: lockedProfiles } = await supabase
+  if (existingOwnerIds.length > 0) {
+    const { data: lockedProfiles } = await service
       .from('profiles')
       .select('user_id, role')
-      .in('user_id', existingParentIds)
+      .in('user_id', existingOwnerIds)
     for (const p of lockedProfiles ?? []) {
-      if (p.role === 'parent') lockedUserIds.add(p.user_id as string)
+      if (isMember(p.role)) lockedUserIds.add(p.user_id as string)
     }
   }
 
@@ -347,18 +417,24 @@ async function _claimPlayers(playerIds: string[]): Promise<{
     return { claimed: 0, skipped: targetPlayers.length }
   }
 
-  const { error } = await supabase
+  // Service client for the write: the only member policy on players is
+  // players_parent_own (parent_id = auth.uid()), which is false until AFTER
+  // the claim, so a user-scoped UPDATE matched zero rows and silently did
+  // nothing. Every check above already ran as the caller.
+  const { data: updated, error } = await service
     .from('players')
     .update({ parent_id: user.id })
     .in('id', claimable.map(p => p.id))
+    .select('id')
 
-  if (error) throw new Error(`Failed to claim players: ${error.message}`)
+  if (error) throw new Error(`Failed to link roster spot: ${error.message}`)
+  const claimedCount = updated?.length ?? 0
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/teams')
 
   return {
-    claimed: claimable.length,
-    skipped: targetPlayers.length - claimable.length,
+    claimed: claimedCount,
+    skipped: targetPlayers.length - claimedCount,
   }
 }

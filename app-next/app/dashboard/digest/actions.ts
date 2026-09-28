@@ -67,8 +67,7 @@ async function _emailDigest(digestId: string) {
 
   if (!digest) throw new Error('Digest not found')
 
-  // Email everyone in the club. Parents are the primary audience —
-  // they'll forward it, share it, and it's free distribution.
+  // Email everyone in the club: staff and players.
   const { data: profiles } = await service
     .from('profiles')
     .select('id')

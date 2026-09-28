@@ -33,7 +33,7 @@ export default function TeamDetailLoading() {
             </div>
           </div>
 
-          {/* Parents section */}
+          {/* Player accounts section */}
           <div>
             <div className="h-5 w-20 bg-dark-secondary rounded-lg mb-3" />
             <div className="space-y-2">

@@ -25,27 +25,16 @@ export const SE_COLUMN_ALIASES: Record<string, OffPitchField> = {
   'birth year': 'team_age_group',
   'division': 'team_age_group',
 
-  // Parent 1
-  'parent 1 email': 'parent1_email',
-  'parent email': 'parent1_email',
-  'guardian email': 'parent1_email',
-  'email address': 'parent1_email',
-  'email': 'parent1_email',
-  'parent 1 first name': 'parent1_first_name',
-  'parent first name': 'parent1_first_name',
-  'guardian first name': 'parent1_first_name',
-  'parent name': 'parent1_first_name',
-  'phone': 'parent1_phone',
-  'parent phone': 'parent1_phone',
-  'mobile phone': 'parent1_phone',
-  'cell': 'parent1_phone',
-  'cell phone': 'parent1_phone',
-  'parent 1 phone': 'parent1_phone',
-
-  // Parent 2
-  'parent 2 email': 'parent2_email',
-  'secondary email': 'parent2_email',
-  'guardian 2 email': 'parent2_email',
+  // Player's own email (becomes their login). Parent/guardian columns are
+  // deliberately absent so they stay unmapped and are ignored on import.
+  'email': 'player_email',
+  'email address': 'player_email',
+  'e-mail': 'player_email',
+  'player email': 'player_email',
+  'member email': 'player_email',
+  'athlete email': 'player_email',
+  'student email': 'player_email',
+  'school email': 'player_email',
 
   // Player extras
   'jersey number': 'jersey_number',

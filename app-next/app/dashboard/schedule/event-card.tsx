@@ -44,7 +44,7 @@ interface EventCardProps {
    * the venue for DOC so they know who's running each session. */
   coaches?: string[]
   showCoaches?: boolean
-  /** Forecast headcount from parent RSVPs. Shown to staff so they can
+  /** Forecast headcount from player RSVPs. Shown to staff so they can
    * plan stations / lineups before walking onto the field. */
   rsvpTally?: { going: number; notGoing: number; totalKids: number } | null
   showRsvpTally?: boolean
@@ -239,7 +239,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 onClick={() => onParentGoing(event.id, teamId)}
                 className="text-green hover:opacity-80 text-sm font-semibold transition-opacity"
               >
-                We&apos;ll Be There
+                I&apos;ll Be There
               </button>
             )}
             {onParentCantAttend && (
@@ -247,7 +247,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 onClick={() => onParentCantAttend(event.id, teamId)}
                 className="text-yellow-500 hover:text-yellow-400 text-xs transition-colors"
               >
-                Can&apos;t Attend
+                Can&apos;t Make It
               </button>
             )}
           </div>

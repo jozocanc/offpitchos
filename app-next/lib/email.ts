@@ -111,10 +111,10 @@ export async function sendRosterRecoveryEmail({
         <p style="color: #94A3B8; font-size: 14px; margin-bottom: 32px;">Club Operating System</p>
 
         <p style="font-size: 16px; color: #333; margin-bottom: 8px;">
-          <strong>${clubName}</strong> just added you to OffPitchOS — the team management app for your kid's club.
+          <strong>${clubName}</strong> just added you to OffPitchOS, the app your team runs on.
         </p>
         <p style="font-size: 14px; color: #666; margin-bottom: 32px;">
-          Click below to set your password and log in. You'll see your kid's schedule, get notified when practice changes, and message coaches directly.
+          Click below to set your password and log in. You'll see your schedule, get notified when training changes, and message your coaches directly.
         </p>
 
         <a href="${recoveryUrl}" style="display: inline-block; background: #00FF87; color: #0A1628; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">

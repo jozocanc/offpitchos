@@ -5,6 +5,7 @@ import { appUrl } from '@/lib/app-url'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { ROLES } from '@/lib/constants'
 
 export async function addPlayer(
   ...args: Parameters<typeof _addPlayer>
@@ -40,6 +41,7 @@ async function _addPlayer(formData: FormData) {
   const { error } = await supabase
     .from('players')
     .insert({
+      // Placeholder owner until the player claims the row via an invite.
       parent_id: user.id,
       team_id: teamId,
       club_id: profile.club_id,
@@ -79,8 +81,11 @@ async function _removePlayer(playerId: string, teamId: string) {
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-// Link an existing player to a parent user (one of the team's parent members).
-// Used to fix "unlinked" players where parent_id currently points at the DOC who added them.
+// Link a roster row to a player account that has already joined the team.
+// players.parent_id is "the account linked to this player row" (the player's
+// own login). Used to fix unclaimed rows where parent_id still points at the
+// DOC who added them. Exported name kept for compatibility.
+// Legacy 'parent' team members are still accepted so old rows don't break.
 export async function linkPlayerToParent(
   ...args: Parameters<typeof _linkPlayerToParent>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _linkPlayerToParent>>>> {
@@ -91,7 +96,7 @@ export async function linkPlayerToParent(
   }
 }
 
-async function _linkPlayerToParent(playerId: string, parentUserId: string, teamId: string) {
+async function _linkPlayerToParent(playerId: string, accountUserId: string, teamId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -102,45 +107,45 @@ async function _linkPlayerToParent(playerId: string, parentUserId: string, teamI
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only DOC can reassign a player parent')
+  if (profile?.role !== 'doc') throw new Error('Only the DOC can link a player account')
   if (!profile.club_id) throw new Error('No club found')
 
-  // Look up the target parent's profile PK so we can query team_members by profile_id.
-  const { data: parentProfile } = await supabase
+  // Look up the target account's profile PK so we can query team_members by profile_id.
+  const { data: accountProfile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('user_id', parentUserId)
+    .eq('user_id', accountUserId)
     .single()
 
-  if (!parentProfile) throw new Error('Parent profile not found')
+  if (!accountProfile) throw new Error('Player account not found')
 
-  // Verify the target parent is actually a parent member of this team in this club.
+  // Verify the target account is a member (player, or legacy parent) of this team.
   const { data: targetMember } = await supabase
     .from('team_members')
     .select('profile_id, role')
     .eq('team_id', teamId)
-    .eq('profile_id', parentProfile.id)
-    .eq('role', 'parent')
+    .eq('profile_id', accountProfile.id)
+    .in('role', [ROLES.PLAYER, ROLES.PARENT])
     .single()
 
-  if (!targetMember) throw new Error('That user is not a parent on this team')
+  if (!targetMember) throw new Error('That account is not a player on this team')
 
   const { error } = await supabase
     .from('players')
-    .update({ parent_id: parentUserId })
+    .update({ parent_id: accountUserId })
     .eq('id', playerId)
     .eq('club_id', profile.club_id)
 
-  if (error) throw new Error(`Failed to link parent: ${error.message}`)
+  if (error) throw new Error(`Failed to link player account: ${error.message}`)
 
   revalidatePath(`/dashboard/teams/${teamId}`)
 }
 
-// Generate a player-scoped parent invite and return the shareable URL.
-// Differs from `createParentInviteReturningUrl` by also stamping player_id
-// on the invites row; on accept, the join action auto-claims the target
-// player for the arriving parent so they don't have to run the manual
-// claim-your-kids flow on the dashboard.
+// Generate a player-scoped invite and return the shareable URL. The player
+// opens it and claims their own profile. Differs from
+// `createParentInviteReturningUrl` by also stamping player_id on the invites
+// row; on accept, the join RPC sets players.parent_id to the arriving
+// account, so the roster row becomes that player's own login.
 export async function createPlayerScopedInvite(
   ...args: Parameters<typeof _createPlayerScopedInvite>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _createPlayerScopedInvite>>>> {
@@ -166,7 +171,7 @@ async function _createPlayerScopedInvite(
     .single()
 
   if (!profile?.club_id) throw new Error('No club found')
-  if (profile.role !== 'doc') throw new Error('Only DOC can create parent invites')
+  if (profile.role !== 'doc') throw new Error('Only the DOC can create player invites')
 
   // Verify the player belongs to the team (and the team to this club) before
   // letting the DOC attach it to an invite — stops a bad playerId from
@@ -188,7 +193,7 @@ async function _createPlayerScopedInvite(
       club_id: profile.club_id,
       team_id: teamId,
       player_id: playerId,
-      role: 'parent',
+      role: ROLES.PLAYER,
       status: 'pending',
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
@@ -205,9 +210,9 @@ async function _createPlayerScopedInvite(
   return { url: `${baseUrl}/join/${invite.token}` }
 }
 
-// Generate a parent invite for a team and return the shareable URL so the UI
+// Generate a player invite for a team and return the shareable URL so the UI
 // can copy it to clipboard right after a player is added, skipping the two-step
-// "generate then find the link" dance.
+// "generate then find the link" dance. Exported name kept for compatibility.
 export async function createParentInviteReturningUrl(
   ...args: Parameters<typeof _createParentInviteReturningUrl>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _createParentInviteReturningUrl>>>> {
@@ -230,7 +235,7 @@ async function _createParentInviteReturningUrl(teamId: string): Promise<{ url: s
     .single()
 
   if (!profile?.club_id) throw new Error('No club found')
-  if (profile.role !== 'doc') throw new Error('Only DOC can create parent invites')
+  if (profile.role !== 'doc') throw new Error('Only the DOC can create player invites')
 
   const { data: team } = await supabase
     .from('teams')
@@ -246,7 +251,7 @@ async function _createParentInviteReturningUrl(teamId: string): Promise<{ url: s
     .insert({
       club_id: profile.club_id,
       team_id: teamId,
-      role: 'parent',
+      role: ROLES.PLAYER,
       status: 'pending',
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })

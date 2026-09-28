@@ -12,17 +12,17 @@ export default function ScrollHero({ signedIn }: { signedIn: boolean }) {
         {/* Headline */}
         <div className="max-w-5xl mx-auto px-6 text-center mb-12 md:mb-16">
           <span className="inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1F4E3D] bg-[#E8F1EB] border border-[#1F4E3D33] rounded-full px-4 py-1.5 mb-8 max-w-full">
-            <span className="sm:hidden">Clubs · Academies · College</span>
-            <span className="hidden sm:inline">For clubs, academies and college programs</span>
+            <span className="sm:hidden">College · Academies · Clubs</span>
+            <span className="hidden sm:inline">For college programs, academies and club teams</span>
           </span>
           <h1 className="text-[2.15rem] leading-[1.05] sm:text-6xl sm:leading-[1.02] md:text-7xl font-semibold tracking-[-0.035em] sm:tracking-[-0.038em] text-[#0F1510] text-balance">
             The operating system
             <br className="hidden sm:block" />{" "}
-            for serious soccer clubs.
+            for serious soccer teams.
           </h1>
           <p className="mt-7 text-lg md:text-xl text-[#5C6660] max-w-2xl mx-auto leading-relaxed">
-            Scheduling, communication, coverage and tactics in one system that reacts on
-            its own. Your director runs the club instead of firefighting it.
+            Scheduling, player comms, gear, travel and tactics in one system that reacts on
+            its own. Your staff coach the team instead of chasing spreadsheets.
           </p>
           <div className="mt-10 flex items-center justify-center gap-3 flex-wrap">
             <a

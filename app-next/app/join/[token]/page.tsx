@@ -108,7 +108,7 @@ export default async function JoinPage({
     )
   }
 
-  const roleName = invite.role === 'coach' ? 'Coach' : 'Parent'
+  const roleName = invite.role === 'coach' ? 'Coach' : 'Player'
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-dark px-4">

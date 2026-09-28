@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { isMember, isStaff } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
@@ -27,6 +28,8 @@ async function getUserProfile() {
 
 export interface CreateAnnouncementResult {
   announcementId: string
+  // Player recipients (plus any legacy 'parent' rows). Key kept as
+  // parentCount because voice-actions reads it.
   parentCount: number
   coachCount: number
   totalRecipients: number
@@ -124,8 +127,8 @@ async function _createAnnouncement(input: {
       .in('id', recipientIds)
 
     for (const p of recipientProfiles ?? []) {
-      if (p.role === 'parent') parentCount++
-      else if (p.role === 'coach' || p.role === 'doc') coachCount++
+      if (isMember(p.role)) parentCount++
+      else if (isStaff(p.role)) coachCount++
     }
 
     const notifications = recipientIds.map(pid => ({
@@ -313,7 +316,8 @@ async function _deleteReply(replyId: string) {
 }
 
 export interface AudienceCounts {
-  parents: number
+  // Players (plus any legacy 'parent' rows).
+  players: number
   coaches: number
 }
 
@@ -377,7 +381,7 @@ export async function getMessagesData() {
     }
   }
 
-  // ---- Poll data: per-announcement tallies + this user's kids' current responses ----
+  // ---- Poll data: per-announcement tallies + the viewer's linked player's current response ----
   const pollAnnouncementIds = (announcements ?? []).filter(a => a.poll_enabled).map(a => a.id)
   const pollTallyByAnnouncement = new Map<string, { yes: number; no: number; maybe: number; totalKids: number }>()
   const myKidsByAnnouncement = new Map<string, Array<{
@@ -402,7 +406,7 @@ export async function getMessagesData() {
       pollTallyByAnnouncement.set(row.announcement_id, entry)
     }
 
-    // Total possible respondents per announcement (= number of kids in the audience)
+    // Total possible respondents per announcement (= number of players in the audience)
     for (const a of announcements ?? []) {
       if (!a.poll_enabled) continue
       let totalKids = 0
@@ -413,7 +417,7 @@ export async function getMessagesData() {
           .eq('team_id', a.team_id)
         totalKids = count ?? 0
       } else {
-        // Club-wide: all kids in the club
+        // Club-wide: all players in the club
         const { count } = await service
           .from('players')
           .select('id', { count: 'exact', head: true })
@@ -425,7 +429,8 @@ export async function getMessagesData() {
       pollTallyByAnnouncement.set(a.id, entry)
     }
 
-    // This user's kids per announcement + their current responses
+    // Player row(s) linked to this account (normally exactly one: the
+    // player's own row, via players.parent_id) + their current responses
     const { data: myPlayers } = await supabase
       .from('players')
       .select('id, first_name, last_name, team_id, club_id')
@@ -481,7 +486,7 @@ export async function getMessagesData() {
   // Audience counts per team + club-wide, used by the compose modal to
   // preview who will receive a new announcement.
   const audienceByTeam: Record<string, AudienceCounts> = {}
-  let clubWide: AudienceCounts = { parents: 0, coaches: 0 }
+  let clubWide: AudienceCounts = { players: 0, coaches: 0 }
 
   const teamIds = (teams ?? []).map(t => t.id)
   if (teamIds.length > 0) {
@@ -491,9 +496,9 @@ export async function getMessagesData() {
       .in('team_id', teamIds)
 
     for (const m of memberships ?? []) {
-      if (!audienceByTeam[m.team_id]) audienceByTeam[m.team_id] = { parents: 0, coaches: 0 }
-      if (m.role === 'parent') audienceByTeam[m.team_id].parents += 1
-      else if (m.role === 'coach') audienceByTeam[m.team_id].coaches += 1
+      if (!audienceByTeam[m.team_id]) audienceByTeam[m.team_id] = { players: 0, coaches: 0 }
+      if (isMember(m.role)) audienceByTeam[m.team_id].players += 1
+      else if (isStaff(m.role)) audienceByTeam[m.team_id].coaches += 1
     }
   }
 
@@ -504,8 +509,8 @@ export async function getMessagesData() {
     .neq('id', profile.id)
 
   for (const p of clubProfiles ?? []) {
-    if (p.role === 'parent') clubWide.parents += 1
-    else if (p.role === 'coach' || p.role === 'doc') clubWide.coaches += 1
+    if (isMember(p.role)) clubWide.players += 1
+    else if (isStaff(p.role)) clubWide.coaches += 1
   }
 
   return {
@@ -537,8 +542,8 @@ async function _respondToPoll(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
 
-  // Verify the player is this parent's kid (defence in depth — RLS will
-  // enforce too, but fail-fast gives a clearer error).
+  // Verify the player row is linked to this account (defence in depth: RLS
+  // will enforce too, but fail-fast gives a clearer error).
   const { data: player } = await supabase
     .from('players')
     .select('id, parent_id')

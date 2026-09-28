@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { ROLES } from '@/lib/constants'
 
+// Creates a team join link for players. Exported name kept for compatibility.
 export async function generateParentInvite(
   ...args: Parameters<typeof _generateParentInvite>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _generateParentInvite>>>> {
@@ -51,7 +53,7 @@ async function _generateParentInvite(formData: FormData) {
     .insert({
       club_id: profile.club_id,
       team_id: teamId,
-      role: 'parent',
+      role: ROLES.PLAYER,
       status: 'pending',
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })

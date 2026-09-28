@@ -15,7 +15,7 @@ export default async function LoadPage() {
   if (!user) redirect('/login')
 
   const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
-  const role = await getEffectiveRole(prof?.role ?? 'parent')
+  const role = await getEffectiveRole(prof?.role ?? 'player')
   if (role !== 'doc' && role !== 'coach') redirect('/dashboard')
 
   const data = await getLoadPageData()

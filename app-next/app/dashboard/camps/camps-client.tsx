@@ -62,7 +62,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
   const [createOpen, setCreateOpen] = useState(false)
 
   const isDoc = userRole === 'doc'
-  const isParent = !isStaff(userRole)
+  const isMemberView = !isStaff(userRole)
 
   // Split into upcoming and past
   const now = new Date()
@@ -136,7 +136,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
               key={camp.eventId}
               camp={camp}
               isDoc={isDoc}
-              isParent={isParent}
+              isMemberView={isMemberView}
               now={now}
               onManage={() => setSelectedCamp(camp)}
               onRegister={() => setRegisterCamp(camp)}
@@ -155,7 +155,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
                 key={camp.eventId}
                 camp={camp}
                 isDoc={isDoc}
-                isParent={false}
+                isMemberView={false}
                 now={now}
                 onManage={() => setSelectedCamp(camp)}
                 onRegister={() => {}}
@@ -183,8 +183,8 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
   )
 }
 
-function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
-  camp: Camp; isDoc: boolean; isParent: boolean; now: Date; onManage: () => void; onRegister: () => void
+function CampCard({ camp, isDoc, isMemberView, now, onManage, onRegister }: {
+  camp: Camp; isDoc: boolean; isMemberView: boolean; now: Date; onManage: () => void; onRegister: () => void
 }) {
   const timezone = useClubTimezone()
   const start = new Date(camp.startTime)
@@ -254,7 +254,7 @@ function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
           {isDoc && camp.expectedRevenue > 0 && camp.collectedRevenue < camp.expectedRevenue && (
             <span className="text-yellow-400">{formatCurrency(camp.expectedRevenue - camp.collectedRevenue)} outstanding</span>
           )}
-          {isParent && camp.capacity && (
+          {isMemberView && camp.capacity && (
             <span>{camp.capacity - camp.registeredCount} spots left</span>
           )}
         </div>
@@ -291,7 +291,7 @@ function CampCard({ camp, isDoc, isParent, now, onManage, onRegister }: {
             Manage
           </button>
         )}
-        {isParent && camp.status !== 'cancelled' && (
+        {isMemberView && camp.status !== 'cancelled' && (
           <button onClick={onRegister} className="text-sm bg-green text-dark font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
             Register
           </button>
