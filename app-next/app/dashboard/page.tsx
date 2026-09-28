@@ -12,7 +12,7 @@ import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
 import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { getClubTimezone } from '@/lib/club-timezone-server'
-import { formatTime } from '@/lib/format-datetime'
+import { formatTime, formatShortDate } from '@/lib/format-datetime'
 import { isMember } from '@/lib/constants'
 import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 
@@ -98,7 +98,7 @@ async function DashboardBody({
   const [teamCountRes, todaySessionsRes, coverageRes, myTeamsRes, demoState] =
     await Promise.all([
       isDoc && clubId
-        ? supabase.from('teams').select('id', { count: 'exact', head: true }).eq('club_id', clubId)
+        ? supabase.from('players').select('id', { count: 'exact', head: true }).eq('club_id', clubId)
         : Promise.resolve({ count: 0 }),
       clubId
         ? supabase
@@ -111,11 +111,15 @@ async function DashboardBody({
         : Promise.resolve({ count: 0 }),
       isDoc && clubId
         ? supabase
-            .from('coverage_requests')
-            .select('id', { count: 'exact', head: true })
+            .from('events')
+            .select('start_time, title')
             .eq('club_id', clubId)
-            .in('status', ['pending', 'escalated'])
-        : Promise.resolve({ count: 0 }),
+            .eq('status', 'scheduled')
+            .in('type', ['game', 'tournament'])
+            .gte('start_time', new Date().toISOString())
+            .order('start_time', { ascending: true })
+            .limit(1)
+        : Promise.resolve({ data: null }),
       profileId
         ? supabase
             .from('team_members')
@@ -125,9 +129,9 @@ async function DashboardBody({
       isDoc ? getDemoSeedState() : Promise.resolve(null),
     ])
 
-  const teamCount = teamCountRes.count
+  const playerCount = teamCountRes.count
   const todaySessions = todaySessionsRes.count
-  const coverageAlerts = coverageRes.count
+  const nextGame = ((coverageRes as unknown as { data: { start_time: string; title: string }[] | null }).data ?? [])[0] ?? null
   const myTeams = (myTeamsRes.data ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
   const myTeamIds = myTeams.map(tm => tm.team_id)
 
@@ -173,8 +177,8 @@ async function DashboardBody({
       {/* Stat cards. */}
       <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
         <StatCard
-          label={isDoc ? 'Total Teams' : 'My Teams'}
-          value={String(isDoc ? (teamCount ?? 0) : myTeams.length)}
+          label={isDoc ? 'Players' : 'My Teams'}
+          value={String(isDoc ? (playerCount ?? 0) : myTeams.length)}
           accent="green"
         />
         <StatCard
@@ -184,9 +188,10 @@ async function DashboardBody({
         />
         {isDoc && (
           <StatCard
-            label="Coverage Alerts"
-            value={String(coverageAlerts ?? 0)}
-            accent={(coverageAlerts ?? 0) > 0 ? 'green' : 'gray'}
+            label="Next game"
+            value={nextGame ? formatShortDate(nextGame.start_time, timezone) : 'None'}
+            accent={nextGame ? 'green' : 'gray'}
+            note={nextGame?.title}
           />
         )}
       </div>

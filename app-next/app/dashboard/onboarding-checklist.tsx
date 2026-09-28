@@ -8,7 +8,8 @@ import { getOnboardingState, dismissOnboardingForm } from './onboarding-checklis
 // can mount this unconditionally for DOC view.
 export default async function OnboardingChecklist() {
   const state = await getOnboardingState()
-  if (!state.visible) return null
+  // Nothing left to do: get out of the way instead of showing four ticks.
+  if (!state.visible || state.allComplete) return null
 
   const steps: {
     key: 'hasTeam' | 'hasCoach' | 'hasPlayer' | 'hasEvent'
@@ -30,7 +31,7 @@ export default async function OnboardingChecklist() {
         <div>
           <h2 className="text-lg font-bold">Finish setting up your team</h2>
           <p className="text-gray text-xs mt-1">
-            {completedCount} of {steps.length} done. Schedule changes and messages reach your players once they&apos;re on the roster.
+            {`${completedCount} of ${steps.length} done.`} Schedule changes and messages reach your players once they&apos;re on the roster.
           </p>
         </div>
         {state.allComplete && (

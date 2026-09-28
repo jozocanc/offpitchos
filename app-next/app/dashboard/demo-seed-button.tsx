@@ -25,25 +25,20 @@ export default function DemoSeedButton({ state }: Props) {
 
   if (state.loaded) {
     return (
-      <div className="mb-6 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 p-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold text-yellow-400">Demo data loaded</p>
-          <p className="text-xs text-gray mt-0.5">
-            This team has seeded players, coaches, and events for demo purposes.
-          </p>
-        </div>
+      <div className="mb-6 flex items-center justify-between gap-4 text-xs text-gray">
+        <p>Sample team loaded. Names, schedule and messages are example data.</p>
         <button
           type="button"
           disabled={isPending}
           onClick={() => {
-            if (!confirm('Clear all seeded demo data from this team?')) return
+            if (!confirm('Clear all sample data from this team?')) return
             setLoading('clear')
             startTransition(async () => {
               try {
                 const clrRes = await clearDemoData()
                 if (!clrRes.ok) { toast(clrRes.error, 'error'); return }
                 const result = clrRes.data
-                toast(`Demo data cleared · ${result.rowsCleared} rows`, 'success')
+                toast(`Sample data cleared · ${result.rowsCleared} rows`, 'success')
                 router.refresh()
               } catch (err) {
                 toast(err instanceof Error ? err.message : 'Failed to clear', 'error')
@@ -52,9 +47,9 @@ export default function DemoSeedButton({ state }: Props) {
               }
             })
           }}
-          className="text-xs font-bold text-yellow-400 hover:opacity-80 transition-opacity shrink-0 disabled:opacity-50"
+          className="text-xs font-semibold text-gray underline underline-offset-2 hover:text-white transition-colors shrink-0 disabled:opacity-50"
         >
-          {loading === 'clear' ? 'Clearing…' : 'Clear demo data'}
+          {loading === 'clear' ? 'Clearing…' : 'Clear sample data'}
         </button>
       </div>
     )

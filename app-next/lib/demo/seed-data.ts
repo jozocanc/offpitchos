@@ -137,6 +137,7 @@ export const DEMO_EVENTS: DemoEventPlan[] = [
   { type: 'game',     title: 'Home vs Lakeview College',      daysFromNow: -3, startHour: 19, startMinute: 0,  durationMinutes: 110 },
   { type: 'practice', title: 'Recovery + Film',               daysFromNow: -2, startHour: 15, startMinute: 30, durationMinutes: 90 },
   // UPCOMING
+  { type: 'practice', title: 'Training + Set Pieces',         daysFromNow: 0, startHour: 15, startMinute: 30, durationMinutes: 120 },
   { type: 'practice', title: 'Training',                      daysFromNow: 1, startHour: 15, startMinute: 30, durationMinutes: 120 },
   { type: 'practice', title: 'Pre-travel Training',           daysFromNow: 3, startHour: 15, startMinute: 30, durationMinutes: 90 },
   { type: 'game',     title: 'Away at Prairie State College', daysFromNow: 5, startHour: 19, startMinute: 0,  durationMinutes: 110,

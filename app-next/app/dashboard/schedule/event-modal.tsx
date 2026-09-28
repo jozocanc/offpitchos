@@ -10,6 +10,8 @@ import SessionPlan from './session-plan'
 import { useToast } from '@/components/toast'
 import { formatRecipientToast } from '../notification-toast'
 import { teamLabel } from '@/lib/team-label'
+import { useClubTimezone } from '@/components/club-timezone'
+import { wallTimeToIso, wallDateTimeToIso, isoToWallDate, isoToWallTime, isoToWallDateTime } from '@/lib/format-datetime'
 import {
   type EventTravelFields,
   type TravelInput,
@@ -55,13 +57,15 @@ interface EventModalProps {
 
 export default function EventModal({ teams, venues, editEvent, onClose, userRole }: EventModalProps) {
   const isEditing = editEvent !== null
+  // Every date/time field is the TEAM's wall clock, not the browser's.
+  const tz = useClubTimezone()
 
   const [teamId, setTeamId] = useState(editEvent?.team_id ?? teams[0]?.id ?? '')
   const [type, setType] = useState<EventType>((editEvent?.type as EventType) ?? 'practice')
   const [title, setTitle] = useState(editEvent?.title ?? '')
-  const [date, setDate] = useState(editEvent ? new Date(editEvent.start_time).toISOString().split('T')[0] : '')
-  const [startTime, setStartTime] = useState(editEvent ? formatTimeInput(new Date(editEvent.start_time)) : '')
-  const [endTime, setEndTime] = useState(editEvent ? formatTimeInput(new Date(editEvent.end_time)) : '')
+  const [date, setDate] = useState(editEvent ? isoToWallDate(editEvent.start_time, tz) : '')
+  const [startTime, setStartTime] = useState(editEvent ? isoToWallTime(editEvent.start_time, tz) : '')
+  const [endTime, setEndTime] = useState(editEvent ? isoToWallTime(editEvent.end_time, tz) : '')
   const [venueId, setVenueId] = useState(editEvent?.venue_id ?? '')
   const [address, setAddress] = useState(
     editEvent?.address ?? (editEvent?.venue_id ? (venues.find(v => v.id === editEvent.venue_id)?.address ?? '') : '')
@@ -83,9 +87,9 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   // Travel (away games / tournaments). Browser-local datetime inputs, same
   // convention as the date + time fields above.
   const hadTravel = hasTravel(editEvent)
-  const [travelDepartAt, setTravelDepartAt] = useState(toDateTimeLocal(editEvent?.travel_depart_at))
+  const [travelDepartAt, setTravelDepartAt] = useState(isoToWallDateTime(editEvent?.travel_depart_at, tz))
   const [travelDepartLocation, setTravelDepartLocation] = useState(editEvent?.travel_depart_location ?? '')
-  const [travelReturnAt, setTravelReturnAt] = useState(toDateTimeLocal(editEvent?.travel_return_at))
+  const [travelReturnAt, setTravelReturnAt] = useState(isoToWallDateTime(editEvent?.travel_return_at, tz))
   const [travelMode, setTravelMode] = useState(editEvent?.travel_mode ?? '')
   const [travelHotel, setTravelHotel] = useState(editEvent?.travel_hotel ?? '')
   const [travelNotes, setTravelNotes] = useState(editEvent?.travel_notes ?? '')
@@ -120,8 +124,8 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   // lead time. Only fills an empty field.
   function suggestDeparture() {
     if (!date || !startTime) return
-    const kickoff = new Date(`${date}T${startTime}`)
-    setTravelDepartAt(toDateTimeLocal(new Date(kickoff.getTime() - 3 * 60 * 60 * 1000).toISOString()))
+    const kickoff = new Date(wallTimeToIso(date, startTime, tz))
+    setTravelDepartAt(isoToWallDateTime(new Date(kickoff.getTime() - 3 * 60 * 60 * 1000), tz))
   }
 
   // Check for conflicts when scheduling inputs change
@@ -135,8 +139,8 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
     const timeout = setTimeout(async () => {
       setCheckingConflicts(true)
       try {
-        const startISO = new Date(`${date}T${startTime}`).toISOString()
-        const endISO = new Date(`${date}T${endTime}`).toISOString()
+        const startISO = wallTimeToIso(date, startTime, tz)
+        const endISO = wallTimeToIso(date, endTime, tz)
 
         const conflictRes = await checkConflicts({
           teamId,
@@ -150,8 +154,8 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
         setConflicts(found)
 
         if (found.length > 0) {
-          const startDate = new Date(`${date}T${startTime}`)
-          const endDate = new Date(`${date}T${endTime}`)
+          const startDate = new Date(wallTimeToIso(date, startTime, tz))
+          const endDate = new Date(wallTimeToIso(date, endTime, tz))
           const durationMinutes = (endDate.getTime() - startDate.getTime()) / 60000
 
           const altRes = await suggestAlternatives({
@@ -188,11 +192,9 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
       return
     }
 
-    // Construct ISO strings preserving the user's intended local time
-    // The browser's Date constructor interprets `YYYY-MM-DDTHH:MM` as local time,
-    // so toISOString() converts correctly
-    const startISO = new Date(`${date}T${startTime}`).toISOString()
-    const endISO = new Date(`${date}T${endTime}`).toISOString()
+    // The fields hold the team's wall-clock time; convert in the team's zone.
+    const startISO = wallTimeToIso(date, startTime, tz)
+    const endISO = wallTimeToIso(date, endTime, tz)
 
     if (new Date(endISO) <= new Date(startISO)) {
       setError('End time must be after start time')
@@ -209,8 +211,8 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
     // is left untouched (undefined). The server skips no-op changes.
     let travel: TravelInput | null | undefined = isEditing ? undefined : null
     if (travelAllowed && (showTravel || travelFilled || hadTravel)) {
-      const departISO = travelDepartAt ? new Date(travelDepartAt).toISOString() : null
-      const returnISO = travelReturnAt ? new Date(travelReturnAt).toISOString() : null
+      const departISO = travelDepartAt ? wallDateTimeToIso(travelDepartAt, tz) : null
+      const returnISO = travelReturnAt ? wallDateTimeToIso(travelReturnAt, tz) : null
       if (departISO && returnISO && new Date(returnISO) <= new Date(departISO)) {
         setError('Return time must be after the departure time')
         return
@@ -566,7 +568,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
           const durationFromStartEnd =
             startTime && endTime
               ? Math.round(
-                  (new Date(`${date}T${endTime}`).getTime() - new Date(`${date}T${startTime}`).getTime()) / 60000
+                  (new Date(wallTimeToIso(date, endTime, tz)).getTime() - new Date(wallTimeToIso(date, startTime, tz)).getTime()) / 60000
                 )
               : undefined
           return (
@@ -658,18 +660,4 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
       </div>
     </div>
   )
-}
-
-function formatTimeInput(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-// ISO timestamp -> "YYYY-MM-DDTHH:MM" in the browser's zone, for
-// <input type="datetime-local">. Browser-local to match the date/time fields.
-function toDateTimeLocal(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

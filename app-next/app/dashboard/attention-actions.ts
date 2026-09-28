@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -90,6 +91,7 @@ STRICT RULES:
 - Refer to the organisation as the team or program, never "club".
 
 URGENCY GUIDANCE (by signal type):
+- Coaching staff is fixed. Never tell the head coach to "confirm coverage" or find cover unless an "Active coverage requests" signal is present. For an upcoming training session, suggest reviewing the session plan instead.
 - "critical" — time pressure or breakdowns. Examples: coverage requests that are EXPIRED or expire in <30 min; events starting in <2 hours without coverage resolved.
 - "important" — act this week. Examples: coverage pending with time, new player replies, upcoming games in next 48h, past events with no attendance marked (coach may have forgotten), gear sizes missing for many players, camps with unpaid registrations.
 - "routine" — awareness / FYI. Examples: upcoming events going smoothly, stale pending invites that may need a resend, 1-2 gear sizes missing, small camp payment gap.
@@ -129,7 +131,9 @@ Return JSON only, no preamble, no markdown. Match this exact schema:
   ]
 }`
 
-export async function getAttentionList(timeZone: string = 'UTC', forceRefresh: boolean = false): Promise<AttentionResult> {
+export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRefresh: boolean = false): Promise<AttentionResult> {
+  // Times in the list are the team's, not the viewer's browser zone.
+  const timeZone = await getClubTimezone()
   const { profile, supabase } = await getUserProfile()
 
   // Only DOCs get the triaged attention list

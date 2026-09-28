@@ -199,3 +199,47 @@ export function daysFromToday(key: string, timeZone: string): number {
   const at = (k: string) => new Date(`${k}T00:00:00Z`).getTime()
   return Math.round((at(key) - at(dayKey(new Date(), timeZone))) / 86_400_000)
 }
+
+/**
+ * The UTC ISO string for a wall-clock date + time in `timeZone`.
+ * `new Date('YYYY-MM-DDTHH:MM')` reads the BROWSER's zone, so a coach creating
+ * a 3:30 PM practice from another state stored it an hour off. Two passes
+ * settle the offset across DST edges.
+ */
+export function wallTimeToIso(date: string, time: string, timeZone: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const [hh, mm] = time.split(':').map(Number)
+  const target = Date.UTC(y, m - 1, d, hh, mm)
+  let guess = target
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(guess), timeZone)
+    const [py, pm, pd] = p.key.split('-').map(Number)
+    guess += target - Date.UTC(py, pm - 1, pd, p.hour, p.minute)
+  }
+  return new Date(guess).toISOString()
+}
+
+/** "YYYY-MM-DDTHH:MM" (datetime-local value) in `timeZone` -> UTC ISO. */
+export function wallDateTimeToIso(value: string, timeZone: string): string {
+  const [date, time] = value.split('T')
+  return wallTimeToIso(date, time ?? '00:00', timeZone)
+}
+
+/** ISO -> "YYYY-MM-DD" in `timeZone`, for <input type="date">. */
+export function isoToWallDate(value: DateInput, timeZone: string): string {
+  return zonedParts(value, timeZone).key
+}
+
+/** ISO -> "HH:MM" in `timeZone`, for <input type="time">. */
+export function isoToWallTime(value: DateInput, timeZone: string): string {
+  const p = zonedParts(value, timeZone)
+  return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`
+}
+
+/** ISO -> "YYYY-MM-DDTHH:MM" in `timeZone`, for <input type="datetime-local">. */
+export function isoToWallDateTime(value: DateInput | null | undefined, timeZone: string): string {
+  if (!value) return ''
+  const d = toDate(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${isoToWallDate(d, timeZone)}T${isoToWallTime(d, timeZone)}`
+}

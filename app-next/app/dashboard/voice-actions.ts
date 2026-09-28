@@ -10,6 +10,7 @@ import { isMember } from '@/lib/constants'
 import { formatShortDate, formatTime } from '@/lib/format-datetime'
 import { unwrap } from '@/lib/action-result'
 import { isPlayerPreview } from '@/lib/admin-role'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -245,10 +246,13 @@ export async function undoCancelEvent(eventId: string): Promise<VoiceCommandResu
 // Step 1: take the transcript, ask Claude what to do, return a plan. No writes.
 export async function interpretVoiceCommand(
   transcript: string,
-  timeZone: string = 'UTC',
+  _clientTimeZone: string = 'UTC',
   pageContext?: PageContext
 ): Promise<VoicePlan> {
   if (!transcript.trim()) return { kind: 'clarification', message: 'No command received.' }
+  // "Practice at 4" means 4 in the team's zone, not wherever the coach's
+  // browser happens to be (an away trip, or the founder demoing from Florida).
+  const timeZone = await getClubTimezone()
 
   const { profile, supabase } = await getUserProfile()
 
@@ -398,8 +402,9 @@ function formatEventTime(ev: any, timeZone: string): string {
 export async function executeVoicePlan(
   tool: string,
   input: Record<string, any>,
-  timeZone: string = 'UTC'
+  _clientTimeZone: string = 'UTC'
 ): Promise<VoiceCommandResult> {
+  const timeZone = await getClubTimezone()
   const { profile, supabase } = await getUserProfile()
 
   if (isMember(profile.role) || await isPlayerPreview()) {
