@@ -127,3 +127,26 @@ export function gearSizeLabel(size: string | null | undefined): string {
   if (!size) return ''
   return GEAR_SIZE_LABELS[size] ?? size
 }
+
+// Team timezones offered in Settings. US zones first (most programs), then a
+// few common elsewhere. Any valid IANA zone detected at onboarding is kept.
+export const TEAM_TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern (New York)' },
+  { value: 'America/Chicago', label: 'Central (Chicago, Texas)' },
+  { value: 'America/Denver', label: 'Mountain (Denver)' },
+  { value: 'America/Phoenix', label: 'Arizona (Phoenix)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
+  { value: 'America/Anchorage', label: 'Alaska' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii' },
+  { value: 'Europe/London', label: 'London' },
+  { value: 'Europe/Zurich', label: 'Central Europe (Zurich)' },
+] as const
+
+export function isValidTimezone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz })
+    return true
+  } catch {
+    return false
+  }
+}

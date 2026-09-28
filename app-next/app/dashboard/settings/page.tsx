@@ -7,6 +7,7 @@ import VenuesSection from './venues-section'
 
 export const metadata: Metadata = { title: 'Settings' }
 import AccountSettings from './account-settings'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 import DangerZone from './danger-zone'
 import StripeConnect from './stripe-connect'
 import { isStaff } from '@/lib/constants'
@@ -14,6 +15,7 @@ import { getEffectiveRole } from '@/lib/admin-role'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
+  const timezone = await getClubTimezone()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -49,6 +51,7 @@ export default async function SettingsPage() {
           isDOC={profile?.role === 'doc'}
           role={profile?.role}
           staffTitle={profile?.staff_title}
+          timezone={timezone}
         />
 
         {/* Staff invites */}

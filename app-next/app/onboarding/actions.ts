@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ROLES } from '@/lib/constants'
+import { ROLES, isValidTimezone } from '@/lib/constants'
 
 // Every failure returns { ok: false, error } rather than throwing. Next.js
 // redacts thrown Server Action messages in production and replaces them with an
@@ -18,6 +18,8 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
   const clubName = formData.get('clubName') as string
   const teamName = formData.get('teamName') as string
   const ageGroup = formData.get('ageGroup') as string
+  const tzInput = (formData.get('timezone') as string | null) ?? ''
+  const timezone = tzInput && isValidTimezone(tzInput) ? tzInput : undefined
 
   // Age group is optional — a college program or senior side has none.
   if (!clubName?.trim() || !teamName?.trim()) {
@@ -27,7 +29,7 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
   // 1. Create the club
   const { data: club, error: clubError } = await supabase
     .from('clubs')
-    .insert({ name: clubName.trim(), created_by: user.id })
+    .insert({ name: clubName.trim(), created_by: user.id, ...(timezone ? { timezone } : {}) })
     .select('id')
     .single()
 

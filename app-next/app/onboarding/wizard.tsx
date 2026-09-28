@@ -36,6 +36,8 @@ export default function OnboardingWizard() {
     formData.set('clubName', clubName)
     formData.set('teamName', teamName)
     formData.set('ageGroup', ageGroup)
+    // The coach's own zone, so a Texas program isn't on Eastern time by default.
+    formData.set('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone ?? '')
 
     startTransition(async () => {
       try {
@@ -56,10 +58,17 @@ export default function OnboardingWizard() {
   if (step === 3) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-dark px-4">
-        <ImportWizard
-          variant="onboarding"
-          onComplete={() => router.push('/dashboard')}
-        />
+        <div className="w-full max-w-2xl">
+          <div className="text-center mb-8">
+            <Wordmark size="xl" />
+            <p className="text-gray text-sm mt-2">Team created. Bring in your players, or skip and add them later.</p>
+          </div>
+          <ImportWizard
+            variant="onboarding"
+            onComplete={() => router.push('/dashboard')}
+          />
+          <p className="text-center text-gray text-xs mt-6">Step 3 of 3</p>
+        </div>
       </main>
     )
   }
@@ -163,7 +172,7 @@ export default function OnboardingWizard() {
           )}
         </div>
 
-        <p className="text-center text-gray text-xs mt-6">Step {step} of 2</p>
+        <p className="text-center text-gray text-xs mt-6">Step {step} of 3</p>
       </div>
     </main>
   )

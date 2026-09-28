@@ -2,6 +2,7 @@
 
 import EditableField from './editable-field'
 import { updateDisplayName, updateClubName } from './actions'
+import TimezoneSelect from './timezone-select'
 import { roleLabel } from '@/lib/constants'
 
 interface AccountSettingsProps {
@@ -11,10 +12,11 @@ interface AccountSettingsProps {
   isDOC: boolean
   role?: string
   staffTitle?: string | null
+  timezone?: string
 }
 
 
-export default function AccountSettings({ clubName, displayName, email, isDOC, role, staffTitle }: AccountSettingsProps) {
+export default function AccountSettings({ clubName, displayName, email, isDOC, role, staffTitle, timezone }: AccountSettingsProps) {
   return (
     <>
       {/* Program info (stored on the clubs table) */}
@@ -38,6 +40,7 @@ export default function AccountSettings({ clubName, displayName, email, isDOC, r
               </div>
             </div>
           )}
+          {timezone && <TimezoneSelect timezone={timezone} canEdit={isDOC} />}
         </div>
       </section>
 

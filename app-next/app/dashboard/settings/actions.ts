@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
+import { isValidTimezone } from '@/lib/constants'
 
 export async function updateDisplayName(name: string) {
   const supabase = await createClient()
@@ -48,6 +49,31 @@ export async function updateClubName(name: string) {
   if (error) return { error: error.message }
 
   revalidatePath('/dashboard/settings')
+  return { success: true }
+}
+
+export async function updateClubTimezone(timezone: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (!isValidTimezone(timezone)) return { error: 'Pick a timezone from the list' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the timezone' }
+
+  const { error } = await supabase
+    .from('clubs')
+    .update({ timezone })
+    .eq('id', profile.club_id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard', 'layout')
   return { success: true }
 }
 
