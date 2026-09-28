@@ -11,7 +11,10 @@ soccer**. `players.parent_id` keeps its name but means "the account linked to th
 player row" (the player's own login). `ROLES.PARENT` survives only for legacy rows.
 Do not reintroduce parent UI or copy. This supersedes the youth/`club_type` notes below.
 
-**Team:** Jozo (builds everything) and **Rob Tomlin, co-founder since day one
+**2026-09-28: Rob is out of the picture** (Jozo's call, no real impact). Removed from the
+homepage; do not add him back or cite his input as product direction. Old notes below are history.
+
+**Team (historical):** Jozo (builds everything) and **Rob Tomlin, co-founder since day one
 (April 2026)**. Rob is non-technical — soccer and business side. He shaped what the
 product IS: the react-to-chaos-automatically thesis, the DOC-Sunday-night-backlog
 insight, voice-first schedule changes as the differentiator. Never describe him as a

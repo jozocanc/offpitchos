@@ -334,44 +334,29 @@ export default async function Home() {
         <div className="max-w-3xl mb-16">
           <SectionLabel n="07">Who is behind it</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4 text-balance">
-            Two founders, both still on the touchline.
+            Built by someone who played the game.
           </h2>
           <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-            OffPitchOS is not built by people who read about the problem. It is built by
-            two who played the game and now work inside a program, which is why it is
-            soccer only and why it argues with the way the existing tools behave.
+            OffPitchOS is not built by someone who read about the problem. It is built by
+            a player who lived it inside real programs, which is why it is soccer only and
+            why it argues with the way the existing tools behave.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-14 md:gap-16">
+        <div className="max-w-md">
           <Founder
             name="Jozo Cancar"
-            role="Co-founder · Builds the product"
+            role="Founder · Builds the product"
             actionSrc="/jozo-soccer.jpg"
             actionAlt="Jozo Cancar playing Division I soccer at Florida Atlantic"
             portraitSrc="/jozo.jpg"
-            portraitAlt="Jozo Cancar, co-founder of OffPitchOS"
+            portraitAlt="Jozo Cancar, founder of OffPitchOS"
             priority
           >
             Played Division I at Florida Atlantic. Years around real teams, as a player and
             on staff, showed me where the existing tools give up: coaches dropping out the
             night before, players lost in group chats, a head coach opening six apps to
             answer one question. I build the thing that should have existed already.
-          </Founder>
-
-          <Founder
-            name="Rob Tomlin"
-            role="Co-founder · Assistant coach, FAU men's soccer"
-            actionSrc="/rob-playing.jpg"
-            actionAlt="Rob Tomlin playing college soccer for Palm Beach Atlantic"
-            portraitSrc="/rob.jpg"
-            portraitAlt="Rob Tomlin, co-founder of OffPitchOS"
-          >
-            Played college soccer at Palm Beach Atlantic and now coaches at Florida
-            Atlantic. Rob has been in this since day one, and the sharpest ideas in the
-            product are his: that the software should react to chaos on its own rather
-            than wait to be told, and that a team&rsquo;s whole week is really decided on a
-            Sunday night.
           </Founder>
         </div>
       </section>
@@ -490,8 +475,7 @@ function SectionLabel({ n, children, center }: { n: string; children: React.Reac
 
 /**
  * One founder: a tilted pair of photos (on the pitch behind, portrait in front)
- * above their name and story. Both founders get the identical treatment, which
- * is the point — neither of them joined the other's project.
+ * above their name and story.
  */
 function Founder({
   name, role, actionSrc, actionAlt, portraitSrc, portraitAlt, priority, children,
