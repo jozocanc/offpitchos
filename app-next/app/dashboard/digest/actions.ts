@@ -95,6 +95,7 @@ async function _emailDigest(digestId: string) {
     subject,
     html,
     'https://offpitchos.com/dashboard/digest',
+    true,
   )
 
   await service

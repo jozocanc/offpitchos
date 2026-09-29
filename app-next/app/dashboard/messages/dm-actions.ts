@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
+import { sendEmailToProfiles } from '@/lib/email'
 import { getViewerIdentity, isPlayerPreview, PREVIEW_WRITE_ERROR } from '@/lib/admin-role'
 
 const MAX_CONTENT = 2000
@@ -293,6 +294,23 @@ export async function sendDM(recipientUserId: string, content: string): Promise<
       url: `/dashboard/messages?dm=${me.userId}`,
       tag: `dm-${me.userId}`,
     })
+
+    // Push only reaches people who turned notifications on. Without a
+    // subscription the message sat unseen until they happened to open the
+    // app, so fall back to email.
+    const { count: pushCount } = await service
+      .from('push_subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', recipProfile.id)
+    if (!pushCount) {
+      const excerpt = trimmed.length > 300 ? trimmed.slice(0, 297) + '…' : trimmed
+      await sendEmailToProfiles(
+        [recipProfile.id],
+        `New message from ${me.display_name ?? 'your team'}`,
+        excerpt,
+        `https://offpitchos.com/dashboard/messages?dm=${me.userId}`,
+      ).catch(err => console.error('[dm] email fallback failed:', err))
+    }
   }
 
   revalidatePath('/dashboard/messages')

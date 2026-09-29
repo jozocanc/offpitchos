@@ -17,7 +17,10 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'OffPitchOS <onboarding@resend.dev>'
+// offpitchos.com is verified in Resend. The old fallback, onboarding@resend.dev,
+// is Resend's sandbox sender: it only delivers to the account owner, so any
+// environment missing RESEND_FROM_EMAIL silently dropped every player email.
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'OffPitchOS <notifications@offpitchos.com>'
 
 // Any address on the demo TLD is a seeded fake account. Returning true
 // here means "pretend the send succeeded, never touch Resend" — callers
@@ -138,25 +141,19 @@ export async function sendRosterRecoveryEmail({
   }
 }
 
-export async function sendNotificationEmail({
-  to,
-  subject,
-  message,
-  actionUrl,
-  actionLabel,
-}: {
-  to: string
-  subject: string
-  message: string
-  actionUrl?: string
-  actionLabel?: string
-}): Promise<void> {
-  if (isDemoRecipient(to)) return
-  const { error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    to,
-    subject,
-    html: `
+// Coach-written text goes into the email as text, not markup, and keeps its
+// line breaks.
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function notificationHtml(rawMessage: string, actionUrl?: string, actionLabel?: string, messageIsHtml = false): string {
+  const message = messageIsHtml ? rawMessage : escapeHtml(rawMessage).replace(/\n/g, '<br>')
+  return `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
         <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">
           OffPitch<span style="color: #00FF87;">OS</span>
@@ -177,7 +174,28 @@ export async function sendNotificationEmail({
           You're receiving this because you're on a team that uses OffPitchOS.
         </p>
       </div>
-    `,
+    `
+}
+
+export async function sendNotificationEmail({
+  to,
+  subject,
+  message,
+  actionUrl,
+  actionLabel,
+}: {
+  to: string
+  subject: string
+  message: string
+  actionUrl?: string
+  actionLabel?: string
+}): Promise<void> {
+  if (isDemoRecipient(to)) return
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject,
+    html: notificationHtml(message, actionUrl, actionLabel),
   })
 
   if (error) {
@@ -200,6 +218,8 @@ export async function sendEmailToProfiles(
   subject: string,
   message: string,
   actionUrl?: string,
+  /** The digest passes pre-rendered HTML; everything else is plain text. */
+  messageIsHtml = false,
 ): Promise<BulkEmailResult> {
   const result: BulkEmailResult = { sent: 0, failed: [] }
 
@@ -213,39 +233,43 @@ export async function sendEmailToProfiles(
 
   if (!profiles || profiles.length === 0) return result
 
-  for (const profile of profiles) {
-    let email: string | undefined
-    try {
-      const { data: { user } } = await service.auth.admin.getUserById(profile.user_id)
-      email = user?.email ?? undefined
-    } catch (err) {
-      console.error('[email] getUserById failed:', err, 'profile:', profile.user_id)
-      result.failed.push({ email: profile.user_id, error: 'lookup_failed' })
-      continue
-    }
+  // Look addresses up in parallel. One by one, a 34-player team made the
+  // coach wait several seconds after hitting Post.
+  const emails = await Promise.all(
+    profiles.map(async profile => {
+      try {
+        const { data: { user } } = await service.auth.admin.getUserById(profile.user_id)
+        return user?.email ?? null
+      } catch (err) {
+        console.error('[email] getUserById failed:', err, 'profile:', profile.user_id)
+        result.failed.push({ email: profile.user_id, error: 'lookup_failed' })
+        return null
+      }
+    }),
+  )
 
-    if (!email) {
-      // Profile exists but no auth email — not a delivery failure, just a gap.
-      continue
-    }
+  const real: string[] = []
+  for (const email of emails) {
+    if (!email) continue
+    // Seeded demo accounts count as delivered without touching Resend.
+    if (isDemoRecipient(email)) result.sent++
+    else real.push(email)
+  }
 
-    if (isDemoRecipient(email)) {
-      // Seeded demo accounts: treat as delivered silently so the bulk
-      // toast count reflects real intent without hammering Resend.
-      result.sent++
-      continue
-    }
-
-    try {
-      await sendNotificationEmail({ to: email, subject, message, actionUrl })
-      result.sent++
-    } catch (err) {
-      // sendNotificationEmail already logs with describeResendError — we
-      // just record the per-recipient outcome here for the aggregate.
-      result.failed.push({
-        email,
-        error: err instanceof Error ? err.message : String(err),
-      })
+  // Resend's batch endpoint takes up to 100 emails per request. Sending them
+  // one request each tripped the per-second rate limit on a full squad, and
+  // the players past the limit simply never got the message.
+  const html = notificationHtml(message, actionUrl, undefined, messageIsHtml)
+  for (let i = 0; i < real.length; i += 100) {
+    const chunk = real.slice(i, i + 100)
+    const { error } = await resend.batch.send(
+      chunk.map(to => ({ from: FROM_EMAIL, to, subject, html })),
+    )
+    if (error) {
+      console.error('[email] batch send failed:', describeResendError(error, `${chunk.length} recipients`))
+      for (const to of chunk) result.failed.push({ email: to, error: describeResendError(error, to) })
+    } else {
+      result.sent += chunk.length
     }
   }
 
