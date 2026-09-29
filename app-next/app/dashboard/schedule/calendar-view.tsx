@@ -191,7 +191,8 @@ function MonthGrid({ monthKey, todayKey, byDay, timezone, onPrev, onNext, onToda
                   className={`w-full text-left rounded-md px-1.5 py-1 text-[11px] leading-tight ${eventColors(e.type, e.status)}`}
                 >
                   <span className="font-bold">{shortTime(e.start_time, timezone)}</span>{' '}
-                  <span className="break-words">{e.title}</span>
+                  {/* Clamp instead of breaking mid-word; the full title is in the tooltip. */}
+                  <span className="line-clamp-2 [overflow-wrap:normal] [word-break:normal]">{e.title}</span>
                   {e.travel_depart_at && e.status !== 'cancelled' && (
                     <span className="block opacity-80">Bus {shortTime(e.travel_depart_at, timezone)}</span>
                   )}
