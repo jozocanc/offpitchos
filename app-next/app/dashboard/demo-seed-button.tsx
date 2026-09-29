@@ -26,7 +26,7 @@ export default function DemoSeedButton({ state }: Props) {
   if (state.loaded) {
     return (
       <div className="mb-6 flex items-center justify-between gap-4 text-xs text-gray">
-        <p>Sample team loaded. Names, schedule and messages are example data.</p>
+        <p>Sample schedule, trip and messages loaded so you can see a full week.</p>
         <button
           type="button"
           disabled={isPending}

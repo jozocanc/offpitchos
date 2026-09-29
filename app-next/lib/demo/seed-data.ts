@@ -73,8 +73,8 @@ export const DEMO_PLAYERS: DemoPlayer[] = [
 // stadium. The name and address are fictional so we don't misdirect a
 // head coach to an address that isn't theirs.
 export const DEMO_VENUE = {
-  name: 'Riverbend College Soccer Stadium',
-  address: '2200 Riverbend Drive, Riverbend, TX 75701',
+  name: 'Home Field',
+  address: 'Main campus',
 }
 
 // Team used when the club has no team yet. A college program has no
@@ -112,7 +112,7 @@ export interface DemoTravelPlan {
 // Fictional, like DEMO_VENUE: nobody should be routed to a real campus.
 const DEMO_AWAY_TRAVEL: DemoTravelPlan = {
   departHoursBeforeStart: 3,
-  departLocation: 'Riverbend College Field House, front lot',
+  departLocation: 'Team field house, front lot',
   mode: 'bus',
   returnHoursAfterEnd: 15, // overnight, home early the next afternoon
   hotel: 'Hampton Inn & Suites, Prairie Hill',

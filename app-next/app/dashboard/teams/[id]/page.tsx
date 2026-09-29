@@ -225,7 +225,7 @@ export default async function TeamDetailPage({
         </div>
         <div className="flex items-center gap-4 mt-1">
           <p className="text-gray text-sm">
-            {members.length} member{members.length !== 1 ? 's' : ''}
+            {`${players.length} player${players.length !== 1 ? 's' : ''} · ${coaches.length} coach${coaches.length !== 1 ? 'es' : ''}`}
           </p>
           {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} />}
         </div>
