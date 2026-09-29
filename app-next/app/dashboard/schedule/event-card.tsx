@@ -185,7 +185,9 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         </div>
 
         {canEdit && !isCancelled && (
-          <div className="flex gap-2 shrink-0">
+          // Wraps instead of pushing: on a game day this row holds five
+          // controls and used to squeeze the title into a one-word column.
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 shrink-0 max-w-[45%]">
             {onAttendance && teamId && isGameDay(event.start_time) && event.type === 'game' && (
               <a
                 href={`/dashboard/schedule/${event.id}/game-day`}
