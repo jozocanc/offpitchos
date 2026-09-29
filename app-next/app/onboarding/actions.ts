@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ROLES, isValidTimezone } from '@/lib/constants'
+import { makeTeamCode } from '@/lib/team-code'
 
 // Every failure returns { ok: false, error } rather than throwing. Next.js
 // redacts thrown Server Action messages in production and replaces them with an
@@ -38,7 +39,7 @@ export async function completeOnboarding(formData: FormData): Promise<Onboarding
   // 2. Create the first team
   const { error: teamError } = await supabase
     .from('teams')
-    .insert({ name: teamName.trim(), age_group: ageGroup ?? '', club_id: club.id })
+    .insert({ name: teamName.trim(), age_group: ageGroup ?? '', club_id: club.id, invite_code: makeTeamCode(clubName) })
 
   if (teamError) return { ok: false, error: `Couldn't create your first team: ${teamError.message}` }
 

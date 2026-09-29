@@ -1,5 +1,6 @@
 'use server'
 
+import { makeTeamCode } from '@/lib/team-code'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -340,4 +341,43 @@ async function _revokeParentInvite(inviteId: string, teamId: string) {
   if (error) throw new Error(`Failed to revoke invite: ${error.message}`)
 
   revalidatePath(`/dashboard/teams/${teamId}`)
+}
+
+// Teams created before codes were generated have none, and the squad has no
+// way to join by code. The head coach creates one with a click; a collision
+// on the unique index just retries with a fresh code.
+export async function createTeamInviteCode(teamId: string): Promise<ActionResult<{ code: string }>> {
+ try {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('club_id, role, clubs(name)')
+    .eq('user_id', user.id)
+    .single()
+  if (profile?.role !== 'doc') throw new Error('Only the head coach can create the team invite code')
+
+  const club = Array.isArray(profile.clubs) ? profile.clubs[0] : profile.clubs
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = makeTeamCode((club as { name?: string } | null)?.name)
+    const { data, error } = await supabase
+      .from('teams')
+      .update({ invite_code: code })
+      .eq('id', teamId)
+      .eq('club_id', profile.club_id)
+      .is('invite_code', null)
+      .select('invite_code')
+    if (!error) {
+      if (!data || data.length === 0) throw new Error('Team not found, or it already has a code')
+      revalidatePath(`/dashboard/teams/${teamId}`)
+      return { ok: true, data: { code } }
+    }
+    if (error.code !== '23505') throw new Error(`Couldn't create the code: ${error.message}`)
+  }
+  throw new Error("Couldn't create a unique code, try again")
+ } catch (e) {
+  return toActionError(e)
+ }
 }

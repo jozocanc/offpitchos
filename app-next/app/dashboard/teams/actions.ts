@@ -1,5 +1,6 @@
 'use server'
 
+import { makeTeamCode } from '@/lib/team-code'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -33,7 +34,7 @@ export async function addTeam(formData: FormData): Promise<ActionResult> {
 
     const { error } = await supabase
       .from('teams')
-      .insert({ name: teamName.trim(), age_group: ageGroup ?? '', club_id: profile.club_id })
+      .insert({ name: teamName.trim(), age_group: ageGroup ?? '', club_id: profile.club_id, invite_code: makeTeamCode(teamName) })
 
     if (error) throw new Error(`Failed to create team: ${error.message}`)
 

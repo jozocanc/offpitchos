@@ -12,6 +12,7 @@ import RemovePlayerButton from './remove-player-button'
 import LinkParentMenu from './link-parent-menu'
 import GroupChatLink from './group-chat-link'
 import InviteCodeCard from './invite-code-card'
+import CreateCodeButton from './create-code-button'
 import PublicShareCard from './public-share-card'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatMonthDayYear } from '@/lib/format-datetime'
@@ -112,6 +113,7 @@ export default async function TeamDetailPage({
     .from('players')
     .select('id, first_name, last_name, jersey_number, position, parent_id, jersey_size, shorts_size')
     .eq('team_id', id)
+    .order('jersey_number', { ascending: true, nullsFirst: false })
     .order('last_name', { ascending: true })
 
   let players = (playersRaw ?? []) as Player[]
@@ -233,6 +235,7 @@ export default async function TeamDetailPage({
       {isDOC && (team as any).invite_code && (
         <InviteCodeCard code={(team as any).invite_code} />
       )}
+      {isDOC && !(team as any).invite_code && <CreateCodeButton teamId={team.id} />}
 
       {/* Group chat link: prominent for players, compact for DOC */}
       {(isSquadMember || isDOC) && (

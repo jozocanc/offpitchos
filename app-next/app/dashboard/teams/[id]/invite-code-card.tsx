@@ -7,11 +7,9 @@ export default function InviteCodeCard({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
 
-  const url = `${window.location.origin}/join/code/${code}`
-
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(`${window.location.origin}/join/code/${code}`)
       setCopied(true)
       toast('Invite link copied. Send it to your players', 'success')
       setTimeout(() => setCopied(false), 2000)

@@ -27,6 +27,7 @@ import {
 } from './lib/types'
 import { normalizeEmail, normalizeDate, trimName, teamKey } from './lib/normalize'
 import { ROLES, NO_AGE_GROUP } from '@/lib/constants'
+import { makeTeamCode } from '@/lib/team-code'
 import { sendRosterRecoveryEmail } from '@/lib/email'
 
 const MAX_ROWS = 1000
@@ -264,6 +265,7 @@ export async function commitImport(
     club_id: clubId,
     name: t.name,
     age_group: t.age_group,
+    invite_code: makeTeamCode(t.name),
   }))
   let teamsCreated = 0
   let allTeams = preview.data.teamsExisting.map(t => ({ id: t.id, name: t.name }))
