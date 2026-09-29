@@ -11,35 +11,17 @@ soccer**. `players.parent_id` keeps its name but means "the account linked to th
 player row" (the player's own login). `ROLES.PARENT` survives only for legacy rows.
 Do not reintroduce parent UI or copy. This supersedes the youth/`club_type` notes below.
 
-**2026-09-28: Rob is out of the picture** (Jozo's call, no real impact). Removed from the
-homepage; do not add him back or cite his input as product direction. Old notes below are history.
+**Team:** Jozo, sole founder. Builds and runs everything.
 
-**Team (historical):** Jozo (builds everything) and **Rob Tomlin, co-founder since day one
-(April 2026)**. Rob is non-technical — soccer and business side. He shaped what the
-product IS: the react-to-chaos-automatically thesis, the DOC-Sunday-night-backlog
-insight, voice-first schedule changes as the differentiator. Never describe him as a
-late addition or a distribution hire. Equity landed 60 Jozo / 40 Rob, reviewable at
-12 months. Agreement draft lives in `~/Documents/OffPitchOS/`, deliberately OUT of
-this repo because **github.com/jozocanc/offpitchos is PUBLIC**.
+**Current bar:** Tyler Junior College men's soccer (head coach Steve Clements,
+assistant Shaun Stocker) live and using the app weekly. Their program exists in
+prod (club `9f5d0239-d614-4ef5-9a27-dc3cb7ae5edc`, team code TJC4PH) with the real
+2026-27 roster and schedule; demo login is Jozo's `+tjc` alias until the head coach
+seat moves to Steve. FAU is parked until Jozo raises it again.
 
-**Current bar (set 2026-08-10): one real club live and using the app weekly by
-~2026-11-10.** Paid or free. Not "one paying club," not "10 demos."
-
-**Market:** youth clubs remain the market thesis. **College is NOT ruled out any
-more** — as of 2026-08-10 the plan is FAU men's soccer as a free first design
-partner (Jozo is a former FAU player, Rob is the assistant coach). That is a warm
-first user, not a pivot: ~200 D1 men's programs and <1000 across all divisions make
-college a strictly worse market than youth. Adult/Sunday-league and HS are still
-ruled out.
-
-The intended shape is a `club_type` ('youth' | 'college') flag on `clubs` that hides
-the parent portal, parent RSVP, parent push, parent auto-reply and coach coverage in
-college mode. **Do not build that flag until Rob has answered the discovery
-questions** — otherwise it gets built twice. Roughly 40% of the product is dead
-weight at a college program (no parents at all, fixed staff of ~5 so no coverage
-need, one roster not age groups), and NCAA countable-hours (CARA / 20-hour rule),
-academic tracking, travel and recruiting are all missing. Check whether FAU
-athletics runs **Teamworks** department-wide before assuming there is room.
+**Market:** college and club teams. One head coach (role `doc`, the club creator,
+sole admin), titled staff coaches, players. No parents, no coverage in the nav.
+Adult/Sunday-league and HS are ruled out.
 
 The Next.js app rules in `app-next/CLAUDE.md` and `app-next/AGENTS.md` apply when
 working in that subtree — Next.js 16 has breaking changes from training data. Always
@@ -169,9 +151,7 @@ at `docs/build-prompts.md`. Do not start that build proactively.
   is sufficient.
 - Don't refactor adjacent code while implementing a feature. Stay scoped.
 - Don't introduce backwards-compatibility shims. The user is the only consumer.
-- Don't suggest pivots/expansions to adult/Sunday-league or HS markets. College is
-  a live plan (FAU design partner) — see "What this is" — but don't build the
-  `club_type` flag before Rob's discovery answers land.
+- Don't suggest pivots/expansions to adult/Sunday-league or HS markets.
 - Don't add error handling for impossible cases. Trust framework + DB constraints.
 - Don't build the parent auto-reply integration without an explicit "I have a paid
   customer" or override from the user.
@@ -182,14 +162,15 @@ For pricing, positioning, market-fit, outreach, or fundraising questions, respon
 a brutal-honest operator (per `feedback_brutal_cofounder_voice`): base rates, dead
 comparisons, exact thresholds, no fluff. The user does not want hedged advice.
 
-## Outreach state (as of 2026-08-16)
+## Outreach state (as of 2026-09-29)
 
 - 0 active leads, 0 paid customers. Last signup was 2026-05-12; the 34 cold emails
   sent 2026-05-04 and bumped 2026-05-11 produced nothing.
 - Jason and Eric are dead leads — do not suggest bumping.
-- Current play is **FAU men's soccer via Rob as a free design partner**, not cold
-  outreach. College season runs late Aug–Nov, landing on the Nov 10 bar.
-- Access gate stays ON. Rob gets the `ACCESS_CODE` rather than opening public signup.
+- Current play is **Tyler Junior College men's soccer** as the free pilot (season runs
+  to the Region XIV final, Nov 8).
+- Access gate stays ON. The head coach gets a login by email; players join with the
+  team code, which bypasses the gate.
 - Pitch comps are gated until ≥3 paying clubs OR ≥$1K MRR OR ≥1 signed LOI.
 
 ## When in doubt

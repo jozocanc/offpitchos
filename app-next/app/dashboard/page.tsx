@@ -13,7 +13,7 @@ import InstallPrompt from '@/components/install-prompt'
 import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime, formatShortDate } from '@/lib/format-datetime'
-import { isMember } from '@/lib/constants'
+import { isMember, isStaff } from '@/lib/constants'
 import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -42,7 +42,9 @@ export default async function DashboardPage() {
   const preview = viewer.isPreview ? viewer.previewPlayer : null
   const viewerProfileId = preview ? viewer.profileId : (profile?.id ?? null)
 
+  // Staff are "Coach" in the greeting, the way players address them.
   const displayName = preview?.firstName
+    ?? (isStaff(userRole) ? 'Coach' : null)
     ?? profile?.display_name
     ?? claims.user_metadata?.full_name
     ?? claims.email?.split('@')[0]?.split('.')[0]?.replace(/\d+/g, '')?.replace(/^./, c => c.toUpperCase())
