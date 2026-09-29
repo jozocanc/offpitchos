@@ -220,16 +220,35 @@ export async function sendEmailToProfiles(
   actionUrl?: string,
   /** The digest passes pre-rendered HTML; everything else is plain text. */
   messageIsHtml = false,
+  /** Email even people who get push. Only the digest, which is an email by design. */
+  includePushRecipients = false,
 ): Promise<BulkEmailResult> {
   const result: BulkEmailResult = { sent: 0, failed: [] }
 
   const { createServiceClient } = await import('@/lib/supabase/service')
   const service = createServiceClient()
 
+  // Push first, email as the fallback. Every caller sends a push to the same
+  // people just before this, so anyone with a live subscription already got
+  // it; emailing them too doubled every message and burned the Resend quota.
+  // Callers push before emailing, and dead subscriptions are deleted on that
+  // push (404/410), so a stale one doesn't leave someone with neither.
+  let targetIds = profileIds
+  if (!includePushRecipients) {
+    const { data: subs } = await service
+      .from('push_subscriptions')
+      .select('profile_id')
+      .in('profile_id', profileIds)
+    const pushed = new Set((subs ?? []).map(s => s.profile_id as string))
+    targetIds = profileIds.filter(id => !pushed.has(id))
+    result.sent += profileIds.length - targetIds.length
+  }
+  if (targetIds.length === 0) return result
+
   const { data: profiles } = await service
     .from('profiles')
     .select('user_id')
-    .in('id', profileIds)
+    .in('id', targetIds)
 
   if (!profiles || profiles.length === 0) return result
 
