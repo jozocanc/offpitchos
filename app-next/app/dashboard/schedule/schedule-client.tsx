@@ -116,6 +116,18 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     return () => clearTimeout(t)
   }, [initialHighlight])
 
+  // The calendar always shows whole months, so it needs past events loaded
+  // whether or not the agenda's Show Past is on.
+  const [pastLoaded, setPastLoaded] = useState(false)
+  async function ensurePastLoaded() {
+    if (pastLoaded || pastEvents.length > 0) return
+    const pastRes = await getPastEvents()
+    if (!pastRes.ok) { toast(pastRes.error, 'error'); return }
+    setPastEvents(pastRes.data.events as Event[])
+    setUnmarkedPastEventIds(new Set(pastRes.data.unmarkedEventIds))
+    setPastLoaded(true)
+  }
+
   async function togglePast() {
     if (!showPast && pastEvents.length === 0) {
       setLoadingPast(true)
@@ -129,7 +141,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     setShowPast(!showPast)
   }
 
-  const allEvents = showPast ? [...pastEvents, ...events] : events
+  const allEvents = showPast || view === 'calendar' ? [...pastEvents, ...events] : events
 
   // Apply filters
   const filtered = allEvents.filter(e => {
@@ -231,7 +243,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
               Agenda
             </button>
             <button
-              onClick={() => setView('calendar')}
+              onClick={() => { setView('calendar'); void ensurePastLoaded() }}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 view === 'calendar' ? 'bg-green text-dark' : 'text-gray hover:text-white'
               }`}
@@ -294,7 +306,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           events={filtered}
           onEdit={handleEdit}
           onAddAtDate={handleAddAtDate}
-          includesPast={showPast}
+          includesPast={showPast || pastEvents.length > 0}
         />
       )}
 
