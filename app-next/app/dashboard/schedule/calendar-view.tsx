@@ -314,10 +314,16 @@ function WeekGrid({ weekStart, todayKey, byDay, events, timezone, includesPast, 
           </div>
 
           <div className="grid grid-cols-[48px_repeat(7,1fr)]">
-            {/* Hour labels */}
-            <div>
-              {hours.map(h => (
-                <div key={h} style={{ height: HOUR_ROW_PX }} className="text-[11px] text-gray pr-2 text-right -mt-1.5">
+            {/* Hour labels, pinned to their line. A negative margin per label
+                used to accumulate down the column, so late hours drifted up
+                and evening blocks looked 40 minutes off. */}
+            <div className="relative" style={{ height: hours.length * HOUR_ROW_PX }}>
+              {hours.map((h, i) => (
+                <div
+                  key={h}
+                  className="absolute right-2 text-[11px] leading-none text-gray"
+                  style={{ top: i * HOUR_ROW_PX - 5 }}
+                >
                   {hourLabel(h)}
                 </div>
               ))}
