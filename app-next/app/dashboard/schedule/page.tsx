@@ -23,6 +23,7 @@ export default async function SchedulePage({
         coachesByTeam={data.coachesByTeam}
         userProfileId={data.userProfileId}
         rsvpTallies={data.rsvpTallies}
+        matchSheets={data.matchSheets}
         initialTeamFilter={initialTeam ?? null}
         initialHighlight={initialHighlight ?? null}
       />

@@ -27,6 +27,12 @@ self.addEventListener('notificationclick', function(event) {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (const client of clientList) {
         if (client.url.includes('/dashboard') && 'focus' in client) {
+          // Take an already-open app window to the push's deep link
+          // (e.g. /dashboard/check-in) instead of just focusing it.
+          const target = new URL(url, self.location.origin).href
+          if (client.url !== target && 'navigate' in client) {
+            return client.focus().then(function(c) { return (c || client).navigate(target) })
+          }
           return client.focus()
         }
       }

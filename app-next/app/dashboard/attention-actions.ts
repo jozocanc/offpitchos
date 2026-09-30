@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
 import { getClubTimezone } from '@/lib/club-timezone-server'
+import { dayKey } from '@/lib/format-datetime'
+import { isFlagged } from '@/lib/checkin'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -93,18 +95,19 @@ STRICT RULES:
 URGENCY GUIDANCE (by signal type):
 - Coaching staff is fixed. Never tell the head coach to "confirm coverage" or find cover unless an "Active coverage requests" signal is present. For an upcoming training session, suggest reviewing the session plan instead.
 - "critical" — time pressure or breakdowns. Examples: coverage requests that are EXPIRED or expire in <30 min; events starting in <2 hours without coverage resolved.
-- "important" — act this week. Examples: coverage pending with time, new player replies, upcoming games in next 48h, past events with no attendance marked (coach may have forgotten), gear sizes missing for many players, camps with unpaid registrations.
+- "important" — act this week. Examples: coverage pending with time, new player replies, upcoming games in next 48h, past events with no attendance marked (coach may have forgotten), gear sizes missing for many players, camps with unpaid registrations, players flagged in this morning's check-in.
 - "routine" — awareness / FYI. Examples: upcoming events going smoothly, stale pending invites that may need a resend, 1-2 gear sizes missing, small camp payment gap.
 
 DEDUPLICATION:
 - If multiple signals describe the same underlying problem, pick the single best one.
 - Prefer aggregate signals (like "12 players missing gear") over per-item signals when they cover the same ground.
 - "gear-missing" is a single aggregate — treat it as ONE item even though it covers many players.
+- "checkin-flagged" is a single aggregate — treat it as ONE item even though it covers many players.
 
 ACTION LABELS:
 - Clicking a card ONLY navigates the user to the relevant page. The card itself does NOT take the action.
 - Use ONLY these labels (pick the most appropriate one):
-  - "Review" — for most things (coverage, gear, camps, invites, attendance gaps)
+  - "Review" — for most things (coverage, gear, camps, invites, attendance gaps, check-in flags)
   - "Open" — for player replies on announcements
   - "View" — for upcoming scheduled events
 - Do NOT use labels like "Confirm", "Assign", "Cancel", "Reply", "Send", "Approve" — these imply the card itself does the action, which is wrong.
@@ -117,6 +120,7 @@ SIGNAL ID FORMATS (for reference only — use the exact IDs from the signals lis
 - invite-<uuid> — pending invite older than 3 days
 - attendance-<uuid> — past event without attendance marked
 - camp-unpaid-<uuid> — camp with unpaid registrations
+- checkin-flagged — aggregate: players flagged in today's morning check-in
 
 Return JSON only, no preamble, no markdown. Match this exact schema:
 {
@@ -153,6 +157,8 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
   const past48h = new Date(now.getTime() - 48 * 60 * 60 * 1000)
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+  // Team-local calendar day, the same key player_checkins.checkin_date uses.
+  const todayKey = dayKey(now, timeZone)
 
   // Gather signals in parallel
   const [
@@ -164,6 +170,7 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     pastEventsRes,
     attendanceRes,
     unpaidCampsRes,
+    checkinsRes,
   ] = await Promise.all([
     // Active coverage requests
     supabase
@@ -232,6 +239,12 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
       .eq('payment_status', 'unpaid')
       .gte('camp_details.events.start_time', sevenDaysAgo.toISOString())
       .limit(100),
+    // Today's morning check-ins (054), for the flagged-players aggregate
+    supabase
+      .from('player_checkins')
+      .select('status, sleep, soreness, energy')
+      .eq('club_id', profile.club_id)
+      .eq('checkin_date', todayKey),
   ])
 
   const coverage = coverageRes.data ?? []
@@ -242,6 +255,9 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
   const pastEvents = pastEventsRes.data ?? []
   const attendanceRows = attendanceRes.data ?? []
   const unpaidCampRegs = unpaidCampsRes.data ?? []
+  const todaysCheckins = checkinsRes.data ?? []
+  const flaggedCheckins = todaysCheckins.filter(c => isFlagged(c as { status: 'fit' | 'limited' | 'out'; sleep: number; soreness: number; energy: number }))
+  const flaggedOut = flaggedCheckins.filter(c => c.status === 'out').length
 
   // Derive "past events without attendance" by filtering pastEvents against attendance event_ids
   const markedEventIds = new Set(attendanceRows.map(a => a.event_id))
@@ -364,6 +380,15 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     }
   }
 
+  // Morning check-in flags — aggregate single signal
+  if (flaggedCheckins.length > 0) {
+    const signalId = 'checkin-flagged'
+    hrefBySignalId.set(signalId, '/dashboard/readiness')
+    const n = flaggedCheckins.length
+    signalParts.push(`\n## Morning check-in flags`)
+    signalParts.push(`- signalId=${signalId} | ${n} player${n === 1 ? '' : 's'} flagged in this morning's check-in (${flaggedOut} out, others report soreness 4+, sleep 2 or less, or energy 2 or less). ${todaysCheckins.length} checked in so far today. Suggested description: "${n} player${n === 1 ? '' : 's'} flagged in this morning's check-in".`)
+  }
+
   if (signalParts.length === 1) {
     // Only the header — no signals at all
     const empty: AttentionResult = {
@@ -383,7 +408,8 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     (missingGearCount > 0 ? 1 : 0) +
     pendingInvites.length +
     unmarkedPastEvents.length +
-    unpaidCampRegs.length
+    unpaidCampRegs.length +
+    (flaggedCheckins.length > 0 ? 1 : 0)
 
   // Call Claude to triage
   let items: AttentionItem[] = []
@@ -410,6 +436,7 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
           if (href.startsWith('/dashboard/coaches')) return 'Review'
           if (href.startsWith('/dashboard/teams')) return 'Review'
           if (href.startsWith('/dashboard/camps')) return 'Review'
+          if (href.startsWith('/dashboard/readiness')) return 'Review'
           return 'View'
         }
         items = parsed.items

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import AttentionPanel from './attention-panel'
 import CoachAttentionPanel from './coach-attention-panel'
 import ParentAttentionPanel from './parent-attention-panel'
+import CheckinCard from './check-in/checkin-card'
 import OnboardingChecklist from './onboarding-checklist'
 import DemoSeedButton from './demo-seed-button'
 import { getDemoSeedState } from './demo-seed-actions'
@@ -174,6 +175,8 @@ async function DashboardBody({
       {userRole === 'coach' && <CoachAttentionPanel />}
 
       {/* Player-scoped attention panel. */}
+      {/* Daily check-in first: it is the one thing players do every morning. */}
+      {isMember(userRole) && <CheckinCard />}
       {isMember(userRole) && <ParentAttentionPanel />}
 
       {/* Stat cards. */}

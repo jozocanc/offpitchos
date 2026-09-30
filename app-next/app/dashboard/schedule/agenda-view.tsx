@@ -15,6 +15,7 @@ interface Event extends EventTravelFields {
   status: string
   notes: string | null
   address: string | null
+  venue_id?: string | null
   link?: string | null
   recurrence_group: string | null
   teams: { name: string; age_group: string }[] | null
@@ -46,9 +47,10 @@ interface AgendaViewProps {
   coachesByTeam?: Record<string, string[]>
   rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
   showRsvpTally?: boolean
+  matchSheets?: Record<string, boolean>
 }
 
-export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets }: AgendaViewProps) {
   // Before the early return — hooks must run unconditionally.
   const timezone = useClubTimezone()
 
@@ -99,6 +101,7 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 showCoaches={userRole === 'doc'}
                 rsvpTally={rsvpTallies?.[event.id] ?? null}
                 showRsvpTally={showRsvpTally}
+                matchSheetEnabled={matchSheets?.[event.id]}
               />
             ))}
           </div>

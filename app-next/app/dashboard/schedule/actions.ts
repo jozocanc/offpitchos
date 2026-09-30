@@ -864,6 +864,17 @@ export async function getScheduleData() {
   // coverage data (a real player can't read coverage_requests).
   const previewTeams = await getPreviewTeamIds(supabase)
 
+  // Visitor match sheets (055) for the "Visitor info shared" chip. Staff-only
+  // under RLS; a player (or preview) just gets an empty map.
+  const matchSheets: Record<string, boolean> = {}
+  if (!previewTeams && upcomingEventIds.length > 0) {
+    const { data: sheetRows } = await supabase
+      .from('match_sheets')
+      .select('event_id, enabled')
+      .in('event_id', upcomingEventIds)
+    for (const r of sheetRows ?? []) matchSheets[r.event_id as string] = Boolean(r.enabled)
+  }
+
   return {
     events: previewTeams ? (events ?? []).filter(e => previewTeams.has(e.team_id)) : (events ?? []),
     teams: previewTeams ? (teams ?? []).filter(t => previewTeams.has(t.id)) : (teams ?? []),
@@ -871,6 +882,7 @@ export async function getScheduleData() {
     coverageRequests: previewTeams ? [] : (coverageRequests ?? []),
     coachesByTeam,
     rsvpTallies,
+    matchSheets,
     userRole: await getEffectiveRole(profile.role),
     userProfileId: profile.id,
   }

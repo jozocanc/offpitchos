@@ -8,6 +8,8 @@ import { useClubTimezone } from '@/components/club-timezone'
 import { formatTimeRange } from '@/lib/format-datetime'
 import type { EventTravelFields } from '@/lib/travel'
 import TravelStrip from './travel-strip'
+import VisitorInfoModal from './visitor-info-modal'
+import { isHomeGame } from '@/lib/match-sheet'
 
 interface EventCardProps {
   event: EventTravelFields & {
@@ -19,6 +21,7 @@ interface EventCardProps {
     status: string
     notes: string | null
     address: string | null
+    venue_id?: string | null
     link?: string | null
     recurrence_group: string | null
     teams: { name: string; age_group: string }[] | null
@@ -50,10 +53,14 @@ interface EventCardProps {
    * plan stations / lineups before walking onto the field. */
   rsvpTally?: { going: number; notGoing: number; totalKids: number } | null
   showRsvpTally?: boolean
+  /** Visitor match sheet (055): true = link live, false = saved but off,
+   * undefined = none yet. Staff-only. */
+  matchSheetEnabled?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
+  const [visitorOpen, setVisitorOpen] = useState(false)
   const timezone = useClubTimezone()
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
@@ -63,6 +70,8 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
   const team = Array.isArray(event.teams) ? event.teams[0] : event.teams
 
   const timeStr = formatTimeRange(start, end, timezone)
+  // Staff (canEdit) only: public visiting-team page for home games.
+  const showVisitorInfo = canEdit && !isCancelled && isHomeGame(event)
 
   return (
     <div
@@ -105,6 +114,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             {coverageRequest && (coverageRequest.status === 'accepted' || coverageRequest.status === 'resolved') && (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
                 Covered{(() => { const p = Array.isArray(coverageRequest.profiles) ? coverageRequest.profiles[0] : coverageRequest.profiles; return p?.display_name ? ` by ${p.display_name}` : '' })()}
+              </span>
+            )}
+            {showVisitorInfo && matchSheetEnabled === true && (
+              <span
+                title="The visiting team's match day page is live"
+                className="text-xs font-medium bg-green/5 text-green/80 border border-green/15 px-2 py-0.5 rounded-full"
+              >
+                Visitor info shared
               </span>
             )}
             {isUnmarked && !isCancelled && (
@@ -204,6 +221,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 Attendance
               </button>
             )}
+            {showVisitorInfo && (
+              <button
+                onClick={() => setVisitorOpen(true)}
+                className="text-green hover:text-green/80 text-sm transition-colors"
+              >
+                Visitor info
+              </button>
+            )}
             <button
               onClick={() => onEdit(event.id)}
               className="text-gray hover:text-white text-sm transition-colors"
@@ -292,6 +317,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           Photos
         </button>
       </div>
+
+      {visitorOpen && (
+        <VisitorInfoModal
+          eventId={event.id}
+          eventTitle={event.title}
+          onClose={() => setVisitorOpen(false)}
+        />
+      )}
 
       {photosOpen && (
         <EventPhotosModal

@@ -64,9 +64,10 @@ interface ScheduleClientProps {
   initialTeamFilter?: string | null
   initialHighlight?: string | null
   rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
+  matchSheets?: Record<string, boolean>
 }
 
-export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, coachesByTeam, userProfileId, initialTeamFilter = null, initialHighlight = null, rsvpTallies }: ScheduleClientProps) {
+export default function ScheduleClient({ events, teams, venues, userRole, coverageRequests, coachesByTeam, userProfileId, initialTeamFilter = null, initialHighlight = null, rsvpTallies, matchSheets }: ScheduleClientProps) {
   const { toast } = useToast()
   const [view, setView] = useState<'agenda' | 'calendar'>('agenda')
   const [filterTeam, setFilterTeam] = useState<string | null>(initialTeamFilter)
@@ -300,6 +301,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           coachesByTeam={coachesByTeam}
           rsvpTallies={rsvpTallies}
           showRsvpTally={canEdit}
+          matchSheets={matchSheets}
         />
       ) : (
         <CalendarView
