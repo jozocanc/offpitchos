@@ -93,7 +93,9 @@ export default async function MatchSheetPage({ params }: { params: Promise<{ tok
     : sheet.venue_name
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sheet.venue_name)}`
       : null
-  const homeName = sheet.club_name === sheet.team_name
+  // "Tyler Junior College Men's Soccer" + team "Men's Soccer" read twice;
+  // skip the team name when the program name already carries it.
+  const homeName = sheet.club_name.toLowerCase().includes(sheet.team_name.toLowerCase())
     ? sheet.club_name
     : `${sheet.club_name} ${sheet.team_name}`.trim()
   const typeLabel = EVENT_TYPE_LABELS[sheet.event_type as EventType] ?? 'Game'
