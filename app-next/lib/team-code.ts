@@ -1,5 +1,5 @@
 // Team invite codes: the short code a head coach shares with the whole squad
-// (/join/code/XXXX). Nothing generated one before; FAU's was set by hand, so
+// (/join/code/XXXX). Nothing generated one before, so
 // every team created in the app had no way to invite its players by code.
 
 // No 0/O, 1/I/L: codes get read out loud and typed on phones.

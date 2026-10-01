@@ -348,12 +348,12 @@ export default async function Home() {
             name="Jozo Cancar"
             role="Founder · Builds the product"
             actionSrc="/jozo-soccer.jpg"
-            actionAlt="Jozo Cancar playing Division I soccer at Florida Atlantic"
+            actionAlt="Jozo Cancar playing college soccer"
             portraitSrc="/jozo.jpg"
             portraitAlt="Jozo Cancar, founder of OffPitchOS"
             priority
           >
-            Played Division I at Florida Atlantic. Years around real teams, as a player and
+            Played at Tyler Junior College, then Division I at Florida Atlantic. Years around real teams, as a player and
             on staff, showed me where the existing tools give up: coaches dropping out the
             night before, players lost in group chats, a head coach opening six apps to
             answer one question. I build the thing that should have existed already.
