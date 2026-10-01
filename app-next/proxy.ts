@@ -7,7 +7,10 @@ const publicExact = new Set(['/'])
 
 // Routes that still need early-access gating even though they're public.
 // Team/camp invite links bypass the gate since the prospect has been invited.
-const gatedPrefixes = ['/login', '/signup', '/forgot-password']
+// Only NEW accounts are gated. Login and password reset used to be gated
+// too, so any existing player or coach who logged out, or opened the app on
+// a new phone, hit "enter access code" and was locked out of their own team.
+const gatedPrefixes = ['/signup']
 
 const TEAM_CODE = /^[A-Za-z0-9]{4,12}$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
