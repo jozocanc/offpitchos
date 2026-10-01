@@ -72,7 +72,7 @@ export default function PlanClient({
       <Link href="/dashboard/schedule" className="inline-flex items-center gap-1 text-sm font-semibold text-gray hover:text-white">
         <span aria-hidden="true">←</span> Schedule
       </Link>
-      <h1 className="mt-2 text-2xl font-bold text-white">{event.title}</h1>
+      <h1 className="mt-2 text-2xl font-black tracking-tight">{event.title}</h1>
       <p className="mt-0.5 text-sm text-gray">
         {[
           event.teamName,
@@ -322,6 +322,8 @@ function StaffPlan({
 
   // ── Tile statuses ──
   const placed = placedCount(doc.lineup)
+  // Corners are built from the 11 in the lineup, so they open once it's complete.
+  const lineupReady = placed === 11
   const left = doc.set_pieces.corner_attack_left
   const right = doc.set_pieces.corner_attack_right
   const defend = doc.set_pieces.corner_defend
@@ -392,14 +394,16 @@ function StaffPlan({
             />
             <Tile
               title="Corners: attacking"
-              status={attackStatus}
+              status={!lineupReady && !left && !right ? `Set your lineup first · ${placed}/11 picked` : attackStatus}
+              locked={!lineupReady && !left && !right}
               done={Boolean(left && right)}
               onClick={() => go('attack')}
               icon={<><path d="M4 21V3" /><path d="M4 4h10l-2 4 2 4H4" /></>}
             />
             <Tile
               title="Corners: defending"
-              status={defend ? `Set up${defend.setup ? ` · ${SETUP_LABELS[defend.setup]}` : ''}` : 'Not set up yet'}
+              status={defend ? `Set up${defend.setup ? ` · ${SETUP_LABELS[defend.setup]}` : ''}` : !lineupReady ? `Set your lineup first · ${placed}/11 picked` : 'Not set up yet'}
+              locked={!lineupReady && !defend}
               done={Boolean(defend)}
               onClick={() => go('defend')}
               icon={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />}
@@ -451,6 +455,9 @@ function StaffPlan({
               </button>
             ))}
           </div>
+          {!lineupReady && !doc.set_pieces[attackSide] ? (
+            <LineupGate placed={placed} onGo={() => go('lineup')} />
+          ) : (
           <SetPieceEditor
             key={attackSide}
             spKey={attackSide}
@@ -460,12 +467,16 @@ function StaffPlan({
             playersById={playersById}
             onChange={setPiece(attackSide)}
           />
+          )}
         </>
       )}
 
       {view === 'defend' && (
         <>
           {back('Corners: defending')}
+          {!lineupReady && !doc.set_pieces.corner_defend ? (
+            <LineupGate placed={placed} onGo={() => go('lineup')} />
+          ) : (
           <SetPieceEditor
             spKey="corner_defend"
             setPiece={doc.set_pieces.corner_defend}
@@ -474,6 +485,7 @@ function StaffPlan({
             playersById={playersById}
             onChange={setPiece('corner_defend')}
           />
+          )}
         </>
       )}
 
@@ -507,12 +519,15 @@ function Tile({
   title,
   status,
   done,
+  locked = false,
   onClick,
   icon,
 }: {
   title: string
   status: string
   done: boolean
+  /** Waiting on another step (corners wait for a full lineup). */
+  locked?: boolean
   onClick: () => void
   icon: React.ReactNode
 }) {
@@ -520,9 +535,9 @@ function Tile({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-[112px] w-full items-center gap-4 rounded-2xl border border-black/10 bg-dark-secondary p-5 text-left transition-colors hover:border-green/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-green"
+      className={`group flex min-h-[112px] w-full items-center gap-4 rounded-2xl border border-black/10 bg-dark-secondary p-5 text-left transition-colors hover:border-green/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-green ${locked ? 'opacity-70' : ''}`}
     >
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${done ? 'bg-green text-dark' : 'bg-green/10 text-green'}`}>
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${done ? 'bg-green text-dark' : locked ? 'bg-black/5 text-gray' : 'bg-green/10 text-green'}`}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           {icon}
         </svg>
@@ -662,5 +677,24 @@ function PrintDialog({
         </button>
       </div>
     </Modal>
+  )
+}
+
+/** Shown in a corner view until the lineup has all 11. */
+function LineupGate({ placed, onGo }: { placed: number; onGo: () => void }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-black/15 bg-dark-secondary px-6 py-10 text-center">
+      <p className="text-lg font-bold text-white">Pick your 11 first</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-gray">
+        Corners are built from the players in your lineup, so the lineup comes first. You have {placed} of 11 picked.
+      </p>
+      <button
+        type="button"
+        onClick={onGo}
+        className="mt-5 rounded-xl bg-green px-5 py-2.5 text-sm font-bold text-dark hover:opacity-90"
+      >
+        Go to lineup
+      </button>
+    </div>
   )
 }
