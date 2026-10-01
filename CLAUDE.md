@@ -17,7 +17,7 @@ Do not reintroduce parent UI or copy. This supersedes the youth/`club_type` note
 assistant Shaun Stocker) live and using the app weekly. Their program exists in
 prod (club `9f5d0239-d614-4ef5-9a27-dc3cb7ae5edc`, team code TJC4PH) with the real
 2026-27 roster and schedule; demo login is Jozo's `+tjc` alias until the head coach
-seat moves to Steve. FAU is parked until Jozo raises it again.
+seat moves to Steve. FAU program DELETED from prod 2026-10-01 (backup: ~/Documents/OffPitchOS/backups/fau-mens-soccer-2026-10-01.json); revisit only after the TJC pitch, when Jozo raises it.
 
 **Market:** college and club teams. One head coach (role `doc`, the club creator,
 sole admin), titled staff coaches, players. No parents, no coverage in the nav.
