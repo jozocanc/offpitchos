@@ -113,7 +113,13 @@ async function _acceptInviteCode(code: string, joinAs: JoinRole = 'player') {
     .single()
 
   if (profile) {
-    const { error: memberError } = await supabase
+    // Service client: team_members only lets a user insert themselves through a
+    // pending personal invite (031), so the shared team code was rejected by
+    // RLS for every player. The code was validated above (_getTeamByCode) and
+    // the row is the caller's own profile, so the write is scoped to exactly
+    // what possessing the code allows. A staff member of another club can't
+    // get here: the profile upsert above is blocked by the privilege guard (051).
+    const { error: memberError } = await createServiceClient()
       .from('team_members')
       .upsert({
         team_id: team.teamId,
