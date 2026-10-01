@@ -21,6 +21,7 @@ import type { ActionResult } from '@/lib/action-result'
 import { formatRecipientToast } from '../notification-toast'
 import type { EventTravelFields } from '@/lib/travel'
 import { getGameScores, type GameReportChip } from './game-report-actions'
+import { getSharedGamePlanIds } from './game-plan-actions'
 
 interface Event extends EventTravelFields {
   id: string
@@ -181,6 +182,25 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     })
     return () => { cancelled = true }
   }, [rsvpEventKey])
+
+  // Players: which games have a shared game plan (059), for the card link.
+  const [sharedGamePlans, setSharedGamePlans] = useState<Set<string>>(new Set())
+  const planEventKey = isPlayer
+    ? allEvents
+        .filter(e => (e.type === 'game' || e.type === 'tournament') && e.status !== 'cancelled')
+        .map(e => e.id)
+        .sort()
+        .join(',')
+    : ''
+  useEffect(() => {
+    if (!planEventKey) return
+    let cancelled = false
+    getSharedGamePlanIds(planEventKey.split(',')).catch(() => ({ ok: false as const, error: '' })).then(res => {
+      if (cancelled || !res.ok) return
+      setSharedGamePlans(new Set(res.data))
+    })
+    return () => { cancelled = true }
+  }, [planEventKey])
 
   // Staff: each game's report state (057/058) for the "Stats in: 2-1 W" chip
   // (plus an edited dot) on past games. Only games/tournaments; re-run when
@@ -500,6 +520,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           matchSheets={matchSheets}
           gameScores={gameScores}
           onGameStatsSaved={handleGameStatsSaved}
+          sharedGamePlans={sharedGamePlans}
         />
       ) : (
         <CalendarView

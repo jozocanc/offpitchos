@@ -697,3 +697,59 @@ export function BatchDrillPDF({ drills, timeZone = DEFAULT_TIMEZONE }: BatchDril
     </Document>
   )
 }
+
+// ─── DrillPdfPage ─────────────────────────────────────────────────────────────
+//
+// One drill as a single page, for documents that mix drills with other pages
+// (the game plan PDF). Same layout as a BatchDrillPDF drill page; the footer
+// numbers itself from the document so it works at any position.
+
+export interface DrillPdfPageProps {
+  drill: BatchDrill
+  /** IANA zone. Defaults to DEFAULT_TIMEZONE when the caller omits it. */
+  timeZone?: string
+  size?: 'A4' | 'LETTER'
+  /** Small label next to the category, e.g. "Game plan: vs Navarro". */
+  context?: string
+}
+
+export function DrillPdfPage({ drill, timeZone = DEFAULT_TIMEZONE, size = 'A4', context }: DrillPdfPageProps) {
+  const generatedAt = formatGeneratedAt(timeZone)
+  const descTruncated = drill.description ? truncateWords(drill.description, 100) : ''
+  return (
+    <Page size={size} style={S.page}>
+      <View style={S.drillPageHeader}>
+        <Text style={S.drillPageTitle}>{drill.title}</Text>
+        <View style={S.drillPageMeta}>
+          <Text style={S.drillPageMetaText}>
+            {categoryLabel(drill.category)}{context ? ` · ${context}` : ''}
+          </Text>
+        </View>
+      </View>
+
+      <View style={S.body}>
+        {descTruncated ? (
+          <>
+            <Text style={S.sectionLabel}>Description</Text>
+            <Text style={S.description}>{descTruncated}</Text>
+          </>
+        ) : null}
+
+        <Text style={S.sectionLabel}>Diagram</Text>
+        <DiagramArea thumbnail={drill.thumbnail} />
+      </View>
+
+      <View style={S.footer} fixed>
+        <View style={S.footerLeft}>
+          <LogoBox />
+          <Text style={S.footerBrand}>OffPitchOS</Text>
+        </View>
+        <Text style={S.footerDate}>Generated {generatedAt}</Text>
+        <Text
+          style={S.footerPage}
+          render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+        />
+      </View>
+    </Page>
+  )
+}

@@ -55,11 +55,13 @@ interface AgendaViewProps {
   onGameStatsSaved?: (eventId: string, chip: GameReportChip | null) => void
   /** Player's own answers. undefined = still loading (cards hold space). */
   myRsvps?: Record<string, 'going' | 'not_going'>
+  /** Players: events whose game plan the staff shared (059). */
+  sharedGamePlans?: Set<string>
   pendingRsvpIds?: Set<string>
   empty?: { title: string; body: string; action?: { label: string; onClick: () => void } }
 }
 
-export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets, gameScores, onGameStatsSaved, myRsvps, pendingRsvpIds, empty }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets, gameScores, onGameStatsSaved, myRsvps, pendingRsvpIds, empty, sharedGamePlans }: AgendaViewProps) {
   // Before the early return — hooks must run unconditionally.
   const timezone = useClubTimezone()
 
@@ -121,6 +123,7 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 onGameStatsSaved={onGameStatsSaved}
                 myRsvp={myRsvps ? (myRsvps[event.id] ?? null) : undefined}
                 myRsvpPending={pendingRsvpIds?.has(event.id) ?? false}
+                gamePlanShared={sharedGamePlans?.has(event.id) ?? false}
               />
             ))}
           </div>

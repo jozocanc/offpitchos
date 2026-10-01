@@ -171,7 +171,7 @@ export async function getReadinessData(opts: { team?: string; date?: string }): 
  * RSVP "can't make it" or a check-in of 'out' wins. Otherwise the most recent
  * check-in decides; with no check-in, an RSVP of 'going' counts as available.
  */
-function combineAvailability(status: CheckinStatus | null, rsvp: 'going' | 'not_going' | null): Availability {
+export function combineAvailability(status: CheckinStatus | null, rsvp: 'going' | 'not_going' | null): Availability {
   if (rsvp === 'not_going' || status === 'out') return 'out'
   if (status === 'limited') return 'limited'
   if (status === 'fit') return 'available'

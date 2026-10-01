@@ -67,9 +67,11 @@ interface EventCardProps {
   gameScore?: GameReportChip | null
   /** Called when the Game report modal saves, autosaves, discards or deletes. */
   onGameStatsSaved?: (eventId: string, chip: GameReportChip | null) => void
+  /** Players: the staff shared this game's plan (059), so link to it. */
+  gamePlanShared?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled, myRsvp, myRsvpPending, gameScore, onGameStatsSaved }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled, myRsvp, myRsvpPending, gameScore, onGameStatsSaved, gamePlanShared }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
   const [visitorOpen, setVisitorOpen] = useState(false)
   const [gameReportOpen, setGameReportOpen] = useState(false)
@@ -87,6 +89,10 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
   const showVisitorInfo = canEdit && !isCancelled && isHomeGame(event)
   // Staff only: after a game, upload the box score or type the stats in.
   const showGameReport = canEdit && !isCancelled && isOver && (event.type === 'game' || event.type === 'tournament')
+  // Staff: lineup, corners and tactics for any game or tournament.
+  const showGamePlan = canEdit && !isCancelled && (event.type === 'game' || event.type === 'tournament')
+  // Players: only once the staff have shared it.
+  const showPlayerGamePlan = !canEdit && !isCancelled && Boolean(gamePlanShared)
 
   return (
     <div
@@ -264,6 +270,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 Attendance
               </button>
             )}
+            {showGamePlan && (
+              <a
+                href={`/dashboard/schedule/${event.id}/plan`}
+                className="text-green hover:text-green/80 text-sm transition-colors"
+              >
+                Game plan
+              </a>
+            )}
             {showGameReport && (
               <button
                 type="button"
@@ -350,7 +364,18 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         <CoverageActionsInline requestId={coverageRequest.id} />
       )}
 
-      <div className="mt-3 pt-3 border-t border-white/5">
+      <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {showPlayerGamePlan && (
+          <a
+            href={`/dashboard/schedule/${event.id}/plan`}
+            className="text-xs font-semibold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="12" x2="21" y2="12" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            Game plan
+          </a>
+        )}
         <button
           type="button"
           onClick={() => setPhotosOpen(true)}

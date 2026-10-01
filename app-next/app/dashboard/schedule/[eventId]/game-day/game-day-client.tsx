@@ -95,9 +95,19 @@ export default function GameDayClient({
             >
               ← Back
             </Link>
-            <span className="text-xs font-bold uppercase tracking-wide bg-green/10 text-green px-2 py-0.5 rounded-full">
-              Game Day
-            </span>
+            <div className="flex items-center gap-2">
+              {(eventType === 'game' || eventType === 'tournament') && (
+                <Link
+                  href={`/dashboard/schedule/${eventId}/plan`}
+                  className="text-xs font-bold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  Game plan
+                </Link>
+              )}
+              <span className="text-xs font-bold uppercase tracking-wide bg-green/10 text-green px-2 py-0.5 rounded-full">
+                Game Day
+              </span>
+            </div>
           </div>
           <h1 className="text-2xl font-black text-white">{eventTitle}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray mt-1">
