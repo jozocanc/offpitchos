@@ -141,7 +141,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   }
 
   const preview = announcement.body.length > 150
-    ? announcement.body.slice(0, 150) + '...'
+    ? announcement.body.slice(0, 150) + '…'
     : announcement.body
 
   const fullDate = new Date(announcement.created_at).toLocaleDateString('en-US', {
@@ -173,7 +173,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
               </span>
             ) : (
               <span className="text-xs font-bold bg-white/10 text-white px-2 py-0.5 rounded-full">
-                All Teams
+                All teams
               </span>
             )}
             {pinned && (

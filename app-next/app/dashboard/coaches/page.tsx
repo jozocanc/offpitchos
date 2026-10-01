@@ -159,7 +159,7 @@ export default async function CoachesPage() {
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Coaching Staff</h1>
+          <h1 className="text-3xl font-black tracking-tight">Coaching staff</h1>
           <p className="text-gray text-sm mt-1">
             You are the head coach. Every coach gets the same staff access; only you manage the team.
           </p>
@@ -170,7 +170,9 @@ export default async function CoachesPage() {
       {/* Head coach */}
       <section className="mb-10">
         <h2 className="text-lg font-bold mb-4">Head Coach</h2>
-        <div className="bg-dark-secondary rounded-2xl p-5 border border-green/20 flex items-center gap-4 max-w-md">
+        {/* Same two-column grid as the staff cards below so the edges line up. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-dark-secondary rounded-2xl p-5 border border-green/20 flex items-center gap-4">
           <div className="w-11 h-11 rounded-full bg-green flex items-center justify-center shrink-0">
             <span className="text-dark font-bold">
               {(profile?.display_name ?? 'H').charAt(0).toUpperCase()}
@@ -180,6 +182,7 @@ export default async function CoachesPage() {
             <p className="font-semibold truncate">{profile?.display_name ?? 'You'}</p>
             <p className="text-gray text-xs">Head Coach · full control</p>
           </div>
+        </div>
         </div>
       </section>
 

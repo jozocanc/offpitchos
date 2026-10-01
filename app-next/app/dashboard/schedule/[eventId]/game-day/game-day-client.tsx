@@ -109,7 +109,7 @@ export default function GameDayClient({
               </span>
             </div>
           </div>
-          <h1 className="text-2xl font-black text-white">{eventTitle}</h1>
+          <h1 className="text-2xl font-black tracking-tight">{eventTitle}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray mt-1">
             <span>{teamLabel(teamName, ageGroup)}</span>
             <span>·</span>
@@ -145,7 +145,7 @@ export default function GameDayClient({
                 tab === 'attendance' ? 'bg-green text-dark' : 'bg-white/5 text-gray hover:text-white'
               }`}
             >
-              Roll Call
+              Roll call
             </button>
             <button
               onClick={() => setTab('feedback')}
@@ -153,7 +153,7 @@ export default function GameDayClient({
                 tab === 'feedback' ? 'bg-green text-dark' : 'bg-white/5 text-gray hover:text-white'
               }`}
             >
-              Quick Feedback
+              Quick feedback
             </button>
             <button
               onClick={() => setPhotosOpen(true)}
@@ -242,7 +242,7 @@ function RollCall({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{p.first_name} {p.last_name}</p>
+              <p className="font-medium text-sm leading-snug break-words">{p.first_name} {p.last_name}</p>
               {p.position && <p className="text-gray text-xs">{p.position}</p>}
             </div>
             <div className="flex gap-1.5 shrink-0">

@@ -242,13 +242,13 @@ export default function ReadinessClient({ data }: { data: ReadinessData }) {
           <EmptyCard
             title="No game on the schedule"
             body="Add your next game or tournament and this shows who you can pick, from check-ins and RSVPs."
-            action={{ href: '/dashboard/schedule', label: 'Open Schedule' }}
+            action={{ href: '/dashboard/schedule', label: 'Open schedule' }}
           />
         ) : (
           <div className="bg-dark-secondary rounded-2xl border border-white/5 p-4 sm:p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
               <div className="min-w-0">
-                <p className="font-bold truncate">{nextEvent.title}</p>
+                <p className="font-bold break-words">{nextEvent.title}</p>
                 <p className="text-gray text-xs mt-0.5">
                   {EVENT_TYPE_LABELS[nextEvent.type as EventType] ?? 'Game'} · {formatShortDate(nextEvent.startTime, timeZone)} · {formatTime(nextEvent.startTime, timeZone)}
                 </p>
@@ -400,7 +400,7 @@ function PlayerRow({
         </div>
         <div className="flex items-center justify-between gap-3 mt-2 pl-10">
           <p className="text-xs text-gray">
-            S <Metric value={c?.sleep} bad={!!c && c.sleep <= 2} /> · Sore <Metric value={c?.soreness} bad={!!c && c.soreness >= 4} /> · E <Metric value={c?.energy} bad={!!c && c.energy <= 2} />
+            Sleep <Metric value={c?.sleep} bad={!!c && c.sleep <= 2} /> · Sore <Metric value={c?.soreness} bad={!!c && c.soreness >= 4} /> · Energy <Metric value={c?.energy} bad={!!c && c.energy <= 2} />
           </p>
           <HistoryDots history={p.history} days={historyDays} />
         </div>

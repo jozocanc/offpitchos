@@ -3,6 +3,7 @@ import { formatMonthDay, formatMonthDayYear } from '@/lib/format-datetime'
 import { useClubTimezone } from '@/components/club-timezone'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import FeedbackForm from './feedback-form'
 import DevelopmentChart from './development-chart'
 import { submitPlayerSize } from './actions'
@@ -33,6 +34,7 @@ interface Player {
   date_of_birth: string | null
   jersey_size: string | null
   shorts_size: string | null
+  team_id?: string | null
   teams: { name: string; age_group: string } | null
 }
 
@@ -104,7 +106,7 @@ function GearSizesEditor({
             onChange={e => setJersey(e.target.value)}
             className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
           >
-            <option value="">—</option>
+            <option value="">Not set</option>
             {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </label>
@@ -115,7 +117,7 @@ function GearSizesEditor({
             onChange={e => setShorts(e.target.value)}
             className="mt-1 block bg-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
           >
-            <option value="">—</option>
+            <option value="">Not set</option>
             {JERSEY_SIZES.map(s => <option key={s} value={s}>{gearSizeLabel(s)}</option>)}
           </select>
         </label>
@@ -239,15 +241,25 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
 
   return (
     <div>
+      {/* Staff arrive from the roster; give them the same way back that the
+          other detail pages (game plan, game day) have. */}
+      {canAddFeedback && player.team_id && (
+        <Link
+          href={`/dashboard/teams/${player.team_id}`}
+          className="text-gray text-sm hover:text-white transition-colors mb-4 inline-block"
+        >
+          ← Roster
+        </Link>
+      )}
       {/* Player header */}
       <div className="bg-dark-secondary border border-white/5 rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-2xl font-black text-white">
               {player.first_name} {player.last_name}
-              {player.jersey_number && <span className="text-green ml-2">#{player.jersey_number}</span>}
+              {player.jersey_number != null && <span className="text-green ml-2">#{player.jersey_number}</span>}
             </h2>
-            <div className="flex items-center gap-3 mt-2 text-sm text-gray">
+            <div className="flex flex-wrap items-center gap-x-1.5 mt-2 text-sm text-gray">
               {team && <span>{teamLabel(team.name, team.age_group)}</span>}
               {player.position && <span>· {player.position}</span>}
             </div>
@@ -276,7 +288,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
               <div key={cat} className="bg-dark rounded-lg px-3 py-2 text-center">
                 <p className="text-xs text-gray capitalize">{CATEGORY_EMOJI[cat]} {cat}</p>
                 <p className="text-lg font-bold text-green">{data.avg}</p>
-                <p className="text-xs text-gray">{data.count} reviews</p>
+                <p className="text-xs text-gray">{data.count} {data.count === 1 ? 'review' : 'reviews'}</p>
               </div>
             ))}
           </div>
@@ -312,7 +324,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
 
         {/* Feedback timeline */}
         <div className={canAddFeedback ? 'lg:col-span-2' : 'lg:col-span-3'}>
-          <h3 className="font-bold text-white mb-4">Development Timeline ({feedback.length})</h3>
+          <h3 className="font-bold text-white mb-4">Development timeline ({feedback.length})</h3>
 
           {feedback.length === 0 ? (
             <p className="text-gray text-sm">No feedback yet.</p>

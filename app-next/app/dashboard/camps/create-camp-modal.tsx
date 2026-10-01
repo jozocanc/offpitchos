@@ -266,7 +266,7 @@ export default function CreateCampModal({
             disabled={isPending || teams.length === 0}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            {isPending ? 'Creating…' : 'Create Camp'}
+            {isPending ? 'Creating…' : 'Create camp'}
           </button>
         </div>
       </form>

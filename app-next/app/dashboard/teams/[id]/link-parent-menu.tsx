@@ -82,7 +82,7 @@ export default function LinkParentMenu({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-[10px] font-bold text-green hover:opacity-80 transition-opacity uppercase tracking-wide"
+        className="text-xs font-medium text-green hover:opacity-80 transition-opacity py-2 -my-2"
       >
         Invite
       </button>

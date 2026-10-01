@@ -79,7 +79,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
-            Public Team Page
+            Public team page
             {enabled && (
               <span className="text-xs font-bold bg-green/10 text-green px-2 py-0.5 rounded-full">
                 LIVE
@@ -99,7 +99,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
               : 'bg-green text-dark hover:opacity-90'
           } disabled:opacity-50`}
         >
-          {isPending ? '...' : enabled ? 'Turn Off' : 'Turn On'}
+          {isPending ? '...' : enabled ? 'Turn off' : 'Turn on'}
         </button>
       </div>
 

@@ -285,10 +285,14 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
         const me = myPlayers.find(p => p.team_id === ev.team_id)
         if (!me || answered.has(`${ev.id}:${me.id}`)) continue
         const when = formatShortDate(ev.start_time, timezone)
+        // Game titles read "vs Opponent" / "at Opponent"; give them a noun
+        // so the question doesn't come out as "Are you in for vs ...?".
+        const evTitle = ev.title?.trim() || 'the session'
+        const subject = /^(vs\.?|at|@)\s/i.test(evTitle) ? `the game ${evTitle}` : evTitle
         signals.push({
           id: `rsvp:${ev.id}`,
           type: 'rsvp_needed',
-          title: `Are you in for ${ev.title ?? 'the session'}?`,
+          title: `Are you in for ${subject}?`,
           subtitle: `${when}. Let your coaches know if you're going.`,
           urgency: 'important',
           href: '/dashboard/schedule',

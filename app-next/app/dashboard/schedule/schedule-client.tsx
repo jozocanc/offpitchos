@@ -414,18 +414,18 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             {(() => { const n = filtered.filter(e => new Date(e.end_time).getTime() >= Date.now()).length; return `${n} upcoming event${n !== 1 ? 's' : ''}` })()}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Past toggle */}
           <button
             type="button"
             aria-pressed={showPast}
             onClick={togglePast}
-            className={`px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+            className={`px-3 py-2 text-sm font-medium rounded-xl border transition-colors whitespace-nowrap ${
               showPast ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-gray hover:text-white'
             }`}
             disabled={loadingPast}
           >
-            {loadingPast ? 'Loading…' : showPast ? 'Hide Past' : 'Show Past'}
+            {loadingPast ? 'Loading…' : showPast ? 'Hide past' : 'Show past'}
           </button>
 
           {/* View toggle */}
@@ -434,7 +434,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
               type="button"
               aria-pressed={view === 'agenda'}
               onClick={() => setView('agenda')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
                 view === 'agenda' ? 'bg-green text-dark' : 'text-gray hover:text-white'
               }`}
             >
@@ -444,7 +444,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
               type="button"
               aria-pressed={view === 'calendar'}
               onClick={() => { setView('calendar'); void ensurePastLoaded() }}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
                 view === 'calendar' ? 'bg-green text-dark' : 'text-gray hover:text-white'
               }`}
             >
@@ -456,9 +456,9 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             <button
               type="button"
               onClick={handleAddNew}
-              className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
+              className="bg-green text-dark font-bold px-4 sm:px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm whitespace-nowrap"
             >
-              + Add Event
+              + Add event
             </button>
           )}
         </div>
@@ -499,7 +499,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
                 ? {
                     title: 'No events scheduled yet',
                     body: 'Add practices, games and travel so your staff and players know where to be.',
-                    action: { label: '+ Add Event', onClick: handleAddNew },
+                    action: { label: '+ Add event', onClick: handleAddNew },
                   }
                 : {
                     title: 'Nothing on the schedule yet',

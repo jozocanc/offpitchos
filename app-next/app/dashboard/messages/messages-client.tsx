@@ -102,7 +102,7 @@ export default function MessagesClient({
             onClick={() => (isPlayer ? setTab('dm') : setModalOpen(true))}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
-            {isPlayer ? 'Message Coach' : '+ New Announcement'}
+            {isPlayer ? 'Message the staff' : '+ New announcement'}
           </button>
         )}
       </div>
@@ -134,13 +134,13 @@ export default function MessagesClient({
           <EmptyState
             title="No announcements yet"
             body="Post schedule changes, travel details or reminders. Everyone on the team gets it in one go."
-            action={{ label: '+ New Announcement', onClick: () => setModalOpen(true) }}
+            action={{ label: '+ New announcement', onClick: () => setModalOpen(true) }}
           />
         ) : (
           <EmptyState
             title="No announcements yet"
             body="When your coaches post updates, they show up here. Have a question? Message a coach directly."
-            action={isPlayer ? { label: 'Message Coach', onClick: () => setTab('dm') } : undefined}
+            action={isPlayer ? { label: 'Message the staff', onClick: () => setTab('dm') } : undefined}
           />
         )
       ) : (

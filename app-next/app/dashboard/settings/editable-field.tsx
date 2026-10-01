@@ -78,7 +78,7 @@ export default function EditableField({ label, value, onSave }: EditableFieldPro
             disabled={isPending}
             className="text-xs font-bold bg-green text-dark px-4 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {isPending ? 'Saving...' : 'Save'}
+            {isPending ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react'
 import { generateDigestNow, emailDigest } from './actions'
 import { useToast } from '@/components/toast'
 import { useConfirm } from '@/components/confirm-dialog'
+import EmptyState from '@/components/empty-state'
 
 interface DigestRow {
   id: string
@@ -144,7 +145,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
     <div>
       <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Weekly Digest</h1>
+          <h1 className="text-3xl font-black tracking-tight">Weekly digest</h1>
           <p className="text-gray text-sm mt-1">
             A staff-only recap of the week: attendance, standout players, and what&apos;s coming up.
           </p>
@@ -155,20 +156,18 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
             disabled={isPending}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
           >
-            {isPending ? 'Generating…' : latest ? 'Regenerate this week' : 'Generate Digest'}
+            {isPending ? 'Generating…' : latest ? 'Regenerate this week' : 'Generate digest'}
           </button>
         )}
       </div>
 
       {!latest && (
-        <div className="bg-dark-secondary border border-white/5 rounded-2xl p-12 text-center">
-          <p className="text-gray text-lg">No digest yet.</p>
-          <p className="text-gray text-sm mt-1">
-            {isDoc
-              ? 'Click "Generate Digest" for a recap of this week\'s sessions, attendance and feedback.'
-              : 'Your head coach generates the digest at the end of each week.'}
-          </p>
-        </div>
+        <EmptyState
+          title="No digest yet"
+          body={isDoc
+            ? 'Click "Generate digest" for a recap of this week\'s sessions, attendance and feedback.'
+            : 'Your head coach generates the digest at the end of each week.'}
+        />
       )}
 
       {latest && (

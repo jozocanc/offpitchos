@@ -176,7 +176,7 @@ function MonthGrid({ monthKey, todayKey, byDay, timezone, onPrev, onNext, onToda
             <div
               key={day}
               onClick={() => onAddAtDate(day)}
-              className={`min-h-[104px] p-1.5 flex flex-col gap-1 cursor-pointer transition-colors ${inMonth ? 'bg-dark-secondary hover:bg-white/[0.03]' : 'bg-dark/60'}`}
+              className={`min-h-[72px] sm:min-h-[104px] p-1 sm:p-1.5 flex flex-col gap-1 cursor-pointer transition-colors ${inMonth ? 'bg-dark-secondary hover:bg-white/[0.03]' : 'bg-dark/60'}`}
             >
               <div className="flex justify-end">
                 <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-green text-dark' : inMonth ? 'text-white' : 'text-gray/50'}`}>
@@ -188,13 +188,15 @@ function MonthGrid({ monthKey, todayKey, byDay, timezone, onPrev, onNext, onToda
                   key={e.id}
                   onClick={ev => { ev.stopPropagation(); onEdit(e.id) }}
                   title={`${formatTime(e.start_time, timezone)} ${teamLabel(e.title, e.teams?.[0]?.age_group)}`}
-                  className={`w-full text-left rounded-md px-1.5 py-1 text-[11px] leading-tight ${eventColors(e.type, e.status)}`}
+                  className={`w-full text-center sm:text-left rounded-md px-0.5 sm:px-1.5 py-1 text-[11px] leading-tight ${eventColors(e.type, e.status)}`}
                 >
-                  <span className="font-bold">{shortTime(e.start_time, timezone)}</span>{' '}
-                  {/* Clamp instead of breaking mid-word; the full title is in the tooltip. */}
-                  <span className="line-clamp-2 [overflow-wrap:normal] [word-break:normal]">{e.title}</span>
+                  <span className="font-bold whitespace-nowrap">{shortTime(e.start_time, timezone)}</span>{' '}
+                  {/* Clamp instead of breaking mid-word; the full title is in the tooltip.
+                      Phone cells are ~45px wide, so they show the time only; the
+                      agenda and week views carry the titles there. */}
+                  <span className="hidden sm:line-clamp-2 [overflow-wrap:normal] [word-break:normal]">{e.title}</span>
                   {e.travel_depart_at && e.status !== 'cancelled' && (
-                    <span className="block opacity-80">Bus {shortTime(e.travel_depart_at, timezone)}</span>
+                    <span className="hidden sm:block opacity-80">Bus {shortTime(e.travel_depart_at, timezone)}</span>
                   )}
                 </button>
               ))}

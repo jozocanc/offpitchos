@@ -88,7 +88,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
 
   return (
     <div className="bg-dark-secondary border border-white/5 rounded-xl p-5">
-      <h3 className="font-bold text-white mb-4">Add Feedback</h3>
+      <h3 className="font-bold text-white mb-4">Add feedback</h3>
 
       {/* Category */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -96,13 +96,14 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
           <button
             key={c.value}
             onClick={() => setCategory(c.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
               category === c.value
                 ? 'bg-green text-dark'
                 : 'bg-white/5 border border-white/10 text-gray hover:text-white'
             }`}
           >
-            {c.emoji} {c.label}
+            <span aria-hidden="true">{c.emoji}</span>
+            <span>{c.label}</span>
           </button>
         ))}
       </div>
@@ -182,7 +183,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
         disabled={submitting || !notes.trim()}
         className="w-full bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"
       >
-        {submitting ? 'Saving...' : 'Save Feedback'}
+        {submitting ? 'Saving…' : 'Save feedback'}
       </button>
     </div>
   )

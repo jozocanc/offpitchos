@@ -237,7 +237,7 @@ export default function CheckinForm({
             <button
               type="button"
               onClick={() => setShowNote(true)}
-              className="text-sm font-bold text-green hover:opacity-80"
+              className="text-sm font-bold text-green hover:opacity-80 py-2.5 -my-2.5"
             >
               + Add a note for the staff
             </button>

@@ -65,7 +65,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
         onClick={() => setOpen(true)}
         className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
       >
-        + Invite Staff
+        + Invite staff
       </button>
 
       {open && (

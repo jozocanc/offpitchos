@@ -296,7 +296,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
     >
       <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-6">
-          {isEditing ? 'Edit Event' : 'Add Event'}
+          {isEditing ? 'Edit event' : 'Add event'}
         </h2>
 
         {/* Team */}
@@ -436,7 +436,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="Any additional details..."
+          placeholder="Any additional details…"
           rows={2}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4 resize-none"
         />
@@ -654,7 +654,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             disabled={isPending}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Saving…' : isEditing ? 'Save Changes' : 'Add Event'}
+            {isPending ? 'Saving…' : isEditing ? 'Save changes' : 'Add event'}
           </button>
         </div>
       </div>

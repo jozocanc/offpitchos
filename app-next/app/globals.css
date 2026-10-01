@@ -17,6 +17,18 @@
   --color-white: #0F1510;           /* near-black ink (primary text) */
   --color-black: #0F1510;
 
+  /* Pale status shades left over from the dark theme (text-yellow-400,
+     text-red-400, ...) wash out on white cards. Deepen them so status
+     labels, badges and counts stay readable; their /10 and /20 tints
+     still render as soft washes. */
+  --color-yellow-400: #B45309;
+  --color-yellow-500: #B45309;
+  --color-red-400: #C53030;
+  --color-blue-400: #1D4ED8;
+  --color-purple-400: #7E22CE;
+  --color-orange-400: #C2410C;
+  --color-emerald-400: #047857;
+
   --font-sans: "Inter", sans-serif;
 }
 
@@ -129,5 +141,18 @@
   }
   a, button {
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* The dashboard <main> pads its bottom so the last card scrolls clear of
+   the floating mic button (layout.tsx). Pages that size themselves to the
+   viewport (Ask, the drill editor) mark their root with data-full-height
+   and keep only the phone tab-bar clearance, so they don't scroll. */
+main:has([data-full-height]) {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  main:has([data-full-height]) {
+    padding-bottom: 0;
   }
 }

@@ -117,7 +117,7 @@ export default function VisitorInfoModal({ eventId, eventTitle, onClose }: Props
         </p>
 
         {loading ? (
-          <p className="text-gray text-sm py-8 text-center">Loading...</p>
+          <p className="text-gray text-sm py-8 text-center">Loading…</p>
         ) : (
           <>
             {sheet && shareUrl && (
@@ -217,7 +217,7 @@ export default function VisitorInfoModal({ eventId, eventTitle, onClose }: Props
                 disabled={pending}
                 className="bg-green text-dark text-sm font-bold px-5 py-2 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {pending ? 'Saving...' : sheet ? 'Save changes' : 'Save and get link'}
+                {pending ? 'Saving…' : sheet ? 'Save changes' : 'Save and get link'}
               </button>
             </div>
           </>

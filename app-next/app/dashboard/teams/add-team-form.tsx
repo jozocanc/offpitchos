@@ -50,7 +50,7 @@ export default function AddTeamForm() {
         onClick={() => setOpen(true)}
         className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
       >
-        + Add Team
+        + Add team
       </button>
 
       {open && (
@@ -103,7 +103,7 @@ export default function AddTeamForm() {
                 disabled={isPending}
                 className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isPending ? 'Adding…' : 'Add Team'}
+                {isPending ? 'Adding…' : 'Add team'}
               </button>
             </div>
           </div>

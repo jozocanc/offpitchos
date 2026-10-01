@@ -14,7 +14,7 @@ interface FeedbackPoint {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  technical: '#00FF87',
+  technical: '#1F4E3D',
   tactical:  '#60A5FA',
   physical:  '#F472B6',
   attitude:  '#FBBF24',
@@ -73,7 +73,7 @@ export default function DevelopmentChart({ feedback }: { feedback: FeedbackPoint
   if (data.length < 2) {
     return (
       <div className="bg-dark-secondary border border-white/5 rounded-xl p-6 mb-6">
-        <h3 className="font-bold text-white mb-2">Development Trend</h3>
+        <h3 className="font-bold text-white mb-2">Development trend</h3>
         <p className="text-gray text-sm">
           Not enough rated feedback yet to chart progress. Add at least two ratings on different days to see the trend line.
         </p>
@@ -94,7 +94,7 @@ export default function DevelopmentChart({ feedback }: { feedback: FeedbackPoint
     <div className="bg-dark-secondary border border-white/5 rounded-xl p-6 mb-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="font-bold text-white">Development Trend</h3>
+          <h3 className="font-bold text-white">Development trend</h3>
           <p className="text-xs text-gray mt-0.5">Average rating per category over time (1–5)</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
@@ -142,15 +142,15 @@ export default function DevelopmentChart({ feedback }: { feedback: FeedbackPoint
             />
             <Tooltip
               contentStyle={{
-                background: '#0F172A',
-                border: '1px solid #ffffff10',
+                background: '#FFFFFF',
+                border: '1px solid rgba(15,21,16,0.1)',
                 borderRadius: 12,
-                color: '#fff',
+                color: '#0F1510',
                 fontSize: 12,
               }}
               labelFormatter={(label) => formatDay(String(label))}
               formatter={(value, name) => [
-                typeof value === 'number' ? value.toFixed(1) : String(value ?? '—'),
+                typeof value === 'number' ? value.toFixed(1) : String(value ?? 'n/a'),
                 CATEGORY_LABELS[String(name)] ?? String(name),
               ]}
             />

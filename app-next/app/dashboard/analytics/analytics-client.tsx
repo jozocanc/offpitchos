@@ -67,13 +67,14 @@ const periods = [
 
 const chartTooltipStyle = {
   contentStyle: {
-    backgroundColor: '#1a1a2e',
-    border: '1px solid rgba(255,255,255,0.1)',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid rgba(15,21,16,0.1)',
     borderRadius: '8px',
     fontSize: '12px',
-    color: '#fff',
+    color: '#0F1510',
+    boxShadow: '0 4px 16px rgba(15,21,16,0.08)',
   },
-  labelStyle: { color: '#888' },
+  labelStyle: { color: '#5C6660' },
 }
 
 export default function AnalyticsClient({ data: initialData }: { data: AnalyticsData }) {
@@ -106,7 +107,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
             onClick={() => handlePeriodChange(p.value)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               period === p.value
-                ? 'bg-green text-black'
+                ? 'bg-green text-dark'
                 : 'bg-dark-secondary border border-white/5 text-gray hover:text-white hover:border-white/20'
             }`}
           >
@@ -144,14 +145,14 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
             {charts.attendance.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={charts.attendance} barCategoryGap="20%">
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,21,16,0.08)" />
+                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#5C6660', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#5C6660', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip {...chartTooltipStyle} labelFormatter={(label) => formatDate(String(label))} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="present" stackId="a" fill="#00ff87" radius={[0, 0, 0, 0]} name="Present" />
-                  <Bar dataKey="late" stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} name="Late" />
-                  <Bar dataKey="absent" stackId="a" fill="#f87171" radius={[4, 4, 0, 0]} name="Absent" />
+                  <Bar dataKey="present" stackId="a" fill="#1F4E3D" radius={[0, 0, 0, 0]} name="Present" />
+                  <Bar dataKey="late" stackId="a" fill="#D97706" radius={[0, 0, 0, 0]} name="Late" />
+                  <Bar dataKey="absent" stackId="a" fill="#C53030" radius={[4, 4, 0, 0]} name="Absent" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -165,13 +166,13 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
             {charts.events.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={charts.events}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,21,16,0.08)" />
+                  <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fill: '#5C6660', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#5C6660', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip {...chartTooltipStyle} labelFormatter={(label) => formatDate(String(label))} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="scheduled" stroke="#00ff87" fill="rgba(0,255,135,0.1)" strokeWidth={2} name="Scheduled" />
-                  <Area type="monotone" dataKey="cancelled" stroke="#f87171" fill="rgba(248,113,113,0.1)" strokeWidth={2} name="Cancelled" />
+                  <Area type="monotone" dataKey="scheduled" stroke="#1F4E3D" fill="rgba(31,78,61,0.12)" strokeWidth={2} name="Scheduled" />
+                  <Area type="monotone" dataKey="cancelled" stroke="#C53030" fill="rgba(197,48,48,0.08)" strokeWidth={2} name="Cancelled" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -232,12 +233,12 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
                         </div>
                         {/* Tooltip */}
                         {isHovered && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a2e] border border-white/10 rounded-lg px-4 py-3 text-xs shadow-xl z-10 whitespace-nowrap">
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-dark-secondary border border-white/10 rounded-lg px-4 py-3 text-xs shadow-xl z-10 whitespace-nowrap">
                             <p className="font-bold text-white mb-1">{team.name}</p>
                             <p className="text-gray">Attendance: <span className="text-green font-medium">{team.attendanceRate}%</span></p>
                             <p className="text-gray">Records: {team.presentRecords}/{team.totalRecords} present</p>
                             <p className="text-gray">Events: {team.eventsLast30} in period</p>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1a1a2e] border-r border-b border-white/10 rotate-45 -mt-1" />
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-dark-secondary border-r border-b border-white/10 rotate-45 -mt-1" />
                           </div>
                         )}
                       </div>

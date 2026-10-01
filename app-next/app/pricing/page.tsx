@@ -115,7 +115,7 @@ export default async function PricingPage() {
           </span>
           <div
             style={{ color: ink }}
-            className="mt-5 text-5xl md:text-7xl font-semibold tracking-[-0.035em] leading-none"
+            className="mt-5 text-[2.5rem] sm:text-5xl md:text-7xl font-semibold tracking-[-0.035em] leading-none whitespace-nowrap"
           >
             $149<span style={{ color: subtext }}>&nbsp;–&nbsp;</span>$499
             <span

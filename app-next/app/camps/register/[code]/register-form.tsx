@@ -141,7 +141,7 @@ export default function RegisterForm({
         className="w-full bg-[#1F4E3D] text-[#FAF7F2] font-semibold py-3 px-4 rounded-full text-sm uppercase tracking-[0.14em] hover:bg-[#2D6B56] transition-colors disabled:opacity-60 mt-2"
       >
         {isPending
-          ? 'Registering...'
+          ? 'Registering…'
           : feeCents > 0
             ? `Register · $${(feeCents / 100).toFixed(2)}`
             : 'Register · Free'}

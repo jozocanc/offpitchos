@@ -40,7 +40,7 @@ export default async function SettingsPage() {
     <div className="p-6 md:p-10 max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight">Settings</h1>
-        <p className="text-gray text-sm mt-1">Manage your program and your account</p>
+        <p className="text-gray text-sm mt-1">Manage your program and your account.</p>
       </div>
 
       <div className="space-y-6">

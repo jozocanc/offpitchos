@@ -209,9 +209,9 @@ async function DashboardBody({
       {isMember(userRole) && <ParentAttentionPanel />}
 
       {/* Stat cards. */}
-      <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
+      <div className={`grid grid-cols-2 ${isDoc ? 'lg:grid-cols-3' : ''} gap-3 sm:gap-4 mb-10`}>
         <StatCard
-          label={isDoc ? 'Players' : 'My Teams'}
+          label={isDoc ? 'Players' : 'My teams'}
           value={String(isDoc ? (playerCount ?? 0) : myTeams.length)}
           accent="green"
         />
@@ -226,6 +226,7 @@ async function DashboardBody({
             value={nextGame ? formatShortDate(nextGame.start_time, timezone) : 'None'}
             accent={nextGame ? 'green' : 'gray'}
             note={nextGame?.title}
+            className="col-span-2 lg:col-span-1"
           />
         )}
       </div>
@@ -233,7 +234,7 @@ async function DashboardBody({
       {/* My Teams (for coaches and players) */}
       {!isDoc && myTeams.length > 0 && (
         <div className="mb-10">
-          <h2 className="text-lg font-bold mb-4">My Teams</h2>
+          <h2 className="text-lg font-bold mb-4">My teams</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {myTeams.map(tm => (
               <Link
@@ -245,9 +246,11 @@ async function DashboardBody({
                   <p className="font-medium">{tm.teams.name}</p>
                   <p className="text-gray text-xs mt-0.5 capitalize">{tm.role === 'parent' ? 'player' : tm.role}</p>
                 </div>
-                <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
-                  {ageGroupLabel(tm.teams.age_group) ?? 'Team'}
-                </span>
+                {ageGroupLabel(tm.teams.age_group) && (
+                  <span className="text-xs font-bold bg-green/10 text-green px-2 py-1 rounded-full">
+                    {ageGroupLabel(tm.teams.age_group)}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -258,7 +261,7 @@ async function DashboardBody({
       <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Today&apos;s Schedule</h2>
-          <Link href="/dashboard/schedule" className="text-xs font-bold text-green hover:opacity-80 transition-opacity">
+          <Link href="/dashboard/schedule" className="text-xs font-bold text-green hover:opacity-80 transition-opacity py-2 -my-2">
             View all
           </Link>
         </div>
@@ -271,7 +274,7 @@ async function DashboardBody({
             {todayEvents.map(event => {
               const start = new Date(event.start_time)
               const end = new Date(event.end_time)
-              const timeStr = `${formatTime(start, timezone)} - ${formatTime(end, timezone)}`
+              const timeStr = `${formatTime(start, timezone)} – ${formatTime(end, timezone)}`
               const team = event.teams as unknown as { name: string; age_group: string } | null
               const isCancelled = event.status === 'cancelled'
 
@@ -281,8 +284,8 @@ async function DashboardBody({
                   href="/dashboard/schedule"
                   className={`bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-center gap-4 hover:border-green/20 transition-colors block ${isCancelled ? 'opacity-50' : ''}`}
                 >
-                  <div className="text-center shrink-0 w-14">
-                    <p className="text-green font-bold text-sm">{formatTime(start, timezone)}</p>
+                  <div className="text-center shrink-0 w-[4.5rem]">
+                    <p className="text-green font-bold text-sm whitespace-nowrap">{formatTime(start, timezone)}</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -316,19 +319,21 @@ function StatCard({
   value,
   accent,
   note,
+  className = '',
 }: {
   label: string
   value: string
   accent: 'green' | 'gray'
   note?: string
+  className?: string
 }) {
   // Responsive sizing: smaller padding + font on narrow screens so labels
   // like "Today's Sessions" don't squeeze a big number off the card. The
   // min-w-0 lets the grid cell shrink below its content's intrinsic width
   // and truncate covers numeric overflow as a safety net.
   return (
-    <div className="bg-dark-secondary rounded-2xl p-4 sm:p-6 border border-white/5 hover:border-green/10 transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,135,0.05)] min-w-0">
-      <p className="text-gray text-xs sm:text-sm mb-2 leading-tight min-h-[2.4em] line-clamp-2">{label}</p>
+    <div className={`bg-dark-secondary rounded-2xl p-4 sm:p-6 border border-white/5 hover:border-green/10 transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,135,0.05)] min-w-0 ${className}`}>
+      <p className="text-gray text-xs sm:text-sm mb-2 leading-tight line-clamp-2">{label}</p>
       <p className={`text-2xl sm:text-3xl lg:text-4xl font-black truncate tabular-nums ${accent === 'green' ? 'text-green' : 'text-white'}`}>
         {value}
       </p>

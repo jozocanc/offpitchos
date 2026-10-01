@@ -101,7 +101,9 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         isCancelled ? 'opacity-50' : 'hover:border-green/20'
       } transition-colors`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Phones stack the controls under the details so the title and
+          venue keep the full card width; wider screens put them on the right. */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             {team?.age_group && (
@@ -124,7 +126,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             )}
             {coverageRequest && coverageRequest.status === 'pending' && (
               <span className="text-xs font-bold bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-full">
-                Needs Coverage
+                Needs coverage
               </span>
             )}
             {coverageRequest && coverageRequest.status === 'escalated' && (
@@ -209,14 +211,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}
-                      className="ml-1 text-xs font-semibold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2 py-0.5 transition-colors"
+                      className="ml-1 text-xs font-semibold text-green bg-green/10 hover:bg-green/20 border border-green/20 rounded-full px-2 py-0.5 transition-colors whitespace-nowrap"
                     >
                       Open in Maps →
                     </a>
                   )}
                 </div>
                 {effectiveAddress && (
-                  <p className="text-xs text-gray/80 mt-0.5 pl-[18px]">{effectiveAddress}</p>
+                  <p className="text-xs text-gray mt-0.5 pl-[18px]">{effectiveAddress}</p>
                 )}
               </div>
             )
@@ -252,13 +254,13 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         {canEdit && !isCancelled && (
           // Wraps instead of pushing: on a game day this row holds five
           // controls and used to squeeze the title into a one-word column.
-          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 shrink-0 max-w-[45%]">
+          <div className="flex flex-wrap items-center sm:justify-end gap-x-4 sm:gap-x-3 gap-y-1.5 sm:shrink-0 sm:max-w-[45%] [&>a]:py-2 [&>button]:py-2 sm:[&>a]:py-0 sm:[&>button]:py-0">
             {onAttendance && teamId && isGameDay(event.start_time) && event.type === 'game' && (
               <a
                 href={`/dashboard/schedule/${event.id}/game-day`}
                 className="bg-green text-dark text-xs font-bold px-3 py-1 rounded-full hover:opacity-90 transition-opacity"
               >
-                Game Day Mode
+                Game day mode
               </a>
             )}
             {onAttendance && teamId && (
@@ -327,9 +329,9 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           <button
             type="button"
             onClick={() => onCantAttend(event.id)}
-            className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0"
+            className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0 self-start py-2 sm:py-0"
           >
-            Can&apos;t Attend
+            Can&apos;t attend
           </button>
         )}
         {(onParentGoing || onParentCantAttend) && !isCancelled && teamId && (

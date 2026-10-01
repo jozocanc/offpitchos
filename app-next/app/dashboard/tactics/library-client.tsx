@@ -16,6 +16,7 @@ import GenerateModal from './generate-modal'
 import ImportPdfModal from './import-pdf-modal'
 import { useToast } from '@/components/toast'
 import { useConfirm } from '@/components/confirm-dialog'
+import EmptyState from '@/components/empty-state'
 
 interface Props {
   drills: DrillSummary[]
@@ -110,30 +111,33 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <header className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">Tactics Board</h1>
-        <div className="flex items-center gap-2">
+    <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-4">
+      <header className="flex items-start justify-between flex-wrap gap-3 mb-2">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight">Tactics board</h1>
+          <p className="text-sm text-gray mt-1">Draw, import and print drills for your sessions and game plans.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {(role === 'doc' || role === 'coach') && (
             <>
               <button
                 type="button"
                 onClick={() => setGenerateOpen(true)}
-                className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
+                className="border border-white/20 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap hover:bg-white/5 transition"
               >
                 Ask Pep
               </button>
               <button
                 type="button"
                 onClick={() => setImportOpen(true)}
-                className="border border-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/5 transition"
+                className="border border-white/20 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap hover:bg-white/5 transition"
               >
                 Import PDF
               </button>
               <button
                 type="button"
                 onClick={toggleSelectMode}
-                className={`border px-4 py-2 rounded-lg font-medium transition ${
+                className={`border px-3 sm:px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                   selectMode
                     ? 'border-green text-green bg-green/10'
                     : 'border-white/20 text-white hover:bg-white/5'
@@ -150,7 +154,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
               )}
               <button
                 type="submit"
-                className="bg-green text-dark px-4 py-2 rounded-lg font-medium hover:brightness-110"
+                className="bg-green text-dark px-3 sm:px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap hover:opacity-90"
               >+ New drill</button>
             </form>
           )}
@@ -198,10 +202,11 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
       </div>
 
       {filtered.length === 0 ? (
-        <div className="border border-dashed border-white/10 rounded-lg p-12 text-center text-gray">
-          <p className="mb-2">No drills yet.</p>
-          <p className="text-sm">Create your first drill to get started.</p>
-        </div>
+        drills.length === 0 ? (
+          <EmptyState title="No drills yet" body="Create your first drill, or ask Pep to draw one for you." />
+        ) : (
+          <EmptyState title="No drills match" body="Try another team, category or search." compact />
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map(d => (

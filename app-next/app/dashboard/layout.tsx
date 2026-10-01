@@ -70,13 +70,14 @@ export default async function DashboardLayout({
       <ToastProvider>
         <ClubTimezoneProvider timezone={timezone}>
         <VoiceFocusProvider>
-          {/* Phones: bottom padding clears the fixed 60px tab bar plus the
-              iPhone home-indicator inset (mobile-tab-bar.tsx); top padding
+          {/* Phones: bottom padding clears the fixed 60px tab bar, the floating
+              mic button above it and the iPhone home-indicator inset
+              (mobile-tab-bar.tsx, voice-command.tsx); top padding
               respects the status bar inset. min-w-0 stops wide children from
-              stretching the flex row past the viewport. Desktop has the
-              static sidebar, so no padding there. */}
+              stretching the flex row past the viewport. Desktop keeps
+              room under the last card for the mic button. */}
           <OfflineBanner />
-          <main className="flex-1 min-w-0 overflow-auto pt-[env(safe-area-inset-top)] pb-[calc(60px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+          <main className="flex-1 min-w-0 overflow-auto pt-[env(safe-area-inset-top)] pb-[calc(136px+env(safe-area-inset-bottom))] md:pt-0 md:pb-24">
             {viewer?.isPreview && <PlayerPreviewBanner player={viewer.previewPlayer} />}
             {children}
           </main>

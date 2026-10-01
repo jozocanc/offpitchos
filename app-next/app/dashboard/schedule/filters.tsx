@@ -26,7 +26,7 @@ export default function Filters({ teams, selectedTeam, selectedType, onTeamChang
         onChange={e => onTeamChange(e.target.value || null)}
         className="bg-dark border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
       >
-        <option value="">All Teams</option>
+        <option value="">All teams</option>
         {teams.map(t => (
           <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
         ))}
@@ -37,7 +37,7 @@ export default function Filters({ teams, selectedTeam, selectedType, onTeamChang
         onChange={e => onTypeChange((e.target.value || null) as EventType | null)}
         className="bg-dark border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
       >
-        <option value="">All Types</option>
+        <option value="">All types</option>
         {EVENT_TYPES.map(t => (
           <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
         ))}

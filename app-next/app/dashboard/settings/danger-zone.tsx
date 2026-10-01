@@ -82,7 +82,7 @@ export default function DangerZone({ userRole }: { userRole: string }) {
               disabled={isPending}
               className="text-sm font-medium text-red border border-red/30 px-4 py-2 rounded-lg hover:bg-red/10 transition-colors disabled:opacity-50"
             >
-              {isPending ? 'Leaving...' : 'Leave'}
+              {isPending ? 'Leaving…' : 'Leave'}
             </button>
           </div>
         )}
@@ -103,7 +103,7 @@ export default function DangerZone({ userRole }: { userRole: string }) {
             disabled={isPending}
             className="text-sm font-medium text-red border border-red/30 px-4 py-2 rounded-lg hover:bg-red/10 transition-colors disabled:opacity-50"
           >
-            {isPending ? 'Deleting...' : 'Delete'}
+            {isPending ? 'Deleting…' : 'Delete'}
           </button>
         </div>
       </div>

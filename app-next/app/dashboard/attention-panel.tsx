@@ -184,24 +184,24 @@ export default function AttentionPanel({
 
   return (
     <div className="mb-10">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-4">
+        <h2 className="text-lg font-bold flex items-center gap-2 whitespace-nowrap">
           <span className="inline-block w-2 h-2 rounded-full bg-green animate-pulse" />
           Needs your attention
           {data && data.items.length > 0 && (
             <span className="text-sm font-bold text-green">· {data.items.length}</span>
           )}
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-auto">
           {data && (
-            <span className="text-xs text-gray">
+            <span className="text-xs text-gray whitespace-nowrap">
               Updated {formatRelative(data.generatedAt)}
             </span>
           )}
           <button
             onClick={() => load(true)}
             disabled={loading}
-            className="text-xs text-gray hover:text-white transition-colors disabled:opacity-50"
+            className="text-xs text-gray hover:text-white transition-colors disabled:opacity-50 py-2.5 -my-2.5"
             aria-label="Refresh attention list"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
@@ -265,7 +265,7 @@ export default function AttentionPanel({
               <Link
                 key={item.id}
                 href={item.actionHref || '/dashboard'}
-                className={`bg-dark-secondary rounded-xl p-4 border transition-all flex items-start gap-3 group ${style.border} ${isCompleted ? 'opacity-60' : ''}`}
+                className={`bg-dark-secondary rounded-xl p-4 border transition-all flex flex-wrap sm:flex-nowrap items-start gap-x-3 gap-y-3 group ${style.border} ${isCompleted ? 'opacity-60' : ''}`}
               >
                 <span className={`inline-block w-2 h-2 rounded-full mt-2 shrink-0 ${style.dot}`} />
                 <div className="flex-1 min-w-0">
@@ -277,7 +277,7 @@ export default function AttentionPanel({
                   </div>
                   <p className="text-gray text-sm">{item.description}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 self-center">
+                <div className={`flex items-center justify-end gap-3 shrink-0 self-center ${hasQuickAction ? 'basis-full sm:basis-auto' : ''}`}>
                   {hasQuickAction && quickActionHandler && (
                     <button
                       type="button"
@@ -287,7 +287,7 @@ export default function AttentionPanel({
                         quickActionHandler!()
                       }}
                       disabled={isPending || isCompleted}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed ${
+                      className={`text-xs font-bold px-3 py-2 rounded-lg transition-all disabled:cursor-not-allowed ${
                         isCompleted
                           ? 'bg-green/15 text-green border border-green/30'
                           : 'bg-green text-dark hover:opacity-90 disabled:opacity-60'
@@ -296,7 +296,7 @@ export default function AttentionPanel({
                       {quickActionLabel}
                     </button>
                   )}
-                  <span className="text-xs font-bold text-green opacity-60 group-hover:opacity-100 transition-opacity">
+                  <span className="text-xs font-bold text-green opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                     {item.actionLabel} →
                   </span>
                 </div>

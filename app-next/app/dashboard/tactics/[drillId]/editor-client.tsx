@@ -1066,7 +1066,7 @@ export default function EditorClient({
     'copy'
 
   return (
-    <div className="flex flex-col h-screen bg-dark overflow-hidden">
+    <div data-full-height className="flex flex-col h-screen bg-dark overflow-hidden">
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
       <header className="flex-shrink-0 bg-dark-secondary border-b border-white/5">
@@ -1264,7 +1264,7 @@ export default function EditorClient({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                   </svg>
-                  {commentsOpen ? 'Hide Comments' : 'Comments'}
+                  {commentsOpen ? 'Hide comments' : 'Comments'}
                 </button>
               </div>
             )}
@@ -1521,10 +1521,10 @@ export default function EditorClient({
                 <>
                   <div className="fixed inset-0 z-[99]" onClick={() => setFormationMenuOpen(false)} />
                   <div
-                    className="fixed z-[100] bg-[#0f1622] border border-white/15 rounded-lg py-1 shadow-2xl w-40"
+                    className="fixed z-[100] bg-dark-secondary border border-white/15 rounded-lg py-1 shadow-2xl w-40"
                     style={{ top, left: formationAnchor.left }}
                   >
-                    <div className="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-white/60 font-semibold">Formations</div>
+                    <div className="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-gray font-semibold">Formations</div>
                     {FORMATION_NAMES.map((name: FormationName) => (
                       <button
                         key={name}

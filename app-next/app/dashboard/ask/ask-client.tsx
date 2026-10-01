@@ -158,7 +158,7 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Ask about schedule, teams, events..."
+            placeholder="Ask Pep about your team…"
             maxLength={500}
             disabled={loading}
             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray focus:outline-none focus:border-green/50 disabled:opacity-50 transition-colors"

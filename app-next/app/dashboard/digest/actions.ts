@@ -138,7 +138,7 @@ function renderDigestHtml(md: string): string {
     }
     if (line.startsWith('## ')) {
       if (inList) { out.push('</ul>'); inList = false }
-      out.push(`<h3 style="font-size:16px;margin:14px 0 6px;color:#00FF87;">${inline(line.slice(3))}</h3>`)
+      out.push(`<h3 style="font-size:16px;margin:14px 0 6px;color:#1F4E3D;">${inline(line.slice(3))}</h3>`)
       continue
     }
     if (line.startsWith('- ') || line.startsWith('* ')) {

@@ -52,7 +52,7 @@ export default function StripeConnect() {
             disabled={connecting}
             className="bg-[#635BFF] text-white font-semibold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {connecting ? 'Connecting...' : 'Connect Stripe'}
+            {connecting ? 'Connecting…' : 'Connect Stripe'}
           </button>
         )}
       </div>

@@ -27,7 +27,7 @@ export default async function ReadinessPage({
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Readiness</h1>
+        <h1 className="text-3xl font-black tracking-tight">Readiness</h1>
         <p className="text-sm text-gray mt-1">
           Daily player check-ins: sleep, soreness, energy and availability, plus who you can pick for the next game.
         </p>

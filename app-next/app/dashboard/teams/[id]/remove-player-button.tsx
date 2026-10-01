@@ -27,7 +27,7 @@ export default function RemovePlayerButton({ playerId, teamId }: { playerId: str
     <button
       onClick={handleRemove}
       disabled={isPending}
-      className="text-xs text-red hover:opacity-80 transition-opacity disabled:opacity-50"
+      className="text-xs text-red hover:opacity-80 transition-opacity disabled:opacity-50 py-2 -my-2"
     >
       {isPending ? '...' : 'Remove'}
     </button>

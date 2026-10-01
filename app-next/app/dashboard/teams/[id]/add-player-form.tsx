@@ -124,7 +124,7 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
         onClick={() => setOpen(true)}
         className="text-sm font-bold text-green hover:opacity-80 transition-opacity"
       >
-        + Add Player
+        + Add player
       </button>
     )
   }
@@ -174,7 +174,7 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
           disabled={isPending}
           className="text-xs font-bold bg-green text-dark px-4 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
         >
-          {isPending ? 'Adding...' : 'Add Player'}
+          {isPending ? 'Adding…' : 'Add player'}
         </button>
       </div>
     </form>

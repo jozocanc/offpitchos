@@ -68,7 +68,7 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
           disabled={isPending}
           className="text-xs font-bold bg-green text-dark px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
         >
-          {isPending ? 'Saving...' : 'Save'}
+          {isPending ? 'Saving…' : 'Save'}
         </button>
         <button
           onClick={() => { setEditing(false); setDraftName(name); setDraftAge(ageGroup) }}

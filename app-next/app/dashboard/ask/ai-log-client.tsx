@@ -40,13 +40,13 @@ export default function AiLogClient() {
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
         </svg>
-        {showLog ? 'Hide' : 'View'} Pep Chat Log
+        {showLog ? 'Hide' : 'View'} Pep chat log
       </button>
 
       {showLog && (
         <div className="mt-4 bg-white/5 border border-white/10 rounded-xl max-h-96 overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-gray text-sm">Loading log...</div>
+            <div className="p-4 text-gray text-sm">Loading log…</div>
           ) : entries.length === 0 ? (
             <div className="p-4 text-gray text-sm">No Pep chats yet.</div>
           ) : (

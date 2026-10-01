@@ -153,7 +153,7 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
           disabled={saving}
           className="w-full bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 mb-6"
         >
-          {saving ? 'Saving...' : 'Save Details'}
+          {saving ? 'Saving…' : 'Save details'}
         </button>
 
         {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
@@ -188,7 +188,7 @@ export default function CampDetailModal({ camp, onClose }: { camp: Camp; onClose
           )}
 
           {loading ? (
-            <p className="text-sm text-gray">Loading...</p>
+            <p className="text-sm text-gray">Loading…</p>
           ) : registrations.length === 0 ? (
             <p className="text-sm text-gray">No registrations yet.</p>
           ) : (

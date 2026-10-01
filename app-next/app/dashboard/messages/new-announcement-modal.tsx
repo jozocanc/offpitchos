@@ -98,7 +98,7 @@ export default function NewAnnouncementModal({
   }
 
   return (
-    <Modal title={isPlayer ? 'Message Coach' : 'New Announcement'} onClose={onClose} size="lg" dismissible={!isPending}>
+    <Modal title={isPlayer ? 'Message the staff' : 'New announcement'} onClose={onClose} size="lg" dismissible={!isPending}>
       <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
         <label htmlFor="ann-team" className="block text-sm font-medium text-gray mb-2">
           {isPlayer ? 'Which team?' : 'Audience'}
@@ -109,7 +109,7 @@ export default function NewAnnouncementModal({
           onChange={e => setTeamId(e.target.value)}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-2"
         >
-          {isDoc && <option value="">All Teams</option>}
+          {isDoc && <option value="">All teams</option>}
           {teams.map(t => (
             <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
           ))}
@@ -146,7 +146,7 @@ export default function NewAnnouncementModal({
           id="ann-body"
           value={body}
           onChange={e => setBody(e.target.value)}
-          placeholder={isPlayer ? 'Write your message to the coach...' : 'Write your announcement...'}
+          placeholder={isPlayer ? 'Write your message to the staff…' : 'Write your announcement…'}
           rows={4}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-2 resize-none"
         />
@@ -184,7 +184,7 @@ export default function NewAnnouncementModal({
             disabled={isPending}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? (isPlayer ? 'Sending…' : 'Posting…') : isPlayer ? 'Send Message' : 'Post Announcement'}
+            {isPending ? (isPlayer ? 'Sending…' : 'Posting…') : isPlayer ? 'Send message' : 'Post announcement'}
           </button>
         </div>
       </form>

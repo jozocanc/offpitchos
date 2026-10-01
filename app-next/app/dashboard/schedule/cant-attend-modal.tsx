@@ -85,7 +85,7 @@ export default function CantAttendModal({ eventId, userProfileId, userRole, onCl
 
   return (
     <Modal
-      title="Can't Attend"
+      title="Can't attend"
       onClose={onClose}
       dismissible={!isPending}
       description={isCoach

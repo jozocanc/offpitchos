@@ -56,7 +56,7 @@ export default function AcceptCodeButton({
         disabled={isPending}
         className="block w-full text-center bg-green text-dark font-bold py-3 px-4 rounded-xl uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-60"
       >
-        {isPending ? 'Joining...' : 'Join Team'}
+        {isPending ? 'Joining…' : 'Join team'}
       </button>
     </div>
   )

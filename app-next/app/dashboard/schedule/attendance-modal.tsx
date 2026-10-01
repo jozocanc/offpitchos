@@ -183,7 +183,7 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                   disabled={isPending}
                   className="text-xs font-medium text-green border border-green/20 px-3 py-1 rounded-lg hover:bg-green/10 transition-colors"
                 >
-                  All Present
+                  All present
                 </button>
                 <button
                   type="button"
@@ -191,7 +191,7 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                   disabled={isPending}
                   className="text-xs font-medium text-red border border-red/20 px-3 py-1 rounded-lg hover:bg-red/10 transition-colors"
                 >
-                  All Absent
+                  All absent
                 </button>
               </div>
             </div>

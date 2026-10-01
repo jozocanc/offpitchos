@@ -99,6 +99,11 @@ export default async function MatchSheetPage({ params }: { params: Promise<{ tok
     ? sheet.club_name
     : `${sheet.club_name} ${sheet.team_name}`.trim()
   const typeLabel = EVENT_TYPE_LABELS[sheet.event_type as EventType] ?? 'Game'
+  // Game titles are written from the home side ("vs Opponent"). The visitor
+  // reading this page is that opponent, so name both teams instead of
+  // echoing the home staff's shorthand.
+  const opponent = sheet.event_title.trim().match(/^(?:vs\.?|v\.?)\s+(.+)$/i)?.[1] ?? null
+  const heading = opponent ? `${homeName} vs ${opponent}` : sheet.event_title
 
   return (
     <div className="min-h-screen bg-dark text-white">
@@ -107,11 +112,11 @@ export default async function MatchSheetPage({ params }: { params: Promise<{ tok
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-green">
             Match day info for the visiting team
           </p>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.03em] mt-3 leading-tight">
-            {sheet.event_title}
+          <h1 className="text-[1.75rem] sm:text-[2rem] font-semibold tracking-[-0.03em] mt-3 leading-tight text-balance">
+            {heading}
           </h1>
           <p className="text-gray text-sm mt-2">
-            {homeName} <span className="text-gray/70">vs</span> Visiting team
+            {typeLabel} hosted by {homeName}
           </p>
         </header>
 

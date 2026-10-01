@@ -174,7 +174,7 @@ export default function ParentCantAttendModal({
               disabled={!canSubmit}
               className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              Notify Coach
+              Notify the staff
             </button>
           )}
         </div>

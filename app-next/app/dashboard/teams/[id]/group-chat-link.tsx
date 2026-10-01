@@ -73,7 +73,7 @@ export default function GroupChatLink({
               disabled={isPending}
               className="text-xs font-bold bg-green text-dark px-3 py-1 rounded-md hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? 'Saving...' : 'Save'}
+              {isPending ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>

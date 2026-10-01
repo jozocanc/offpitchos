@@ -662,7 +662,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
       {phase === 'reading' && (
         <div className="py-10 text-center" aria-live="polite">
           <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-green/20 border-t-green animate-spin" aria-hidden="true" />
-          <p className="font-bold text-white">Reading the report...</p>
+          <p className="font-bold text-white">Reading the report…</p>
           <p className="text-gray text-sm mt-1">Finding your players and their numbers. This takes up to a minute.</p>
         </div>
       )}
@@ -1065,7 +1065,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                   disabled={saving}
                   className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : 'Save to player profiles'}
+                  {saving ? 'Saving…' : 'Save to player profiles'}
                 </button>
               </div>
             </div>

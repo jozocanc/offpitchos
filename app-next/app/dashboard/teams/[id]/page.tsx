@@ -451,7 +451,7 @@ export default async function TeamDetailPage({
         {isDOC && <div>
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Share Invite Link</h2>
+              <h2 className="text-lg font-bold">Share invite link</h2>
               <GenerateInviteButton teamId={team.id} />
             </div>
             <p className="text-gray text-sm mb-5">
@@ -460,7 +460,7 @@ export default async function TeamDetailPage({
 
             {!playerInvites || playerInvites.length === 0 ? (
               <div className="bg-dark rounded-xl p-4 text-center border border-white/5">
-                <p className="text-gray text-sm">No active invite links. Click &quot;Generate Invite Link&quot; to create one.</p>
+                <p className="text-gray text-sm">No active invite links. Click &quot;Generate invite link&quot; to create one.</p>
               </div>
             ) : (
               <div className="space-y-3">

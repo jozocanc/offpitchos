@@ -21,8 +21,8 @@ export default function AccountSettings({ clubName, displayName, email, isDOC, r
     <>
       {/* Program info (stored on the clubs table) */}
       <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
-        <h2 className="text-lg font-bold mb-1">Program</h2>
-        <p className="text-gray text-xs mb-4">
+        <h2 className="text-lg font-bold mb-2">Program</h2>
+        <p className="text-gray text-sm mb-4">
           The name your staff and players see, e.g. Tyler Junior College Men&apos;s Soccer.
         </p>
         <div className="space-y-4">

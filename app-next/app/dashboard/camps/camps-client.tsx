@@ -7,6 +7,7 @@ import CampDetailModal from './camp-detail-modal'
 import RegisterModal from './register-modal'
 import CreateCampModal from './create-camp-modal'
 import { isStaff } from '@/lib/constants'
+import EmptyState from '@/components/empty-state'
 
 interface Camp {
   eventId: string
@@ -88,7 +89,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
             onClick={() => setCreateOpen(true)}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
-            + Create Camp
+            + Create camp
           </button>
         </div>
       )}
@@ -100,11 +101,11 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
       {isDoc && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
-            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total Registrations</p>
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Registrations</p>
             <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{totalRegistered}</p>
           </div>
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
-            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Expected Revenue</p>
+            <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Expected revenue</p>
             <p className="text-xl sm:text-2xl lg:text-3xl font-black text-green truncate tabular-nums">{formatCurrency(totalExpected)}</p>
           </div>
           <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
@@ -126,9 +127,14 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
       )}
 
       {/* Upcoming camps */}
-      <h2 className="text-lg font-bold text-white mb-4">Upcoming Camps ({upcoming.length})</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Upcoming camps ({upcoming.length})</h2>
       {upcoming.length === 0 ? (
-        <p className="text-gray text-sm mb-8">No upcoming camps.</p>
+        <EmptyState
+          title="No upcoming camps"
+          body={isDoc ? 'Create a camp to take registrations and track payments.' : undefined}
+          className="mb-8"
+          compact
+        />
       ) : (
         <div className="space-y-3 mb-8">
           {upcoming.map(camp => (
@@ -148,7 +154,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
       {/* Past camps */}
       {past.length > 0 && (
         <>
-          <h2 className="text-lg font-bold text-white mb-4">Past Camps ({past.length})</h2>
+          <h2 className="text-lg font-bold text-white mb-4">Past camps ({past.length})</h2>
           <div className="space-y-3 mb-8 opacity-60">
             {past.map(camp => (
               <CampCard
@@ -283,7 +289,7 @@ function CampCard({ camp, isDoc, isMemberView, now, onManage, onRegister }: {
             }}
             className="text-xs text-green bg-green/10 border border-green/20 px-3 py-1.5 rounded-lg hover:bg-green/20 transition-colors"
           >
-            Share Link
+            Share link
           </button>
         )}
         {isDoc && (

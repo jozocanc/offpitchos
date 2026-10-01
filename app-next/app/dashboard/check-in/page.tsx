@@ -14,7 +14,7 @@ export default async function CheckinPage() {
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Check-in</h1>
+        <h1 className="text-3xl font-black tracking-tight">Check-in</h1>
         <p className="text-sm text-gray mt-1">
           {state.today ? formatDayKeyLong(state.today) : 'Daily readiness for the staff.'}
         </p>

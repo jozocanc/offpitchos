@@ -11,7 +11,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <Link href="/" className="text-green hover:underline text-sm">← Back</Link>
 
-        <h1 className="text-4xl font-black uppercase tracking-tight mt-6 mb-2">Terms of Service</h1>
+        <h1 className="text-4xl font-semibold tracking-[-0.03em] mt-6 mb-2">Terms of Service</h1>
         <p className="text-gray text-sm mb-10">Last updated: September 28, 2026</p>
 
         <div className="space-y-8 text-white/90 leading-relaxed">

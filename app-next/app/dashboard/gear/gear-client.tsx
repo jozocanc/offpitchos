@@ -206,7 +206,7 @@ export default function GearClient({
               className={`${hasAccounts ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10' : 'bg-green text-dark hover:opacity-90'} font-bold px-4 py-2 rounded-xl text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2`}
               title="Copy one private link per player to send them directly"
             >
-              {copiedLinks ? '✓ Copied' : '🔗 Copy player links'}
+              {copiedLinks ? '✓ Copied' : <><span aria-hidden="true">🔗</span>Copy player links</>}
               {totalMissing > 0 && (
                 <span className={`${hasAccounts ? 'bg-white/10 text-white' : 'bg-dark/20 text-dark'} px-1.5 py-0.5 rounded text-[10px] font-bold`}>{totalMissing}</span>
               )}
@@ -230,7 +230,7 @@ export default function GearClient({
                 </>
               ) : (
                 <>
-                  📨 Request sizes from players
+                  <span aria-hidden="true">📨</span>Request sizes from players
                   {totalMissing > 0 && <span className="bg-dark/20 text-dark px-1.5 py-0.5 rounded text-[10px] font-bold">{totalMissing}</span>}
                 </>
               )}
@@ -238,9 +238,9 @@ export default function GearClient({
             <button
               onClick={handleCopyOrder}
               disabled={totalPlayers - totalMissing === 0}
-              className="bg-white/5 text-white border border-white/10 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="bg-white/5 text-white border border-white/10 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
-              {copied ? '✓ Copied' : '📋 Copy order to clipboard'}
+              {copied ? '✓ Copied' : <><span aria-hidden="true">📋</span>Copy order to clipboard</>}
             </button>
           </div>
 
@@ -280,16 +280,16 @@ export default function GearClient({
       {/* Club-wide summary */}
       {isDoc && (
         <div className="mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-3 sm:p-5 min-w-0">
               <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Total players</p>
               <p className="text-xl sm:text-2xl lg:text-3xl font-black text-white truncate tabular-nums">{totalPlayers}</p>
             </div>
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-3 sm:p-5 min-w-0">
               <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Sizes submitted</p>
               <p className="text-xl sm:text-2xl lg:text-3xl font-black text-green truncate tabular-nums">{totalPlayers - totalMissing}</p>
             </div>
-            <div className="bg-dark-secondary border border-white/5 rounded-xl p-4 sm:p-5 min-w-0">
+            <div className="bg-dark-secondary border border-white/5 rounded-xl p-3 sm:p-5 min-w-0">
               <p className="text-xs sm:text-sm text-gray mb-1 leading-tight min-h-[2.4em] line-clamp-2">Missing sizes</p>
               <p className={`text-xl sm:text-2xl lg:text-3xl font-black truncate tabular-nums ${totalMissing > 0 ? 'text-yellow-400' : 'text-white'}`}>{totalMissing}</p>
             </div>
@@ -313,8 +313,8 @@ export default function GearClient({
 
           {/* Club-wide size breakdown */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <SizeBreakdownCard title="Jersey sizes (all teams)" breakdown={clubJerseys} />
-            <SizeBreakdownCard title="Shorts sizes (all teams)" breakdown={clubShorts} />
+            <SizeBreakdownCard title="Jersey sizes (all teams)" breakdown={clubJerseys} onPage />
+            <SizeBreakdownCard title="Shorts sizes (all teams)" breakdown={clubShorts} onPage />
           </div>
         </div>
       )}
@@ -390,7 +390,9 @@ export default function GearClient({
   )
 }
 
-function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Record<string, number> }) {
+// onPage: sits straight on the cream page (program totals), so it needs the
+// white card surface; inside a team card the cream inset reads fine.
+function SizeBreakdownCard({ title, breakdown, onPage = false }: { title: string; breakdown: Record<string, number>; onPage?: boolean }) {
   const sorted = Object.entries(breakdown).sort((a, b) => {
     const order = JERSEY_SIZES
     return order.indexOf(a[0]) - order.indexOf(b[0])
@@ -398,7 +400,7 @@ function SizeBreakdownCard({ title, breakdown }: { title: string; breakdown: Rec
   const maxCount = Math.max(0, ...sorted.map(([, c]) => c))
 
   return (
-    <div className="bg-dark rounded-lg p-3">
+    <div className={onPage ? 'bg-dark-secondary border border-white/5 rounded-xl p-4' : 'bg-dark rounded-lg p-3'}>
       <p className="text-xs text-gray font-semibold mb-2">{title}</p>
       {sorted.length === 0 ? (
         <p className="text-xs text-gray">No data yet</p>
