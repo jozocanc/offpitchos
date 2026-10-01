@@ -21,7 +21,7 @@ import {
   type Lineup,
   type PlanPlayer,
 } from '@/lib/game-plan'
-import { FullPitchMarkings, PlayerToken, useBoardDrag } from './pitch'
+import { FullPitchMarkings, PITCH_FRAME_CLASS, PITCH_FRAME_STYLE, PlayerToken, useBoardDrag } from './pitch'
 import PlayerPicker, { AvailabilityBadge } from './player-picker'
 
 type Picker =
@@ -50,7 +50,7 @@ export function LineupPitch({
   const drag = useBoardDrag(boardRef)
   const editable = Boolean(onSlotTap)
   return (
-    <div className="mx-auto w-full max-w-[440px] p-3">
+    <div className={`mx-auto w-full max-w-[440px] ${PITCH_FRAME_CLASS}`} style={PITCH_FRAME_STYLE}>
       <div ref={boardRef} className="relative w-full" style={{ aspectRatio: '68 / 105' }}>
         <FullPitchMarkings />
         {doc.lineup.slots.map(slot => {
@@ -236,7 +236,7 @@ export default function LineupEditor({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:items-start">
-        <div className="rounded-2xl border border-black/10 bg-dark-secondary">
+        <div className="rounded-2xl border border-black/10 bg-dark-secondary p-3">
           <LineupPitch
             doc={doc}
             playersById={playersById}
@@ -246,7 +246,7 @@ export default function LineupEditor({
               setLineup(l => ({ ...l, slots: l.slots.map(s => (s.slot_id === slotId ? { ...s, x, y } : s)) }))
             }
           />
-          <p className="px-4 pb-3 text-center text-xs text-gray">
+          <p className="px-2 pt-3 text-center text-xs text-gray">
             Tap a circle to pick a player. Drag it to fine-tune the position.
           </p>
         </div>

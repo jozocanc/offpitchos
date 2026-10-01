@@ -14,6 +14,14 @@ export const PITCH_LINE = '#f5f5f0'
 const W = 68
 const L = 105
 
+/**
+ * Green surround for a board. The markings used to paint grass a few metres
+ * past the viewBox with overflow visible, which spilled out of the card over
+ * the text below. The padding here holds the goals and edge labels instead.
+ */
+export const PITCH_FRAME_CLASS = 'rounded-xl p-3 sm:p-4'
+export const PITCH_FRAME_STYLE = { background: `linear-gradient(180deg, ${'#2d6e42'}, ${'#1f5a36'})` }
+
 /** Portrait full pitch, our goal at the bottom. viewBox in metres. */
 export function FullPitchMarkings() {
   const box = { x: (W - 40.32) / 2, w: 40.32, d: 16.5 }
@@ -27,7 +35,7 @@ export function FullPitchMarkings() {
           <stop offset="1" stopColor={PITCH_GREEN_DARK} />
         </linearGradient>
       </defs>
-      <rect x={-3} y={-3} width={W + 6} height={L + 6} rx={2} fill="url(#gp-grass)" />
+      <rect x={0} y={0} width={W} height={L} fill="url(#gp-grass)" />
       {Array.from({ length: 7 }, (_, i) => (
         <rect key={i} x={0} y={i * 15} width={W} height={7.5} fill="#ffffff" opacity={0.035} />
       ))}
@@ -74,7 +82,7 @@ export function BoxMarkings() {
           <stop offset="1" stopColor={PITCH_GREEN_DARK} />
         </linearGradient>
       </defs>
-      <rect x={-2} y={-3} width={W + 4} height={D + 3} rx={1.5} fill="url(#gp-box-grass)" />
+      <rect x={0} y={0} width={W} height={D} fill="url(#gp-box-grass)" />
       <g fill="none" stroke={PITCH_LINE} strokeWidth={0.3} strokeLinecap="round">
         <line x1={0} y1={0} x2={W} y2={0} />
         <line x1={0} y1={0} x2={0} y2={D} />
@@ -207,15 +215,15 @@ export function PlayerToken({
         )}
       </span>
       <span
-        className={`max-w-[76px] truncate text-center font-semibold leading-tight ${size === 'sm' ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-[11px]'}`}
-        style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
+        className={`max-w-[84px] truncate rounded-md px-1.5 py-px text-center font-semibold leading-tight ${size === 'sm' ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-[11px]'}`}
+        style={{ color: '#ffffff', background: 'rgba(10, 28, 18, 0.55)' }}
       >
         {empty ? (label ?? '') : name}
       </span>
       {label && !empty && size === 'sm' && (
         <span
-          className="max-w-[80px] truncate text-center text-[8px] font-medium uppercase leading-none tracking-wide sm:text-[9px]"
-          style={{ color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 2px rgba(0,0,0,0.85)' }}
+          className="max-w-[84px] truncate rounded px-1 py-px text-center text-[8px] font-medium uppercase leading-none tracking-wide sm:text-[9px]"
+          style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(10, 28, 18, 0.45)' }}
         >
           {label}
         </span>

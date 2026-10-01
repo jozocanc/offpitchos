@@ -16,7 +16,7 @@ import {
   type SetPieceKey,
   type SetPieceMarker,
 } from '@/lib/game-plan'
-import { BoxMarkings, PlayerToken, useBoardDrag } from './pitch'
+import { BoxMarkings, PITCH_FRAME_CLASS, PITCH_FRAME_STYLE, PlayerToken, useBoardDrag } from './pitch'
 import PlayerPicker from './player-picker'
 
 const ARROW_COLOR = '#ffffff'
@@ -107,7 +107,7 @@ export function SetPieceBoard({
   const arrows = preview ? [...setPiece.arrows, { id: '__preview', ...preview }] : setPiece.arrows
 
   return (
-    <div className="w-full px-2 pb-2 pt-4">
+    <div className={`w-full ${PITCH_FRAME_CLASS} pt-5`} style={PITCH_FRAME_STYLE}>
       <div
         ref={boardRef}
         className={`relative w-full ${drawing ? 'cursor-crosshair touch-none' : ''}`}
