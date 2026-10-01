@@ -5,7 +5,7 @@ import EmptyState from '@/components/empty-state'
 import { useClubTimezone } from '@/components/club-timezone'
 import { dayKey, daysFromToday, formatDayKeyLong } from '@/lib/format-datetime'
 import type { EventTravelFields } from '@/lib/travel'
-import type { GameScore } from './game-report-actions'
+import type { GameReportChip } from './game-report-actions'
 
 interface Event extends EventTravelFields {
   id: string
@@ -51,8 +51,8 @@ interface AgendaViewProps {
   showRsvpTally?: boolean
   matchSheets?: Record<string, boolean>
   /** Saved game scores by event id (057), staff only. */
-  gameScores?: Record<string, GameScore>
-  onGameStatsSaved?: (eventId: string, score: GameScore | null) => void
+  gameScores?: Record<string, GameReportChip>
+  onGameStatsSaved?: (eventId: string, chip: GameReportChip | null) => void
   /** Player's own answers. undefined = still loading (cards hold space). */
   myRsvps?: Record<string, 'going' | 'not_going'>
   pendingRsvpIds?: Set<string>

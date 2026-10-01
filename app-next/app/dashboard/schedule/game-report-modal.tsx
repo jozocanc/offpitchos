@@ -5,25 +5,36 @@ import Modal from '@/components/modal'
 import { Skeleton } from '@/components/skeleton'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast, networkErrorMessage } from '@/components/toast'
+import { useClubTimezone } from '@/components/club-timezone'
 import { createClient } from '@/lib/supabase/client'
+import { formatMonthDay, formatTime } from '@/lib/format-datetime'
 import {
   MAX_REPORT_BYTES,
   REPORT_ACCEPT,
   SUPPORTED_TYPES_LABEL,
+  blankDraftRow,
+  blankManualDraft,
+  draftFromSaved,
+  draftRowFromExtracted,
   formatResult,
   isGoalkeeper,
+  type DraftRow,
   type ExtractedPlayerRow,
+  type GameReportDraft,
   type GameStatInput,
-  type MatchConfidence,
   type RosterPlayer,
 } from '@/lib/game-stats'
 import {
   confirmGameReport,
   createGameReportUpload,
   deleteGameReport,
+  discardGameReportChanges,
   getGameReportContext,
+  saveGameReportDraft,
   saveManualStats,
+  startManualGameReport,
   uploadAndParseGameReport,
+  type GameReportChip,
   type GameReportContext,
   type GameReportView,
   type GameScore,
@@ -32,15 +43,16 @@ import {
 interface Props {
   eventId: string
   eventTitle: string
-  /** Score shown on the card right now, restored if a save fails. */
-  currentScore?: GameScore | null
+  /** Chip shown on the card right now, restored if a save fails. */
+  currentScore?: GameReportChip | null
   onClose: () => void
-  /** New score after a save (null after the stats are deleted). */
-  onSaved: (score: GameScore | null) => void
+  /** New chip state after a save, autosave, discard or delete (null = no report). */
+  onSaved: (chip: GameReportChip | null) => void
 }
 
 type Phase = 'loading' | 'load-error' | 'pick' | 'reading' | 'review'
-type Mode = 'draft' | 'confirmed' | 'manual'
+type Origin = GameReportDraft['origin']
+type AutosaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const NUM_FIELDS = [
   'minutes', 'goals', 'assists', 'shots', 'shots_on_goal', 'yellow_cards', 'red_cards', 'saves', 'goals_against',
@@ -59,66 +71,22 @@ const COLUMNS: { key: NumField; label: string; title: string }[] = [
   { key: 'goals_against', label: 'GA', title: 'Goals against (keepers)' },
 ]
 
-interface RowSource {
-  name: string
-  jersey: number | null
-  confidence: MatchConfidence
-  reason: string
-  uncertain: string[]
-}
+const AUTOSAVE_MS = 1000
 
-type EditRow = { key: string; player_id: string; started: boolean; source?: RowSource } & Record<NumField, string>
+type RowSource = NonNullable<DraftRow['source']>
+type EditRow = DraftRow & { key: string }
 
 interface PendingRow { key: string; row: ExtractedPlayerRow }
 
 let keySeq = 0
 const nextKey = () => `r${++keySeq}`
 
-function str(v: number | null | undefined): string {
-  return v == null ? '' : String(v)
+function toEdit(r: DraftRow): EditRow {
+  return { ...r, key: nextKey() }
 }
 
-function rowFromExtracted(row: ExtractedPlayerRow, playerId: string, source?: RowSource): EditRow {
-  return {
-    key: nextKey(),
-    player_id: playerId,
-    started: row.started === true,
-    minutes: str(row.minutes),
-    goals: str(row.goals),
-    assists: str(row.assists),
-    shots: str(row.shots),
-    shots_on_goal: str(row.shots_on_goal),
-    yellow_cards: str(row.yellow_cards),
-    red_cards: str(row.red_cards),
-    saves: str(row.saves),
-    goals_against: str(row.goals_against),
-    source,
-  }
-}
-
-function rowFromSaved(r: GameStatInput): EditRow {
-  return {
-    key: nextKey(),
-    player_id: r.player_id,
-    started: r.started,
-    minutes: str(r.minutes),
-    goals: str(r.goals),
-    assists: str(r.assists),
-    shots: str(r.shots),
-    shots_on_goal: str(r.shots_on_goal),
-    yellow_cards: str(r.yellow_cards),
-    red_cards: str(r.red_cards),
-    saves: str(r.saves),
-    goals_against: str(r.goals_against),
-  }
-}
-
-function blankRow(playerId: string): EditRow {
-  return {
-    key: nextKey(), player_id: playerId, started: false,
-    minutes: '', goals: '', assists: '', shots: '', shots_on_goal: '',
-    yellow_cards: '', red_cards: '', saves: '', goals_against: '',
-  }
+function toDraftRow({ key: _key, ...r }: EditRow): DraftRow {
+  return r
 }
 
 function isBlank(r: EditRow): boolean {
@@ -126,7 +94,7 @@ function isBlank(r: EditRow): boolean {
 }
 
 /** Needs a second look: matched by name only, number/name disagree, or low confidence. */
-function matchNeedsCheck(s: RowSource | undefined): boolean {
+function matchNeedsCheck(s: RowSource | null | undefined): boolean {
   if (!s) return false
   return s.confidence !== 'high' || !s.reason.startsWith('#')
 }
@@ -156,11 +124,16 @@ function parseScore(v: string): number | null | 'bad' {
   return Number.isInteger(n) && n >= 0 && n <= 99 ? n : 'bad'
 }
 
+function errMessage(e: unknown): string {
+  return e instanceof Error && e.message && e.message !== 'Failed to fetch' ? e.message : networkErrorMessage()
+}
+
 const cellInput =
   'w-11 bg-dark border rounded-md px-1 py-1.5 text-center text-sm text-white tabular-nums focus:outline-none focus:border-green transition-colors'
 
 export default function GameReportModal({ eventId, eventTitle, currentScore, onClose, onSaved }: Props) {
   const { toast } = useToast()
+  const timezone = useClubTimezone()
   const { confirm: rawConfirm, dialog } = useConfirm()
   // While a confirm is up, Escape/backdrop must not close this modal too.
   const [confirming, setConfirming] = useState(false)
@@ -172,49 +145,157 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [ctx, setCtx] = useState<GameReportContext | null>(null)
-  const [mode, setMode] = useState<Mode>('manual')
-  const [view, setView] = useState<GameReportView | null>(null)
+  /** The game's one report as last loaded (null before anything exists). */
+  const [report, setReport] = useState<GameReportView | null>(null)
+  /** Set as soon as a row exists, even before `report` (manual autosave). */
+  const [reportId, setReportId] = useState<string | null>(null)
+  const [origin, setOrigin] = useState<Origin>('manual')
   const [rows, setRows] = useState<EditRow[]>([])
   const [pending, setPending] = useState<PendingRow[]>([])
   const [teamScore, setTeamScore] = useState('')
   const [oppScore, setOppScore] = useState('')
+  /** Unsaved changes exist (draft_rows set, or about to be). */
+  const [hasDraft, setHasDraft] = useState(false)
+  const [autosave, setAutosave] = useState<AutosaveState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
   const [showMissing, setShowMissing] = useState(false)
+  const [dirtyRev, setDirtyRev] = useState(0)
 
   const roster = useMemo(() => ctx?.roster ?? [], [ctx])
   const rosterById = useMemo(() => new Map(roster.map(p => [p.id, p])), [roster])
 
-  function openReview(v: GameReportView | null, m: Mode, c: GameReportContext) {
-    setMode(m)
-    setView(v)
+  const status: 'parsed' | 'confirmed' = report?.status ?? 'parsed'
+  const savedScore: GameScore | null = report?.savedScore ?? null
+
+  // ── Autosave plumbing ─────────────────────────────────────────────────────
+  // Edits mark the table dirty; a 1s debounce (and closing) writes the draft.
+  // Saves run one at a time through queueRef so they land in order, and
+  // save/discard/upload wait for the queue before touching the report.
+
+  const latest = useRef({ rows, pending, teamScore, oppScore, origin })
+  useEffect(() => {
+    latest.current = { rows, pending, teamScore, oppScore, origin }
+  }, [rows, pending, teamScore, oppScore, origin])
+  const reportIdRef = useRef<string | null>(null)
+  useEffect(() => { reportIdRef.current = reportId }, [reportId])
+  const statusRef = useRef(status)
+  useEffect(() => { statusRef.current = status }, [status])
+  const savedScoreRef = useRef(savedScore)
+  useEffect(() => { savedScoreRef.current = savedScore }, [savedScore])
+
+  const dirtyRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queueRef = useRef<Promise<void>>(Promise.resolve())
+  const closedRef = useRef(false)
+
+  function chip(st: 'parsed' | 'confirmed', score: GameScore | null, edited: boolean): GameReportChip {
+    return { status: st, teamScore: score?.teamScore ?? null, opponentScore: score?.opponentScore ?? null, edited }
+  }
+
+  function touch() {
+    dirtyRef.current = true
+    setHasDraft(true)
+    setDirtyRev(n => n + 1)
+  }
+
+  function flush(): Promise<void> {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+    if (!dirtyRef.current) return queueRef.current
+    dirtyRef.current = false
+    const l = latest.current
+    const draft: GameReportDraft = {
+      origin: l.origin,
+      rows: l.rows.map(toDraftRow),
+      pending: l.pending.map(p => p.row),
+      teamScore: l.teamScore,
+      opponentScore: l.oppScore,
+    }
+    const run = async () => {
+      if (!closedRef.current) setAutosave('saving')
+      try {
+        const id = reportIdRef.current
+        if (id) {
+          const res = await saveGameReportDraft(id, draft)
+          if (!res.ok) throw new Error(res.error)
+        } else {
+          const res = await startManualGameReport(eventId, draft)
+          if (!res.ok) throw new Error(res.error)
+          reportIdRef.current = res.data.reportId
+          if (!closedRef.current) setReportId(res.data.reportId)
+        }
+        if (!closedRef.current) setAutosave('saved')
+        onSaved(chip(statusRef.current, savedScoreRef.current, true))
+      } catch (e) {
+        dirtyRef.current = true
+        if (closedRef.current) toast(`Draft not saved: ${errMessage(e)}`, 'error')
+        else setAutosave('error')
+      }
+    }
+    queueRef.current = queueRef.current.then(run)
+    return queueRef.current
+  }
+
+  /** Drop any pending autosave and wait for one in flight. */
+  async function settleAutosave() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+    dirtyRef.current = false
+    await queueRef.current
+  }
+
+  useEffect(() => {
+    if (dirtyRev === 0) return
+    const t = setTimeout(() => { timerRef.current = null; void flush() }, AUTOSAVE_MS)
+    timerRef.current = t
+    return () => clearTimeout(t)
+    // flush reads refs only; re-arming on dirtyRev is the debounce.
+  }, [dirtyRev])
+
+  function handleClose() {
+    closedRef.current = true
+    void flush()
+    onClose()
+  }
+
+  // ── Loading the table ─────────────────────────────────────────────────────
+
+  function loadDraft(d: GameReportDraft) {
+    setOrigin(d.origin)
+    setRows(d.rows.map(toEdit))
+    setPending(d.pending.map(row => ({ key: nextKey(), row })))
+    setTeamScore(d.teamScore)
+    setOppScore(d.opponentScore)
+  }
+
+  /** Show a report: its draft if there are unsaved changes, else the saved stats. */
+  function openReport(v: GameReportView, c: GameReportContext) {
+    setReport(v)
+    setReportId(v.reportId)
     setError(null)
     setShowOriginal(false)
     setShowMissing(false)
-    if (m === 'manual') {
-      setRows(c.roster.map(p => blankRow(p.id)))
-      setPending([])
-      setTeamScore('')
-      setOppScore('')
-    } else if (v && m === 'confirmed') {
-      setRows((v.savedRows ?? []).map(rowFromSaved))
-      setPending([])
-      setTeamScore(str(v.teamScore))
-      setOppScore(str(v.opponentScore))
-    } else if (v) {
-      setRows(v.matched.map(mr => rowFromExtracted(mr.row, mr.player_id, {
-        name: mr.row.name,
-        jersey: mr.row.jersey_number,
-        confidence: mr.confidence,
-        reason: mr.reason,
-        uncertain: mr.row.uncertain_fields ?? [],
-      })))
-      setPending(v.unmatched.map(row => ({ key: nextKey(), row })))
-      setTeamScore(str(v.teamScore))
-      setOppScore(str(v.opponentScore))
+    setAutosave('idle')
+    if (v.draft) {
+      loadDraft(v.draft)
+      setHasDraft(true)
+    } else {
+      loadDraft(v.savedRows
+        ? draftFromSaved(v.savedRows, v.savedScore?.teamScore ?? null, v.savedScore?.opponentScore ?? null)
+        : blankManualDraft(c.roster))
+      setHasDraft(false)
     }
+    setPhase('review')
+  }
+
+  function startManual(c: GameReportContext) {
+    setReport(null)
+    setReportId(null)
+    setError(null)
+    setAutosave('idle')
+    setHasDraft(false)
+    loadDraft(blankManualDraft(c.roster))
     setPhase('review')
   }
 
@@ -225,10 +306,9 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
         if (cancelled) return
         if (!res.ok) { setError(res.error); setPhase('load-error'); return }
         setCtx(res.data)
-        // Reopen where staff left off: an unreviewed draft first, then the
-        // saved stats for editing, else the upload screen.
-        if (res.data.draft) openReview(res.data.draft, 'draft', res.data)
-        else if (res.data.confirmed) openReview(res.data.confirmed, 'confirmed', res.data)
+        // One report per game: open it straight on the table, else the
+        // upload / manual screen.
+        if (res.data.report) openReport(res.data.report, res.data)
         else setPhase('pick')
       })
       .catch(() => {
@@ -248,16 +328,11 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
       setError('That file is over 10 MB. Upload a smaller copy or just the box score page.')
       return
     }
-    if (ctx.confirmed) {
-      const ok = await confirm({
-        title: 'Replace the saved stats?',
-        message: 'The stats already on player profiles stay there until you review the new report and save it.',
-        confirmLabel: 'Upload new report',
-      })
-      if (!ok) return
-    }
     setPhase('reading')
     try {
+      // Land pending edits first: the upload then re-seeds the draft on the
+      // server and no older autosave can arrive on top of it.
+      await flush()
       const up = await createGameReportUpload(eventId, file.name, file.type, file.size)
       if (!up.ok) throw new Error(up.error)
       const supabase = createClient()
@@ -272,12 +347,12 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
       fd.set('mimeType', file.type)
       const res = await uploadAndParseGameReport(eventId, fd)
       if (!res.ok) throw new Error(res.error)
-      const nextCtx = { ...ctx, draft: res.data }
+      const nextCtx = { ...ctx, report: res.data }
       setCtx(nextCtx)
-      openReview(res.data, 'draft', nextCtx)
+      openReport(res.data, nextCtx)
+      onSaved(chip(res.data.status, res.data.savedScore, true))
     } catch (e) {
-      const msg = e instanceof Error && e.message && e.message !== 'Failed to fetch' ? e.message : networkErrorMessage()
-      setError(msg)
+      setError(errMessage(e))
       setPhase('pick')
     }
   }
@@ -295,19 +370,42 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
     if (f) void handleFile(f)
   }
 
+  async function handleReplace() {
+    const exists = !!reportId
+    if (exists) {
+      const ok = await confirm(report?.hasFile
+        ? {
+            title: 'Replace the report file?',
+            message: 'The table will be refilled from the new file. Players keep the saved stats until you save again.',
+            confirmLabel: 'Replace file',
+          }
+        : {
+            title: 'Fill the table from a file?',
+            message: 'The table will be refilled from the file. Players keep the saved stats until you save again.',
+            confirmLabel: 'Upload a file',
+          })
+      if (!ok) return
+    }
+    setError(null)
+    setPhase('pick')
+  }
+
   // ── Row editing ───────────────────────────────────────────────────────────
 
   function updateRow(key: string, patch: Partial<EditRow>) {
     setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)))
+    touch()
   }
 
   function removeRow(key: string) {
     setRows(rs => rs.filter(r => r.key !== key))
+    touch()
   }
 
   function addPlayer(playerId: string) {
     if (!playerId) return
-    setRows(rs => [...rs, blankRow(playerId)])
+    setRows(rs => [...rs, toEdit(blankDraftRow(playerId))])
+    touch()
   }
 
   function assignPending(p: PendingRow, playerId: string) {
@@ -316,29 +414,37 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
     setRows(rs => [
       // A player already in the table gets replaced by the assigned row.
       ...rs.filter(r => r.player_id !== playerId),
-      rowFromExtracted(p.row, playerId, {
+      toEdit(draftRowFromExtracted(p.row, playerId, {
         name: p.row.name,
         jersey: p.row.jersey_number,
         confidence: 'high',
         reason: '#assigned by staff',
         uncertain: p.row.uncertain_fields ?? [],
-      }),
+      })),
     ])
+    touch()
   }
 
+  function skipPending(key: string) {
+    setPending(ps => ps.filter(x => x.key !== key))
+    touch()
+  }
+
+  // Flags only apply to a table seeded from a file.
+  const fromFile = origin === 'file'
   const usedIds = new Set(rows.map(r => r.player_id).filter(Boolean))
-  const missingFromReport = mode === 'draft' ? roster.filter(p => !usedIds.has(p.id)) : []
+  const missingFromReport = fromFile ? roster.filter(p => !usedIds.has(p.id)) : []
   const notInTable = roster.filter(p => !usedIds.has(p.id))
 
-  const nameOnlyCount = mode === 'draft' ? rows.filter(r => matchNeedsCheck(r.source)).length : 0
-  const uncertainCount = mode === 'draft'
+  const nameOnlyCount = fromFile ? rows.filter(r => matchNeedsCheck(r.source)).length : 0
+  const uncertainCount = fromFile
     ? rows.reduce((n, r) => n + (r.source?.uncertain.length ?? 0), 0)
     : 0
-  const checkCount = mode === 'draft'
+  const checkCount = fromFile
     ? nameOnlyCount + uncertainCount + pending.length + (missingFromReport.length > 0 ? 1 : 0)
     : 0
 
-  // ── Save ──────────────────────────────────────────────────────────────────
+  // ── Save to player profiles ───────────────────────────────────────────────
 
   async function handleSave() {
     if (!ctx) return
@@ -347,7 +453,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
     const seen = new Set<string>()
     for (const r of rows) {
       if (!r.player_id) { setError('Pick a player for every row, or remove the row.'); return }
-      if (mode === 'manual' && isBlank(r)) continue
+      if (origin === 'manual' && isBlank(r)) continue
       const name = playerName(rosterById.get(r.player_id))
       if (seen.has(r.player_id)) { setError(`${name} is listed twice. Remove one row.`); return }
       seen.add(r.player_id)
@@ -381,8 +487,8 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
     if (ts === 'bad' || os === 'bad') { setError('Scores must be whole numbers.'); return }
     if (out.length === 0) { setError('Add at least one player who played.'); return }
 
-    const ours = view?.teamNameAsWritten || ctx.clubName || 'Us'
-    const theirs = view?.opponentName || opponentFromTitle(ctx.event.title) || 'Opponent'
+    const ours = report?.teamNameAsWritten || ctx.clubName || 'Us'
+    const theirs = report?.opponentName || opponentFromTitle(ctx.event.title) || 'Opponent'
     const scoreLine = ts != null && os != null ? ` · ${ours} ${ts} - ${os} ${theirs}` : ''
     const ok = await confirm({
       title: 'Save to player profiles?',
@@ -394,7 +500,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
           {pending.length > 0 && (
             <span className="block mt-2">{`${pending.length} unassigned row${pending.length === 1 ? ' is' : 's are'} skipped.`}</span>
           )}
-          {ctx.confirmed && mode !== 'confirmed' && (
+          {status === 'confirmed' && (
             <span className="block mt-2">This replaces the stats saved for this game.</span>
           )}
         </>
@@ -405,18 +511,25 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
 
     const scores: GameScore = { teamScore: ts, opponentScore: os }
     setSaving(true)
-    onSaved(scores) // optimistic chip
+    onSaved(chip('confirmed', scores, false)) // optimistic chip
     try {
-      const res = mode === 'manual' || !view
-        ? await saveManualStats(eventId, out, scores)
-        : await confirmGameReport(view.reportId, out, scores)
+      // These rows are what gets saved; a queued autosave would only re-add
+      // a draft on top of the save.
+      await settleAutosave()
+      const id = reportIdRef.current
+      const res = id
+        ? await confirmGameReport(id, out, scores)
+        : await saveManualStats(eventId, out, scores)
       if (!res.ok) throw new Error(res.error)
       toast(`Saved to ${res.data.playerCount} player profile${res.data.playerCount === 1 ? '' : 's'}`, 'success')
-      onSaved({ teamScore: res.data.teamScore, opponentScore: res.data.opponentScore })
+      onSaved(chip('confirmed', { teamScore: res.data.teamScore, opponentScore: res.data.opponentScore }, false))
+      closedRef.current = true
       onClose()
     } catch (e) {
       onSaved(currentScore ?? null)
-      const msg = e instanceof Error && e.message && e.message !== 'Failed to fetch' ? e.message : networkErrorMessage()
+      // Keep the edits: they go back into the draft.
+      touch()
+      const msg = errMessage(e)
       setError(msg)
       toast(msg, 'error')
     } finally {
@@ -424,34 +537,112 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
     }
   }
 
-  async function handleDelete(target: GameReportView, isDraft: boolean) {
-    const ok = await confirm(isDraft
-      ? { title: 'Discard this draft?', message: 'The uploaded file and the AI reading are deleted. Saved stats are not touched.', confirmLabel: 'Discard draft', destructive: true }
-      : { title: 'Delete the stats for this game?', message: 'They come off every player profile.', confirmLabel: 'Delete stats', destructive: true })
-    if (!ok || !ctx) return
+  // ── Discard / delete ──────────────────────────────────────────────────────
+
+  function backToPick() {
+    setReport(null)
+    setReportId(null)
+    setHasDraft(false)
+    setAutosave('idle')
+    setRows([])
+    setPending([])
+    if (ctx) setCtx({ ...ctx, report: null })
+    setPhase('pick')
+  }
+
+  async function handleDiscard() {
+    if (!ctx) return
+    const neverSaved = status !== 'confirmed'
+    const ok = await confirm(neverSaved
+      ? {
+          title: 'Delete this draft?',
+          message: 'Nothing is on player profiles yet, so the report and its file are deleted.',
+          confirmLabel: 'Delete draft',
+          destructive: true,
+        }
+      : {
+          title: 'Discard your changes?',
+          message: 'The table goes back to the last saved version. Player profiles are not touched.',
+          confirmLabel: 'Discard changes',
+          destructive: true,
+        })
+    if (!ok) return
     setSaving(true)
-    const res = await deleteGameReport(target.reportId).catch(() => ({ ok: false as const, error: networkErrorMessage() }))
-    setSaving(false)
-    if (!res.ok) { setError(res.error); toast(res.error, 'error'); return }
-    const nextCtx: GameReportContext = isDraft ? { ...ctx, draft: null } : { ...ctx, confirmed: null }
-    setCtx(nextCtx)
-    if (!isDraft) onSaved(null)
-    toast(isDraft ? 'Draft discarded' : 'Stats deleted', 'success')
-    if (nextCtx.confirmed) openReview(nextCtx.confirmed, 'confirmed', nextCtx)
-    else { setView(null); setPhase('pick') }
+    setError(null)
+    try {
+      await settleAutosave()
+      const id = reportIdRef.current
+      if (!id) { backToPick(); return }
+      const res = await discardGameReportChanges(id)
+      if (!res.ok) throw new Error(res.error)
+      if (res.data.report) {
+        const nextCtx = { ...ctx, report: res.data.report }
+        setCtx(nextCtx)
+        openReport(res.data.report, nextCtx)
+        onSaved(chip('confirmed', res.data.report.savedScore, false))
+        toast('Changes discarded', 'success')
+      } else {
+        backToPick()
+        onSaved(null)
+        toast('Draft deleted', 'success')
+      }
+    } catch (e) {
+      touch()
+      const msg = errMessage(e)
+      setError(msg)
+      toast(msg, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: 'Delete this game report?',
+      message: status === 'confirmed'
+        ? 'The file and the stats come off every player profile. This can’t be undone.'
+        : 'The file and the draft are deleted. Nothing is on player profiles yet.',
+      confirmLabel: 'Delete report',
+      destructive: true,
+    })
+    if (!ok) return
+    setSaving(true)
+    setError(null)
+    try {
+      await settleAutosave()
+      const id = reportIdRef.current
+      if (id) {
+        const res = await deleteGameReport(id)
+        if (!res.ok) throw new Error(res.error)
+      }
+      backToPick()
+      onSaved(null)
+      toast('Game report deleted', 'success')
+    } catch (e) {
+      touch()
+      const msg = errMessage(e)
+      setError(msg)
+      toast(msg, 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   const wide = phase === 'review'
-  const title = phase === 'review' && mode === 'manual' ? 'Enter stats' : 'Game report'
+  const title = phase === 'review' && origin === 'manual' && !report?.hasFile ? 'Enter stats' : 'Game report'
+  const lastSaved = report?.confirmedAt
+    ? `${formatMonthDay(report.confirmedAt, timezone)}, ${formatTime(report.confirmedAt, timezone)}${report.confirmedByName ? ` by ${report.confirmedByName}` : ''}`
+    : null
+  const preview = report && (report.fileUrl || report.sourceText) ? report : null
 
   return (
     <>
     <Modal
       title={title}
       description={eventTitle}
-      onClose={onClose}
+      onClose={handleClose}
       size="lg"
       dismissible={!saving && phase !== 'reading' && !confirming}
       className={wide ? 'sm:max-w-6xl' : ''}
@@ -502,25 +693,36 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
             <input ref={fileRef} type="file" accept={REPORT_ACCEPT} onChange={onPick} className="hidden" />
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => openReview(null, 'manual', ctx)}
-              className="text-sm text-green hover:text-green/80 font-medium transition-colors"
-            >
-              Or enter stats manually
-            </button>
-            {ctx.confirmed && (
+            {reportId ? (
               <button
                 type="button"
-                onClick={() => openReview(ctx.confirmed, 'confirmed', ctx)}
-                className="text-sm text-gray hover:text-white transition-colors"
+                onClick={() => { setError(null); setPhase('review') }}
+                className="text-sm text-green hover:text-green/80 font-medium transition-colors"
               >
-                Back to saved stats
+                Back to the table
+              </button>
+            ) : rows.length > 0 && origin === 'manual' ? (
+              <button
+                type="button"
+                onClick={() => { setError(null); setPhase('review') }}
+                className="text-sm text-green hover:text-green/80 font-medium transition-colors"
+              >
+                Back to entering stats
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => startManual(ctx)}
+                className="text-sm text-green hover:text-green/80 font-medium transition-colors"
+              >
+                Or enter stats manually
               </button>
             )}
           </div>
           <p className="text-xs text-gray mt-4">
-            The AI reads your team&apos;s side only. You review every number before anything reaches player profiles.
+            {reportId
+              ? 'The table will be refilled from the new file. Players keep the saved stats until you save again.'
+              : 'The AI reads your team’s side only. You review every number before anything reaches player profiles.'}
           </p>
         </div>
       )}
@@ -529,39 +731,59 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
         <div>
           {/* Status + actions */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div className="text-sm">
-              {mode === 'draft' && (
-                <span className="inline-flex items-center gap-2 font-semibold text-yellow-700 bg-yellow-400/10 border border-yellow-500/25 rounded-full px-3 py-1">
-                  Draft saved, not yet on player profiles
-                </span>
-              )}
-              {mode === 'confirmed' && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              {status === 'confirmed' && !hasDraft && (
                 <span className="inline-flex items-center gap-2 font-semibold text-green bg-green/10 border border-green/20 rounded-full px-3 py-1">
-                  On player profiles. Edits update them when you save.
+                  {`Saved to player profiles${lastSaved ? ` · last saved ${lastSaved}` : ''}`}
                 </span>
               )}
-              {mode === 'manual' && (
-                <span className="text-gray">Leave a row blank for players who didn&apos;t play.</span>
+              {status !== 'confirmed' && (
+                <span className="inline-flex items-center gap-2 font-semibold text-yellow-700 bg-yellow-400/10 border border-yellow-500/25 rounded-full px-3 py-1">
+                  Draft, not on player profiles yet
+                </span>
               )}
+              <span className="text-xs text-gray" aria-live="polite">
+                {autosave === 'saving' && 'Saving…'}
+                {autosave === 'saved' && 'Draft saved'}
+                {autosave === 'error' && <span className="text-red">Draft not saved. It retries on your next edit.</span>}
+              </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <button type="button" onClick={() => { setError(null); setPhase('pick') }} className="text-green hover:text-green/80 transition-colors">
-                {mode === 'manual' ? 'Upload a file instead' : 'Upload a different file'}
+              <button type="button" disabled={saving} onClick={handleReplace} className="text-green hover:text-green/80 transition-colors">
+                {report?.hasFile ? 'Replace file' : 'Upload a file'}
               </button>
-              {mode === 'draft' && view && (
-                <button type="button" disabled={saving} onClick={() => handleDelete(view, true)} className="text-gray hover:text-red transition-colors">
-                  Discard draft
-                </button>
-              )}
-              {mode === 'confirmed' && view && (
-                <button type="button" disabled={saving} onClick={() => handleDelete(view, false)} className="text-gray hover:text-red transition-colors">
-                  Delete stats
+              {reportId && (
+                <button type="button" disabled={saving} onClick={handleDelete} className="text-gray hover:text-red transition-colors">
+                  Delete report
                 </button>
               )}
             </div>
           </div>
 
-          {mode === 'draft' && checkCount > 0 && (
+          {status === 'confirmed' && hasDraft && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-yellow-500/25 bg-yellow-400/10 px-4 py-3 text-sm">
+              <p className="font-semibold text-yellow-700">Unsaved changes. Players still see the last saved version.</p>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={saving} onClick={handleDiscard} className="text-gray hover:text-red transition-colors">
+                  Discard changes
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleSave}
+                  className="bg-green text-dark font-bold px-4 py-1.5 rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+
+          {origin === 'manual' && (
+            <p className="mb-4 text-sm text-gray">Leave a row blank for players who didn&apos;t play.</p>
+          )}
+
+          {fromFile && checkCount > 0 && (
             <div className="mb-4 rounded-xl border border-yellow-500/25 bg-yellow-400/10 px-4 py-3 text-sm">
               <p className="font-bold text-yellow-700">{`${checkCount} thing${checkCount === 1 ? '' : 's'} to check`}</p>
               <ul className="mt-1 text-yellow-800/90 space-y-0.5 list-disc pl-5">
@@ -572,13 +794,10 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
               </ul>
             </div>
           )}
-          {mode === 'draft' && ctx.confirmed && (
-            <p className="mb-4 text-xs text-gray">Saving replaces the stats already saved for this game.</p>
-          )}
 
-          <div className={view && (view.fileUrl || view.sourceText) ? 'lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-5' : ''}>
+          <div className={preview ? 'lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-5' : ''}>
             {/* Original document */}
-            {view && (view.fileUrl || view.sourceText) && (
+            {preview && (
               <div className="mb-4 lg:mb-0">
                 <button
                   type="button"
@@ -590,20 +809,20 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                 </button>
                 <div className={`${showOriginal ? 'block' : 'hidden'} lg:block rounded-xl border border-white/10 bg-dark overflow-hidden`}>
                   <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 text-xs text-gray">
-                    <span className="truncate">{view.fileName ?? 'Original'}</span>
-                    {view.fileUrl && (
-                      <a href={view.fileUrl} target="_blank" rel="noopener noreferrer" className="text-green shrink-0">Open</a>
+                    <span className="truncate">{preview.fileName ?? 'Original'}</span>
+                    {preview.fileUrl && (
+                      <a href={preview.fileUrl} target="_blank" rel="noopener noreferrer" className="text-green shrink-0">Open</a>
                     )}
                   </div>
-                  {view.fileUrl && view.mimeType === 'application/pdf' && (
-                    <iframe src={view.fileUrl} title="Original report" className="w-full h-[55vh] lg:h-[65vh] bg-white" />
+                  {preview.fileUrl && preview.mimeType === 'application/pdf' && (
+                    <iframe src={preview.fileUrl} title="Original report" className="w-full h-[55vh] lg:h-[65vh] bg-white" />
                   )}
-                  {view.fileUrl && view.mimeType?.startsWith('image/') && (
+                  {preview.fileUrl && preview.mimeType?.startsWith('image/') && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={view.fileUrl} alt="Original report" className="w-full max-h-[65vh] object-contain bg-white" />
+                    <img src={preview.fileUrl} alt="Original report" className="w-full max-h-[65vh] object-contain bg-white" />
                   )}
-                  {!view.fileUrl && view.sourceText && (
-                    <pre className="max-h-[55vh] lg:max-h-[65vh] overflow-auto p-3 text-xs text-white/80 whitespace-pre font-mono">{view.sourceText}</pre>
+                  {!preview.fileUrl && preview.sourceText && (
+                    <pre className="max-h-[55vh] lg:max-h-[65vh] overflow-auto p-3 text-xs text-white/80 whitespace-pre font-mono">{preview.sourceText}</pre>
                   )}
                 </div>
               </div>
@@ -613,22 +832,22 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
               {/* Score */}
               <div className="flex flex-wrap items-end gap-3 mb-4">
                 <label className="block">
-                  <span className="text-xs text-gray">{view?.teamNameAsWritten || ctx.clubName || 'Our score'}</span>
+                  <span className="text-xs text-gray">{report?.teamNameAsWritten || ctx.clubName || 'Our score'}</span>
                   <input
                     inputMode="numeric"
                     value={teamScore}
-                    onChange={e => setTeamScore(e.target.value)}
+                    onChange={e => { setTeamScore(e.target.value); touch() }}
                     aria-label="Our score"
                     className="mt-1 block w-16 bg-dark border border-white/10 rounded-lg px-2 py-2 text-center text-lg font-bold text-white focus:outline-none focus:border-green"
                   />
                 </label>
                 <span className="pb-2.5 text-gray font-bold">-</span>
                 <label className="block">
-                  <span className="text-xs text-gray">{view?.opponentName || opponentFromTitle(ctx.event.title) || 'Opponent'}</span>
+                  <span className="text-xs text-gray">{report?.opponentName || opponentFromTitle(ctx.event.title) || 'Opponent'}</span>
                   <input
                     inputMode="numeric"
                     value={oppScore}
-                    onChange={e => setOppScore(e.target.value)}
+                    onChange={e => { setOppScore(e.target.value); touch() }}
                     aria-label="Opponent score"
                     className="mt-1 block w-16 bg-dark border border-white/10 rounded-lg px-2 py-2 text-center text-lg font-bold text-white focus:outline-none focus:border-green"
                   />
@@ -658,7 +877,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                     {rows.map(r => {
                       const p = rosterById.get(r.player_id)
                       const gk = isGoalkeeper(p?.position)
-                      const flagged = mode === 'draft' && (matchNeedsCheck(r.source) || (r.source?.uncertain.length ?? 0) > 0)
+                      const flagged = fromFile && (matchNeedsCheck(r.source) || (r.source?.uncertain.length ?? 0) > 0)
                       const otherUsed = new Set(rows.filter(x => x.key !== r.key).map(x => x.player_id))
                       return (
                         <tr key={r.key} className="align-top">
@@ -669,7 +888,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                                 onChange={e => updateRow(r.key, { player_id: e.target.value })}
                                 aria-label="Player"
                                 className={`w-full min-w-[150px] bg-dark border rounded-md px-2 py-1.5 text-sm text-white focus:outline-none focus:border-green ${
-                                  mode === 'draft' && matchNeedsCheck(r.source) ? 'border-yellow-500/60' : 'border-white/10'
+                                  fromFile && matchNeedsCheck(r.source) ? 'border-yellow-500/60' : 'border-white/10'
                                 }`}
                               >
                                 <option value="">Pick a player</option>
@@ -685,7 +904,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                                 </span>
                               )}
                             </div>
-                            {mode === 'draft' && r.source && (
+                            {fromFile && r.source && (
                               <p className="text-[11px] text-gray mt-0.5 truncate max-w-[220px]" title={`Report: ${r.source.name}`}>
                                 {`Report: ${r.source.jersey != null ? `#${r.source.jersey} ` : ''}${r.source.name}`}
                                 {matchNeedsCheck(r.source) ? ` · matched by ${r.source.reason}` : ''}
@@ -702,7 +921,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                             />
                           </td>
                           {COLUMNS.map(c => {
-                            const unsure = mode === 'draft' && (r.source?.uncertain.includes(c.key) ?? false)
+                            const unsure = fromFile && (r.source?.uncertain.includes(c.key) ?? false)
                             const keeperCol = c.key === 'saves' || c.key === 'goals_against'
                             return (
                               <td key={c.key} className="px-0.5">
@@ -786,7 +1005,7 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
                         </select>
                         <button
                           type="button"
-                          onClick={() => setPending(ps => ps.filter(x => x.key !== pr.key))}
+                          onClick={() => skipPending(pr.key)}
                           className="text-xs text-gray hover:text-white px-2 py-1"
                         >
                           Skip
@@ -834,11 +1053,11 @@ export default function GameReportModal({ eventId, eventTitle, currentScore, onC
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   disabled={saving}
                   className="text-sm text-gray hover:text-white px-3 py-2 transition-colors"
                 >
-                  {mode === 'draft' ? 'Finish later' : 'Cancel'}
+                  {hasDraft ? 'Finish later' : 'Close'}
                 </button>
                 <button
                   type="button"

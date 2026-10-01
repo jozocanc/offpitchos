@@ -1,5 +1,5 @@
 /**
- * Game report + player game stats (migration 057). Client-safe: types,
+ * Game report + player game stats (migrations 057, 058). Client-safe: types,
  * constants, roster matching and small formatters shared by the server
  * actions, the schedule modal and the player profile.
  */
@@ -251,4 +251,121 @@ export function matchRowsToRoster(rows: ExtractedPlayerRow[], roster: RosterPlay
     }
   })
   return { matched, unmatched }
+}
+
+// ---------------------------------------------------------------------------
+// Draft (migration 058): the staff's in-progress review table
+// ---------------------------------------------------------------------------
+
+/** Where a review row came from in the report, for the "things to check" flags. */
+export interface DraftRowSource {
+  name: string
+  jersey: number | null
+  confidence: MatchConfidence
+  reason: string
+  uncertain: string[]
+}
+
+/**
+ * One row of the review table as staff typed it. Values stay strings so a
+ * half-typed or invalid cell survives an autosave; validation happens on
+ * "Save to player profiles".
+ */
+export type DraftRow = {
+  player_id: string
+  started: boolean
+  source?: DraftRowSource | null
+} & Record<StatKey, string>
+
+/**
+ * game_reports.draft_rows. origin says what seeded it: 'file' (the AI
+ * reading, flags apply), 'saved' (last saved stats) or 'manual' (blank roster,
+ * blank rows are skipped on save).
+ */
+export interface GameReportDraft {
+  origin: 'file' | 'saved' | 'manual'
+  rows: DraftRow[]
+  /** AI rows not matched to a roster player yet. */
+  pending: ExtractedPlayerRow[]
+  teamScore: string
+  opponentScore: string
+}
+
+export const MAX_DRAFT_ROWS = 100
+
+function str(v: number | null | undefined): string {
+  return v == null ? '' : String(v)
+}
+
+export function draftRowFromExtracted(row: ExtractedPlayerRow, playerId: string, source?: DraftRowSource | null): DraftRow {
+  return {
+    player_id: playerId,
+    started: row.started === true,
+    minutes: str(row.minutes),
+    goals: str(row.goals),
+    assists: str(row.assists),
+    shots: str(row.shots),
+    shots_on_goal: str(row.shots_on_goal),
+    yellow_cards: str(row.yellow_cards),
+    red_cards: str(row.red_cards),
+    saves: str(row.saves),
+    goals_against: str(row.goals_against),
+    source: source ?? null,
+  }
+}
+
+export function draftRowFromSaved(r: GameStatInput): DraftRow {
+  return {
+    player_id: r.player_id,
+    started: r.started,
+    minutes: str(r.minutes),
+    goals: str(r.goals),
+    assists: str(r.assists),
+    shots: str(r.shots),
+    shots_on_goal: str(r.shots_on_goal),
+    yellow_cards: str(r.yellow_cards),
+    red_cards: str(r.red_cards),
+    saves: str(r.saves),
+    goals_against: str(r.goals_against),
+    source: null,
+  }
+}
+
+export function blankDraftRow(playerId: string): DraftRow {
+  return {
+    player_id: playerId, started: false, source: null,
+    minutes: '', goals: '', assists: '', shots: '', shots_on_goal: '',
+    yellow_cards: '', red_cards: '', saves: '', goals_against: '',
+  }
+}
+
+/** Seed the table from the AI reading: roster matches become rows, the rest wait to be assigned. */
+export function draftFromExtraction(
+  players: ExtractedPlayerRow[],
+  roster: RosterPlayer[],
+  teamScore: number | null,
+  opponentScore: number | null,
+): GameReportDraft {
+  const { matched, unmatched } = matchRowsToRoster(players, roster)
+  return {
+    origin: 'file',
+    rows: matched.map(mr => draftRowFromExtracted(mr.row, mr.player_id, {
+      name: mr.row.name,
+      jersey: mr.row.jersey_number,
+      confidence: mr.confidence,
+      reason: mr.reason,
+      uncertain: mr.row.uncertain_fields ?? [],
+    })),
+    pending: unmatched,
+    teamScore: str(teamScore),
+    opponentScore: str(opponentScore),
+  }
+}
+
+export function draftFromSaved(rows: GameStatInput[], teamScore: number | null, opponentScore: number | null): GameReportDraft {
+  return { origin: 'saved', rows: rows.map(draftRowFromSaved), pending: [], teamScore: str(teamScore), opponentScore: str(opponentScore) }
+}
+
+export function blankManualDraft(roster: RosterPlayer[]): GameReportDraft {
+  return { origin: 'manual', rows: roster.map(p => blankDraftRow(p.id)), pending: [], teamScore: '', opponentScore: '' }
 }

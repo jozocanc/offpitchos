@@ -13,13 +13,19 @@ import { type ActionResult, toActionError } from '@/lib/action-result'
 import { sendPushToProfiles } from '@/lib/push'
 import {
   EXTRACTED_FIELDS,
+  MAX_DRAFT_ROWS,
   MAX_REPORT_BYTES,
+  STAT_KEYS,
   SUPPORTED_TYPES_LABEL,
-  matchRowsToRoster,
+  blankManualDraft,
+  draftFromExtraction,
   summarizeLine,
+  type DraftRow,
+  type DraftRowSource,
   type ExtractedPlayerRow,
+  type GameReportDraft,
   type GameStatInput,
-  type MatchedRow,
+  type MatchConfidence,
   type RosterPlayer,
 } from '@/lib/game-stats'
 
@@ -34,12 +40,15 @@ const SIGNED_URL_TTL = 60 * 60
 // ─── Types returned to the client ────────────────────────────────────────────
 
 /**
- * One game report as the review screen needs it. 'parsed' = AI draft, not on
- * any player profile yet. 'confirmed' = saved; savedRows are the live stats.
+ * A game's one report (058). 'parsed' = never saved to player profiles.
+ * 'confirmed' = saved at least once; savedRows/savedScore are what players
+ * see. draft = staff's unsaved table, null when there are no unsaved changes.
  */
 export interface GameReportView {
   reportId: string
   status: 'parsed' | 'confirmed'
+  /** False for a manual entry (no file uploaded). */
+  hasFile: boolean
   fileName: string | null
   mimeType: string | null
   /** Short-lived signed URL of the original file (PDF/image preview). */
@@ -48,23 +57,21 @@ export interface GameReportView {
   sourceText: string | null
   teamNameAsWritten: string | null
   opponentName: string | null
-  teamScore: number | null
-  opponentScore: number | null
-  /** AI rows matched to the roster (empty for manual entries). */
-  matched: MatchedRow[]
-  unmatched: ExtractedPlayerRow[]
-  /** Saved stat lines; confirmed reports only. */
+  /** Score on player profiles; confirmed reports only. */
+  savedScore: GameScore | null
+  /** Stat lines on player profiles (player_game_stats); null if never saved. */
   savedRows: GameStatInput[] | null
+  draft: GameReportDraft | null
+  confirmedAt: string | null
+  confirmedByName: string | null
 }
 
 export interface GameReportContext {
   event: { id: string; title: string; start_time: string; type: string; team_name: string | null }
   clubName: string
   roster: RosterPlayer[]
-  /** The saved report, if stats exist for this game. */
-  confirmed: GameReportView | null
-  /** An uploaded report still waiting for review. */
-  draft: GameReportView | null
+  /** The game's one report, or null before anything was uploaded or typed. */
+  report: GameReportView | null
 }
 
 export interface SavedGameStats {
@@ -72,11 +79,20 @@ export interface SavedGameStats {
   teamScore: number | null
   opponentScore: number | null
   playerCount: number
+  confirmedAt: string
+  confirmedByName: string | null
 }
 
 export interface GameScore {
   teamScore: number | null
   opponentScore: number | null
+}
+
+/** What the schedule chip shows for a game (staff only). */
+export interface GameReportChip extends GameScore {
+  status: 'parsed' | 'confirmed'
+  /** Unsaved changes exist (draft_rows set). */
+  edited: boolean
 }
 
 // ─── Shared guards ───────────────────────────────────────────────────────────
@@ -93,7 +109,7 @@ async function requireStaffEvent(eventId: string) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, club_id, role, clubs(name)')
+    .select('id, club_id, role, display_name, clubs(name)')
     .eq('user_id', user.id)
     .single()
 
@@ -118,6 +134,7 @@ async function requireStaffEvent(eventId: string) {
   return {
     supabase,
     userId: user.id,
+    userName: ((profile.display_name as string | null) ?? '').trim() || null,
     clubId: profile.club_id as string,
     clubName: ((club as { name?: string } | null)?.name ?? '') as string,
     event: {
@@ -488,14 +505,193 @@ async function _createGameReportUpload(eventId: string, fileName: string, mimeTy
   return { path: data.path, token: data.token, contentType: kind.mime }
 }
 
+
+// ─── Report row helpers ──────────────────────────────────────────────────────
+
+type StoredExtraction = ExtractionOutput & { source_text: string | null }
+
+const REPORT_SELECT =
+  'id, event_id, status, storage_path, file_name, mime_type, extraction, team_score, opponent_score, draft_rows, confirmed_at, confirmed_by'
+
+interface ReportRow {
+  id: string
+  event_id: string
+  status: 'parsed' | 'confirmed'
+  storage_path: string | null
+  file_name: string | null
+  mime_type: string | null
+  extraction: StoredExtraction | null
+  team_score: number | null
+  opponent_score: number | null
+  draft_rows: unknown
+  confirmed_at: string | null
+  confirmed_by: string | null
+}
+
+const STAT_SELECT =
+  'player_id, started, minutes, goals, assists, shots, shots_on_goal, yellow_cards, red_cards, saves, goals_against'
+
+async function loadReportRow(ctx: StaffCtx): Promise<ReportRow | null> {
+  const { data } = await ctx.supabase
+    .from('game_reports')
+    .select(REPORT_SELECT)
+    .eq('event_id', ctx.event.id)
+    .maybeSingle()
+  return (data as unknown as ReportRow | null) ?? null
+}
+
+/** Staff caller + the report's event, from a report id. */
+async function requireStaffReport(reportId: string): Promise<{ ctx: StaffCtx; row: ReportRow }> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('game_reports')
+    .select(REPORT_SELECT)
+    .eq('id', reportId)
+    .maybeSingle()
+  if (!data) throw new Error('That report is gone. Close this and open Game report again.')
+  const row = data as unknown as ReportRow
+  const ctx = await requireStaffEvent(row.event_id)
+  return { ctx, row }
+}
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v)
+}
+
+function cell(v: unknown): string {
+  if (typeof v === 'string') return v.slice(0, 6)
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v).slice(0, 6)
+  return ''
+}
+
+const CONFIDENCES: readonly MatchConfidence[] = ['high', 'medium', 'low']
+
+function sanitizeSource(v: unknown): DraftRowSource | null {
+  if (!isObj(v)) return null
+  return {
+    name: typeof v.name === 'string' ? v.name.slice(0, 120) : '',
+    jersey: toIntOrNull(v.jersey),
+    confidence: CONFIDENCES.includes(v.confidence as MatchConfidence) ? (v.confidence as MatchConfidence) : 'low',
+    reason: typeof v.reason === 'string' ? v.reason.slice(0, 60) : '',
+    uncertain: Array.isArray(v.uncertain)
+      ? v.uncertain.filter((f): f is string => typeof f === 'string' && (EXTRACTED_FIELDS as readonly string[]).includes(f))
+      : [],
+  }
+}
+
+/** Shape-check a draft from the client or the database. Values stay as typed. */
+function sanitizeDraft(input: unknown): GameReportDraft {
+  const o = isObj(input) ? input : {}
+  const origin = o.origin === 'file' || o.origin === 'manual' ? o.origin : 'saved'
+  const rows = Array.isArray(o.rows) ? o.rows.slice(0, MAX_DRAFT_ROWS) : []
+  const pending = Array.isArray(o.pending) ? o.pending.slice(0, MAX_DRAFT_ROWS) : []
+  return {
+    origin,
+    rows: rows.filter(isObj).map(r => {
+      const out = {
+        player_id: typeof r.player_id === 'string' ? r.player_id.slice(0, 64) : '',
+        started: r.started === true,
+        source: sanitizeSource(r.source),
+      } as DraftRow
+      for (const k of STAT_KEYS) out[k] = cell(r[k])
+      return out
+    }),
+    pending: sanitizeExtraction({ players: pending }).players,
+    teamScore: cell(o.teamScore),
+    opponentScore: cell(o.opponentScore),
+  }
+}
+
+async function buildView(ctx: StaffCtx, r: ReportRow, roster: RosterPlayer[]): Promise<GameReportView> {
+  const service = createServiceClient()
+  const wantsUrl = !!(r.storage_path && r.mime_type && (r.mime_type === 'application/pdf' || r.mime_type.startsWith('image/')))
+  const [signed, stats, by] = await Promise.all([
+    wantsUrl
+      ? service.storage.from(BUCKET).createSignedUrl(r.storage_path as string, SIGNED_URL_TTL)
+      : Promise.resolve(null),
+    r.status === 'confirmed'
+      ? ctx.supabase.from('player_game_stats').select(STAT_SELECT).eq('event_id', ctx.event.id)
+      : Promise.resolve(null),
+    r.confirmed_by
+      ? ctx.supabase.from('profiles').select('display_name').eq('user_id', r.confirmed_by).eq('club_id', ctx.clubId).maybeSingle()
+      : Promise.resolve(null),
+  ])
+
+  const ex = r.extraction
+  let draft: GameReportDraft | null = r.draft_rows ? sanitizeDraft(r.draft_rows) : null
+  // A never-saved report always opens on a draft. Older rows may lack one.
+  if (!draft && r.status === 'parsed') {
+    draft = ex
+      ? draftFromExtraction(ex.players ?? [], roster, ex.our_score, ex.opponent_score)
+      : blankManualDraft(roster)
+  }
+
+  const savedRows = stats ? ((stats.data ?? []) as GameStatInput[]) : null
+  const name = (by?.data as { display_name?: string } | null)?.display_name?.trim() || null
+
+  return {
+    reportId: r.id,
+    status: r.status,
+    hasFile: !!r.storage_path,
+    fileName: r.file_name,
+    mimeType: r.mime_type,
+    fileUrl: signed?.data?.signedUrl ?? null,
+    sourceText: ex?.source_text ?? null,
+    teamNameAsWritten: ex?.team_name_as_written ?? null,
+    opponentName: ex?.opponent_name ?? null,
+    savedScore: r.status === 'confirmed' ? { teamScore: r.team_score, opponentScore: r.opponent_score } : null,
+    savedRows,
+    draft,
+    confirmedAt: r.confirmed_at,
+    confirmedByName: name,
+  }
+}
+
+function revalidateGame(ctx: StaffCtx) {
+  revalidatePath('/dashboard/schedule')
+  revalidatePath('/dashboard/players', 'layout')
+  revalidatePath(`/dashboard/teams/${ctx.event.team_id}`)
+}
+
+/**
+ * Create the game's one report, or return the existing one when another tab
+ * beat us to it (unique index on event_id, 058).
+ */
+async function insertReport(ctx: StaffCtx, values: Record<string, unknown>): Promise<{ row: ReportRow; created: boolean }> {
+  const { data, error } = await ctx.supabase
+    .from('game_reports')
+    .insert({
+      club_id: ctx.clubId,
+      team_id: ctx.event.team_id,
+      event_id: ctx.event.id,
+      status: 'parsed',
+      created_by: ctx.userId,
+      updated_by: ctx.userId,
+      ...values,
+    })
+    .select(REPORT_SELECT)
+    .single()
+  if (data) return { row: data as unknown as ReportRow, created: true }
+  if (error?.code === '23505') {
+    const existing = await loadReportRow(ctx)
+    if (existing) return { row: existing, created: false }
+  }
+  throw new Error(`Save failed: ${error?.message ?? 'unknown error'}`)
+}
+
 // ─── Upload + parse ──────────────────────────────────────────────────────────
 
 /**
  * Store the report and extract our players' stats. FormData carries either
  * `file` (a File, for small uploads) or `storagePath` + `fileName` +
- * `mimeType` (already uploaded through createGameReportUpload). Saves a
- * game_reports row with status 'parsed'; nothing touches player stats until
- * confirmGameReport.
+ * `mimeType` (already uploaded through createGameReportUpload).
+ *
+ * No report yet: creates the game's one report (status 'parsed').
+ * Report exists: replaces its file and extraction on the same row and deletes
+ * the old file. Status is kept, so after a replace on a saved report players
+ * still see the last saved stats until staff save again.
+ * Either way draft_rows is re-seeded from the new reading; nothing touches
+ * player stats until confirmGameReport.
  */
 export async function uploadAndParseGameReport(
   ...args: Parameters<typeof _uploadAndParseGameReport>
@@ -549,7 +745,12 @@ async function _uploadAndParseGameReport(eventId: string, formData: FormData): P
     throw new Error('Choose a file to upload.')
   }
 
-  const roster = await loadRoster(ctx.supabase, ctx.event.team_id)
+  const [roster, existing] = await Promise.all([
+    loadRoster(ctx.supabase, ctx.event.team_id),
+    loadReportRow(ctx),
+  ])
+  // Re-uploading the current file's own path would delete it below.
+  if (existing?.storage_path === path) throw new Error('Upload not found. Try again.')
 
   let extraction: ExtractionOutput
   let sourceText: string | null
@@ -564,93 +765,51 @@ async function _uploadAndParseGameReport(eventId: string, formData: FormData): P
 
   if (!extraction.our_team_found && extraction.players.length === 0) {
     await service.storage.from(BUCKET).remove([path])
-    throw new Error(`Couldn\u2019t find ${ctx.clubName || 'your team'} in that report. Check it\u2019s the right game, or enter the stats manually.`)
+    throw new Error(`Couldn’t find ${ctx.clubName || 'your team'} in that report. Check it’s the right game, or enter the stats manually.`)
   }
 
-  // Drop earlier unconfirmed uploads for this game so abandoned reviews
-  // don't pile up. Confirmed reports stay until a new one is confirmed.
-  const { data: stale } = await ctx.supabase
-    .from('game_reports')
-    .select('id, storage_path')
-    .eq('event_id', eventId)
-    .eq('status', 'parsed')
-  if (stale && stale.length > 0) {
-    await ctx.supabase.from('game_reports').delete().in('id', stale.map(s => s.id))
-    const stalePaths = stale.map(s => s.storage_path).filter((p): p is string => !!p)
-    if (stalePaths.length > 0) await service.storage.from(BUCKET).remove(stalePaths)
-  }
-
-  // A draft: the AI output lives only here until staff confirm. Nothing is
-  // written to player_game_stats, so players see nothing yet.
   const stored: StoredExtraction = { ...extraction, source_text: sourceText }
-  const { data: report, error: insErr } = await ctx.supabase
-    .from('game_reports')
-    .insert({
-      club_id: ctx.clubId,
-      team_id: ctx.event.team_id,
-      event_id: eventId,
-      storage_path: path,
-      file_name: fileName,
-      mime_type: kind.mime,
-      status: 'parsed',
-      extraction: stored,
-      team_score: extraction.our_score,
-      opponent_score: extraction.opponent_score,
-      created_by: ctx.userId,
-    })
-    .select(REPORT_SELECT)
-    .single()
+  const draft = draftFromExtraction(extraction.players, roster, extraction.our_score, extraction.opponent_score)
+  const fileValues = {
+    storage_path: path,
+    file_name: fileName,
+    mime_type: kind.mime,
+    extraction: stored,
+    draft_rows: draft,
+    updated_by: ctx.userId,
+  }
 
-  if (insErr || !report) {
+  let saved: ReportRow
+  let oldPath: string | null = null
+  try {
+    let target = existing
+    let created = false
+    if (!target) {
+      const ins = await insertReport(ctx, fileValues)
+      created = ins.created
+      target = ins.row
+    }
+    if (created) {
+      saved = target
+    } else {
+      // Same row, new file. team_score/opponent_score and status stay: they
+      // are what players see until staff save again.
+      const { data: updated, error: updErr } = await ctx.supabase
+        .from('game_reports')
+        .update(fileValues)
+        .eq('id', target.id)
+        .select(REPORT_SELECT)
+        .single()
+      if (updErr || !updated) throw new Error(`Save failed: ${updErr?.message ?? 'unknown error'}`)
+      saved = updated as unknown as ReportRow
+      oldPath = target.storage_path
+    }
+  } catch (e) {
     await service.storage.from(BUCKET).remove([path])
-    throw new Error(`Save failed: ${insErr?.message ?? 'unknown error'}`)
+    throw e
   }
-
-  return toView(report as unknown as ReportRow, roster, null)
-}
-
-// ─── Report view ─────────────────────────────────────────────────────────────
-
-type StoredExtraction = ExtractionOutput & { source_text: string | null }
-
-const REPORT_SELECT = 'id, status, storage_path, file_name, mime_type, extraction, team_score, opponent_score'
-
-interface ReportRow {
-  id: string
-  status: 'parsed' | 'confirmed'
-  storage_path: string | null
-  file_name: string | null
-  mime_type: string | null
-  extraction: StoredExtraction | null
-  team_score: number | null
-  opponent_score: number | null
-}
-
-async function toView(r: ReportRow, roster: RosterPlayer[], savedRows: GameStatInput[] | null): Promise<GameReportView> {
-  let fileUrl: string | null = null
-  if (r.storage_path && r.mime_type && (r.mime_type === 'application/pdf' || r.mime_type.startsWith('image/'))) {
-    const { data } = await createServiceClient().storage.from(BUCKET).createSignedUrl(r.storage_path, SIGNED_URL_TTL)
-    fileUrl = data?.signedUrl ?? null
-  }
-  const ex = r.extraction
-  // Older rows or manual entries have no extraction.
-  const players = (ex?.players ?? []).map(p => ({ ...p, uncertain_fields: p.uncertain_fields ?? [] }))
-  const { matched, unmatched } = matchRowsToRoster(players, roster)
-  return {
-    reportId: r.id,
-    status: r.status,
-    fileName: r.file_name,
-    mimeType: r.mime_type,
-    fileUrl,
-    sourceText: ex?.source_text ?? null,
-    teamNameAsWritten: ex?.team_name_as_written ?? null,
-    opponentName: ex?.opponent_name ?? null,
-    teamScore: r.team_score,
-    opponentScore: r.opponent_score,
-    matched,
-    unmatched,
-    savedRows,
-  }
+  if (oldPath && oldPath !== path) await service.storage.from(BUCKET).remove([oldPath])
+  return buildView(ctx, saved, roster)
 }
 
 // ─── Read: context for the modal ─────────────────────────────────────────────
@@ -665,33 +824,12 @@ export async function getGameReportContext(
   }
 }
 
-const STAT_SELECT =
-  'player_id, started, minutes, goals, assists, shots, shots_on_goal, yellow_cards, red_cards, saves, goals_against'
-
 async function _getGameReportContext(eventId: string): Promise<GameReportContext> {
   const ctx = await requireStaffEvent(eventId)
-  const [roster, { data: reports }, { data: stats }] = await Promise.all([
+  const [roster, row] = await Promise.all([
     loadRoster(ctx.supabase, ctx.event.team_id),
-    ctx.supabase
-      .from('game_reports')
-      .select(REPORT_SELECT)
-      .eq('event_id', eventId)
-      .order('created_at', { ascending: false }),
-    ctx.supabase
-      .from('player_game_stats')
-      .select(STAT_SELECT)
-      .eq('event_id', eventId),
+    loadReportRow(ctx),
   ])
-
-  const rows = (reports ?? []) as unknown as ReportRow[]
-  const confirmedRow = rows.find(r => r.status === 'confirmed') ?? null
-  const draftRow = rows.find(r => r.status === 'parsed') ?? null
-
-  const [confirmed, draft] = await Promise.all([
-    confirmedRow ? toView(confirmedRow, roster, (stats ?? []) as GameStatInput[]) : Promise.resolve(null),
-    draftRow ? toView(draftRow, roster, null) : Promise.resolve(null),
-  ])
-
   return {
     event: {
       id: ctx.event.id,
@@ -702,12 +840,73 @@ async function _getGameReportContext(eventId: string): Promise<GameReportContext
     },
     clubName: ctx.clubName,
     roster,
-    confirmed,
-    draft,
+    report: row ? await buildView(ctx, row, roster) : null,
   }
 }
 
-// ─── Save ────────────────────────────────────────────────────────────────────
+// ─── Draft: autosave of the review table ─────────────────────────────────────
+
+/**
+ * Store the staff's in-progress table (rows, unmatched rows, scores) on the
+ * report. Called debounced from the modal and on close. Never touches
+ * player_game_stats, so players keep seeing the last saved version.
+ */
+export async function saveGameReportDraft(
+  ...args: Parameters<typeof _saveGameReportDraft>
+): Promise<ActionResult<Awaited<ReturnType<typeof _saveGameReportDraft>>>> {
+  try {
+    return { ok: true, data: await _saveGameReportDraft(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _saveGameReportDraft(reportId: string, draft: GameReportDraft): Promise<{ savedAt: string }> {
+  await assertNotPreview()
+  const { ctx, row } = await requireStaffReport(reportId)
+  const { error } = await ctx.supabase
+    .from('game_reports')
+    .update({ draft_rows: sanitizeDraft(draft), updated_by: ctx.userId })
+    .eq('id', row.id)
+  if (error) throw new Error(`Draft not saved: ${error.message}`)
+  return { savedAt: new Date().toISOString() }
+}
+
+/**
+ * Manual entry before any report exists: create the game's one report with
+ * no file, holding this draft. If a report already exists, the draft is
+ * saved on it instead.
+ */
+export async function startManualGameReport(
+  ...args: Parameters<typeof _startManualGameReport>
+): Promise<ActionResult<Awaited<ReturnType<typeof _startManualGameReport>>>> {
+  try {
+    return { ok: true, data: await _startManualGameReport(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _startManualGameReport(eventId: string, draft: GameReportDraft): Promise<{ reportId: string }> {
+  await assertNotPreview()
+  const ctx = await requireStaffEvent(eventId)
+  const clean = sanitizeDraft(draft)
+  const existing = await loadReportRow(ctx)
+  if (!existing) {
+    const ins = await insertReport(ctx, { storage_path: null, draft_rows: clean })
+    if (ins.created) return { reportId: ins.row.id }
+  }
+  const target = existing ?? (await loadReportRow(ctx))
+  if (!target) throw new Error('Save failed. Try again.')
+  const { error } = await ctx.supabase
+    .from('game_reports')
+    .update({ draft_rows: clean, updated_by: ctx.userId })
+    .eq('id', target.id)
+  if (error) throw new Error(`Draft not saved: ${error.message}`)
+  return { reportId: target.id }
+}
+
+// ─── Save to player profiles ─────────────────────────────────────────────────
 
 function cleanCount(v: unknown, label: string, max = 99): number {
   if (v == null || v === '') return 0
@@ -748,43 +947,21 @@ function validateRows(rows: GameStatInput[], roster: RosterPlayer[]): GameStatIn
 }
 
 /**
- * Make `reportId` the one confirmed report for its event and write its stat
- * lines. Replaces earlier values: other reports for the game go (with their
- * files), stat rows for players no longer listed are removed, the rest are
- * upserted on (event_id, player_id).
+ * Write the report's stat lines to player profiles. Stat rows for players no
+ * longer listed are removed, the rest are upserted on (event_id, player_id).
+ * Then the report becomes 'confirmed' with this score, its draft is cleared
+ * and confirmed_at/by record the save. Callable any number of times.
  */
 async function commitStats(
   ctx: StaffCtx,
-  reportId: string,
+  report: Pick<ReportRow, 'id' | 'status'>,
   rows: GameStatInput[],
   scores: GameScore,
 ): Promise<SavedGameStats> {
-  const service = createServiceClient()
   const roster = await loadRoster(ctx.supabase, ctx.event.team_id)
   const clean = validateRows(rows, roster)
   const teamScore = cleanNullable(scores.teamScore, 'Our score')
   const opponentScore = cleanNullable(scores.opponentScore, 'Opponent score')
-
-  const { data: all } = await ctx.supabase
-    .from('game_reports')
-    .select('id, storage_path, status')
-    .eq('event_id', ctx.event.id)
-  // Includes this report itself when staff are editing saved stats.
-  const hadConfirmed = (all ?? []).some(o => o.status === 'confirmed')
-  const others = (all ?? []).filter(o => o.id !== reportId)
-
-  if (others.length > 0) {
-    const { error: delErr } = await ctx.supabase.from('game_reports').delete().in('id', others.map(o => o.id))
-    if (delErr) throw new Error(`Save failed: ${delErr.message}`)
-    const paths = others.map(o => o.storage_path).filter((p): p is string => !!p)
-    if (paths.length > 0) await service.storage.from(BUCKET).remove(paths)
-  }
-
-  const { error: upErr } = await ctx.supabase
-    .from('game_reports')
-    .update({ status: 'confirmed', team_score: teamScore, opponent_score: opponentScore })
-    .eq('id', reportId)
-  if (upErr) throw new Error(`Save failed: ${upErr.message}`)
 
   const keep = clean.map(r => r.player_id)
   let removeQuery = ctx.supabase.from('player_game_stats').delete().eq('event_id', ctx.event.id)
@@ -801,7 +978,7 @@ async function commitStats(
           club_id: ctx.clubId,
           team_id: ctx.event.team_id,
           event_id: ctx.event.id,
-          report_id: reportId,
+          report_id: report.id,
           created_by: ctx.userId,
         })),
         { onConflict: 'event_id,player_id' },
@@ -809,9 +986,24 @@ async function commitStats(
     if (statErr) throw new Error(`Save failed: ${statErr.message}`)
   }
 
+  const confirmedAt = new Date().toISOString()
+  const { error: upErr } = await ctx.supabase
+    .from('game_reports')
+    .update({
+      status: 'confirmed',
+      team_score: teamScore,
+      opponent_score: opponentScore,
+      draft_rows: null,
+      confirmed_at: confirmedAt,
+      confirmed_by: ctx.userId,
+      updated_by: ctx.userId,
+    })
+    .eq('id', report.id)
+  if (upErr) throw new Error(`Save failed: ${upErr.message}`)
+
   // First time stats land for this game: tell the players who appear. Not on
-  // corrections, so a fix doesn't buzz the whole squad again. Push only.
-  if (!hadConfirmed && clean.length > 0) {
+  // later saves, so a fix doesn't buzz the whole squad again. Push only.
+  if (report.status !== 'confirmed' && clean.length > 0) {
     try {
       await notifyPlayers(ctx, clean)
     } catch (e) {
@@ -819,11 +1011,8 @@ async function commitStats(
     }
   }
 
-  revalidatePath('/dashboard/schedule')
-  revalidatePath('/dashboard/players', 'layout')
-  revalidatePath(`/dashboard/teams/${ctx.event.team_id}`)
-
-  return { reportId, teamScore, opponentScore, playerCount: clean.length }
+  revalidateGame(ctx)
+  return { reportId: report.id, teamScore, opponentScore, playerCount: clean.length, confirmedAt, confirmedByName: ctx.userName }
 }
 
 async function notifyPlayers(ctx: StaffCtx, rows: GameStatInput[]) {
@@ -873,15 +1062,8 @@ export async function confirmGameReport(
 
 async function _confirmGameReport(reportId: string, rows: GameStatInput[], scores: GameScore): Promise<SavedGameStats> {
   await assertNotPreview()
-  const supabase = await createClient()
-  const { data: report } = await supabase
-    .from('game_reports')
-    .select('id, event_id')
-    .eq('id', reportId)
-    .maybeSingle()
-  if (!report) throw new Error('That report is gone. Upload it again.')
-  const ctx = await requireStaffEvent(report.event_id as string)
-  return commitStats(ctx, reportId, rows, scores)
+  const { ctx, row } = await requireStaffReport(reportId)
+  return commitStats(ctx, row, rows, scores)
 }
 
 export async function saveManualStats(
@@ -894,29 +1076,75 @@ export async function saveManualStats(
   }
 }
 
-/** Same as confirm, without a file: a report row with no storage_path. */
+/**
+ * Save typed stats when no report row exists yet (first save before the
+ * first autosave landed). Uses the game's one report, creating it with no
+ * file if needed.
+ */
 async function _saveManualStats(eventId: string, rows: GameStatInput[], scores: GameScore): Promise<SavedGameStats> {
   await assertNotPreview()
   const ctx = await requireStaffEvent(eventId)
-  const { data: report, error } = await ctx.supabase
-    .from('game_reports')
-    .insert({
-      club_id: ctx.clubId,
-      team_id: ctx.event.team_id,
-      event_id: eventId,
-      storage_path: null,
-      status: 'parsed',
-      created_by: ctx.userId,
-    })
-    .select('id')
-    .single()
-  if (error || !report) throw new Error(`Save failed: ${error?.message ?? 'unknown error'}`)
+  let row = await loadReportRow(ctx)
+  let created = false
+  if (!row) {
+    const ins = await insertReport(ctx, { storage_path: null })
+    row = ins.row
+    created = ins.created
+  }
   try {
-    return await commitStats(ctx, report.id as string, rows, scores)
+    return await commitStats(ctx, row, rows, scores)
   } catch (e) {
-    await ctx.supabase.from('game_reports').delete().eq('id', report.id)
+    if (created) await ctx.supabase.from('game_reports').delete().eq('id', row.id)
     throw e
   }
+}
+
+// ─── Discard / delete ────────────────────────────────────────────────────────
+
+/** Remove the report, every stat line of its game and its file. */
+async function removeReport(ctx: StaffCtx, row: Pick<ReportRow, 'id' | 'storage_path'>) {
+  const { error: statErr } = await ctx.supabase.from('player_game_stats').delete().eq('event_id', ctx.event.id)
+  if (statErr) throw new Error(`Delete failed: ${statErr.message}`)
+  const { data: deleted, error } = await ctx.supabase.from('game_reports').delete().eq('id', row.id).select('id')
+  if (error) throw new Error(`Delete failed: ${error.message}`)
+  if (!deleted || deleted.length === 0) throw new Error('Not allowed.')
+  if (row.storage_path) {
+    await createServiceClient().storage.from(BUCKET).remove([row.storage_path])
+  }
+  revalidateGame(ctx)
+}
+
+export async function discardGameReportChanges(
+  ...args: Parameters<typeof _discardGameReportChanges>
+): Promise<ActionResult<Awaited<ReturnType<typeof _discardGameReportChanges>>>> {
+  try {
+    return { ok: true, data: await _discardGameReportChanges(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+/**
+ * Drop unsaved changes. A saved report goes back to its last saved version
+ * (returned). A report that was never saved has no other version, so it is
+ * deleted with its file (report: null).
+ */
+async function _discardGameReportChanges(reportId: string): Promise<{ report: GameReportView | null }> {
+  await assertNotPreview()
+  const { ctx, row } = await requireStaffReport(reportId)
+  if (row.status !== 'confirmed') {
+    await removeReport(ctx, row)
+    return { report: null }
+  }
+  const { data: updated, error } = await ctx.supabase
+    .from('game_reports')
+    .update({ draft_rows: null, updated_by: ctx.userId })
+    .eq('id', row.id)
+    .select(REPORT_SELECT)
+    .single()
+  if (error || !updated) throw new Error(`Discard failed: ${error?.message ?? 'unknown error'}`)
+  const roster = await loadRoster(ctx.supabase, ctx.event.team_id)
+  return { report: await buildView(ctx, updated as unknown as ReportRow, roster) }
 }
 
 export async function deleteGameReport(
@@ -929,34 +1157,14 @@ export async function deleteGameReport(
   }
 }
 
-/** Removes the report, its file and the stat lines it wrote. */
+/** Removes the report, its file and the game's stat lines. */
 async function _deleteGameReport(reportId: string): Promise<void> {
   await assertNotPreview()
-  const supabase = await createClient()
-  const { data: report } = await supabase
-    .from('game_reports')
-    .select('id, event_id, storage_path')
-    .eq('id', reportId)
-    .maybeSingle()
-  if (!report) throw new Error('Report not found.')
-  const ctx = await requireStaffEvent(report.event_id as string)
-
-  const { error: statErr } = await ctx.supabase.from('player_game_stats').delete().eq('report_id', reportId)
-  if (statErr) throw new Error(`Delete failed: ${statErr.message}`)
-  const { data: deleted, error } = await ctx.supabase.from('game_reports').delete().eq('id', reportId).select('id')
-  if (error) throw new Error(`Delete failed: ${error.message}`)
-  if (!deleted || deleted.length === 0) throw new Error('Not allowed.')
-
-  if (report.storage_path) {
-    await createServiceClient().storage.from(BUCKET).remove([report.storage_path as string])
-  }
-
-  revalidatePath('/dashboard/schedule')
-  revalidatePath('/dashboard/players', 'layout')
-  revalidatePath(`/dashboard/teams/${ctx.event.team_id}`)
+  const { ctx, row } = await requireStaffReport(reportId)
+  await removeReport(ctx, row)
 }
 
-// ─── Scores for the schedule chips ───────────────────────────────────────────
+// ─── Chips on the schedule (staff) ───────────────────────────────────────────
 
 export async function getGameScores(
   ...args: Parameters<typeof _getGameScores>
@@ -968,15 +1176,35 @@ export async function getGameScores(
   }
 }
 
-async function _getGameScores(eventIds: string[]): Promise<Record<string, GameScore>> {
+/**
+ * Report state per game for the chips. game_reports is staff-only under RLS,
+ * so anyone else gets an empty map. draft_rows itself stays on the server;
+ * only whether one exists comes back.
+ */
+async function _getGameScores(eventIds: string[]): Promise<Record<string, GameReportChip>> {
   const ids = eventIds.filter(Boolean).slice(0, 500)
   if (ids.length === 0) return {}
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('get_game_scores', { p_event_ids: ids })
+  const { data, error } = await supabase
+    .from('game_reports')
+    .select('event_id, status, team_score, opponent_score, draft_origin:draft_rows->>origin')
+    .in('event_id', ids)
   if (error) throw new Error(error.message)
-  const out: Record<string, GameScore> = {}
-  for (const r of (data ?? []) as { event_id: string; team_score: number | null; opponent_score: number | null }[]) {
-    out[r.event_id] = { teamScore: r.team_score, opponentScore: r.opponent_score }
+  const out: Record<string, GameReportChip> = {}
+  for (const r of (data ?? []) as unknown as {
+    event_id: string
+    status: 'parsed' | 'confirmed'
+    team_score: number | null
+    opponent_score: number | null
+    draft_origin: string | null
+  }[]) {
+    const confirmed = r.status === 'confirmed'
+    out[r.event_id] = {
+      status: r.status,
+      teamScore: confirmed ? r.team_score : null,
+      opponentScore: confirmed ? r.opponent_score : null,
+      edited: r.draft_origin != null,
+    }
   }
   return out
 }

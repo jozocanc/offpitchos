@@ -20,7 +20,7 @@ import { parentExcuseChildren } from './attendance-actions'
 import type { ActionResult } from '@/lib/action-result'
 import { formatRecipientToast } from '../notification-toast'
 import type { EventTravelFields } from '@/lib/travel'
-import { getGameScores, type GameScore } from './game-report-actions'
+import { getGameScores, type GameReportChip } from './game-report-actions'
 
 interface Event extends EventTravelFields {
   id: string
@@ -182,9 +182,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     return () => { cancelled = true }
   }, [rsvpEventKey])
 
-  // Staff: saved game scores (057) for the "Stats in: 2-1 W" chip on past
-  // games. Only games/tournaments; re-run when that set changes.
-  const [gameScores, setGameScores] = useState<Record<string, GameScore>>({})
+  // Staff: each game's report state (057/058) for the "Stats in: 2-1 W" chip
+  // (plus an edited dot) on past games. Only games/tournaments; re-run when
+  // that set changes.
+  const [gameScores, setGameScores] = useState<Record<string, GameReportChip>>({})
   const gameEventKey = canEdit
     ? allEvents
         .filter(e => (e.type === 'game' || e.type === 'tournament') && e.status !== 'cancelled')
@@ -209,10 +210,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     return () => { cancelled = true }
   }, [gameEventKey])
 
-  function handleGameStatsSaved(eventId: string, score: GameScore | null) {
+  function handleGameStatsSaved(eventId: string, chip: GameReportChip | null) {
     setGameScores(prev => {
       const next = { ...prev }
-      if (score) next[eventId] = score
+      if (chip) next[eventId] = chip
       else delete next[eventId]
       return next
     })
