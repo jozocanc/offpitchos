@@ -181,7 +181,7 @@ export function PlayerToken({
         {empty ? (
           <span
             className={`${circle} flex items-center justify-center rounded-full border-2 border-dashed font-bold`}
-            style={{ borderColor: 'rgba(255,255,255,0.75)', color: '#ffffff', background: 'rgba(0,0,0,0.12)' }}
+            style={{ borderColor: 'rgba(255,255,255,0.8)', color: '#ffffff', background: '#2a6340' }}
           >
             +
           </span>
