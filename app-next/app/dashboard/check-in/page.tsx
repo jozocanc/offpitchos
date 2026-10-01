@@ -30,12 +30,12 @@ export default async function CheckinPage() {
         />
       ) : (
         <div className="bg-dark-secondary rounded-2xl border border-white/5 p-6 text-center">
-          <p className="font-bold">No roster spot linked to this account</p>
+          <p className="font-bold">Find yourself on the roster first</p>
           <p className="text-gray text-sm mt-1">
-            The daily check-in is for players. Once your account is linked to the roster, it shows up here.
+            Tap your name on the team roster once, and your daily check-in shows up here.
           </p>
-          <Link href="/dashboard" className="inline-block mt-4 text-sm font-bold text-green hover:opacity-80">
-            Back to dashboard
+          <Link href="/dashboard?claim=1" className="inline-block mt-4 bg-green text-dark text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90">
+            Find yourself on the roster
           </Link>
         </div>
       )}
