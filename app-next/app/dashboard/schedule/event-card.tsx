@@ -10,6 +10,9 @@ import type { EventTravelFields } from '@/lib/travel'
 import TravelStrip from './travel-strip'
 import VisitorInfoModal from './visitor-info-modal'
 import { isHomeGame } from '@/lib/match-sheet'
+import GameReportModal from './game-report-modal'
+import type { GameScore } from './game-report-actions'
+import { formatResult } from '@/lib/game-stats'
 
 interface EventCardProps {
   event: EventTravelFields & {
@@ -60,11 +63,16 @@ interface EventCardProps {
   myRsvp?: 'going' | 'not_going' | null
   /** True while that answer is still being saved. */
   myRsvpPending?: boolean
+  /** Saved game stats (057), staff only. null/undefined = none saved. */
+  gameScore?: GameScore | null
+  /** Called after staff save or delete stats in the Game report modal. */
+  onGameStatsSaved?: (eventId: string, score: GameScore | null) => void
 }
 
-export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled, myRsvp, myRsvpPending }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled, myRsvp, myRsvpPending, gameScore, onGameStatsSaved }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
   const [visitorOpen, setVisitorOpen] = useState(false)
+  const [gameReportOpen, setGameReportOpen] = useState(false)
   const timezone = useClubTimezone()
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
@@ -77,6 +85,8 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
   const timeStr = formatTimeRange(start, end, timezone)
   // Staff (canEdit) only: public visiting-team page for home games.
   const showVisitorInfo = canEdit && !isCancelled && isHomeGame(event)
+  // Staff only: after a game, upload the box score or type the stats in.
+  const showGameReport = canEdit && !isCancelled && isOver && (event.type === 'game' || event.type === 'tournament')
 
   return (
     <div
@@ -127,6 +137,17 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 className="text-xs font-medium bg-green/5 text-green/80 border border-green/15 px-2 py-0.5 rounded-full"
               >
                 Visitor info shared
+              </span>
+            )}
+            {showGameReport && gameScore && (
+              <span
+                title="Player stats are saved for this game"
+                className="text-xs font-medium bg-green/5 text-green/80 border border-green/15 px-2 py-0.5 rounded-full"
+              >
+                {(() => {
+                  const r = formatResult(gameScore.teamScore, gameScore.opponentScore)
+                  return r ? `Stats in: ${r}` : 'Stats in'
+                })()}
               </span>
             )}
             {isUnmarked && !isCancelled && (
@@ -227,6 +248,15 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                 Attendance
               </button>
             )}
+            {showGameReport && (
+              <button
+                type="button"
+                onClick={() => setGameReportOpen(true)}
+                className="text-green hover:text-green/80 text-sm transition-colors"
+              >
+                Game report
+              </button>
+            )}
             {showVisitorInfo && (
               <button
                 type="button"
@@ -324,6 +354,16 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           eventId={event.id}
           eventTitle={event.title}
           onClose={() => setVisitorOpen(false)}
+        />
+      )}
+
+      {gameReportOpen && (
+        <GameReportModal
+          eventId={event.id}
+          eventTitle={event.title}
+          currentScore={gameScore ?? null}
+          onClose={() => setGameReportOpen(false)}
+          onSaved={score => onGameStatsSaved?.(event.id, score)}
         />
       )}
 

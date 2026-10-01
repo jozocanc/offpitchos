@@ -91,6 +91,7 @@ export default async function TeamDetailPage({
     { data: playersRaw },
     rosterRes,
     { data: attRows },
+    { data: statRows },
   ] = await Promise.all([
     getClubTimezone(),
     supabase
@@ -136,6 +137,13 @@ export default async function TeamDetailPage({
       .eq('events.status', 'scheduled')
       .gte('events.start_time', thirtyDaysAgo)
       .lte('events.start_time', nowIso),
+    // Confirmed game stats (057) for the small season G/A/min line. Staff only.
+    isStaffViewer
+      ? supabase
+          .from('player_game_stats')
+          .select('player_id, goals, assists, minutes')
+          .eq('team_id', id)
+      : Promise.resolve({ data: null }),
   ])
 
   if (!team) notFound()
@@ -158,6 +166,15 @@ export default async function TeamDetailPage({
         shorts_size: null,
       })
     }
+  }
+
+  const seasonStats: Record<string, { goals: number; assists: number; minutes: number }> = {}
+  for (const r of (statRows ?? []) as { player_id: string; goals: number; assists: number; minutes: number | null }[]) {
+    const t = seasonStats[r.player_id] ?? { goals: 0, assists: 0, minutes: 0 }
+    t.goals += r.goals ?? 0
+    t.assists += r.assists ?? 0
+    t.minutes += r.minutes ?? 0
+    seasonStats[r.player_id] = t
   }
 
   const perPlayerTotals: Record<string, { total: number; present: number }> = {}
@@ -356,6 +373,14 @@ export default async function TeamDetailPage({
                           {isDOC && sig?.missingSizes && (
                             <span className="text-[10px] font-bold uppercase tracking-wide bg-white/10 text-gray px-1.5 py-0.5 rounded">
                               No sizes
+                            </span>
+                          )}
+                          {isStaffViewer && !isSquadMember && seasonStats[p.id] && (
+                            <span
+                              title="Season goals, assists and minutes"
+                              className="text-[10px] font-semibold text-gray tabular-nums"
+                            >
+                              {`${seasonStats[p.id].goals}G ${seasonStats[p.id].assists}A · ${seasonStats[p.id].minutes} min`}
                             </span>
                           )}
                           {sig?.attendanceRate !== null && sig?.attendanceRate !== undefined && (

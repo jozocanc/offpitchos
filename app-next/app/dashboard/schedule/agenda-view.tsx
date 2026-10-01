@@ -5,6 +5,7 @@ import EmptyState from '@/components/empty-state'
 import { useClubTimezone } from '@/components/club-timezone'
 import { dayKey, daysFromToday, formatDayKeyLong } from '@/lib/format-datetime'
 import type { EventTravelFields } from '@/lib/travel'
+import type { GameScore } from './game-report-actions'
 
 interface Event extends EventTravelFields {
   id: string
@@ -49,13 +50,16 @@ interface AgendaViewProps {
   rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
   showRsvpTally?: boolean
   matchSheets?: Record<string, boolean>
+  /** Saved game scores by event id (057), staff only. */
+  gameScores?: Record<string, GameScore>
+  onGameStatsSaved?: (eventId: string, score: GameScore | null) => void
   /** Player's own answers. undefined = still loading (cards hold space). */
   myRsvps?: Record<string, 'going' | 'not_going'>
   pendingRsvpIds?: Set<string>
   empty?: { title: string; body: string; action?: { label: string; onClick: () => void } }
 }
 
-export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets, myRsvps, pendingRsvpIds, empty }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets, gameScores, onGameStatsSaved, myRsvps, pendingRsvpIds, empty }: AgendaViewProps) {
   // Before the early return — hooks must run unconditionally.
   const timezone = useClubTimezone()
 
@@ -113,6 +117,8 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 rsvpTally={rsvpTallies?.[event.id] ?? null}
                 showRsvpTally={showRsvpTally}
                 matchSheetEnabled={matchSheets?.[event.id]}
+                gameScore={gameScores?.[event.id] ?? null}
+                onGameStatsSaved={onGameStatsSaved}
                 myRsvp={myRsvps ? (myRsvps[event.id] ?? null) : undefined}
                 myRsvpPending={pendingRsvpIds?.has(event.id) ?? false}
               />

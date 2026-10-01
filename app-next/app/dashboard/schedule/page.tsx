@@ -4,6 +4,10 @@ import ScheduleClient from './schedule-client'
 
 export const metadata: Metadata = { title: 'Schedule' }
 
+// Game report uploads (game-report-actions.ts) run a Claude document read
+// inside a Server Action from this page; give it room.
+export const maxDuration = 120
+
 export default async function SchedulePage({
   searchParams,
 }: {

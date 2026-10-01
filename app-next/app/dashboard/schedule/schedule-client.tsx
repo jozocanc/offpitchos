@@ -20,6 +20,7 @@ import { parentExcuseChildren } from './attendance-actions'
 import type { ActionResult } from '@/lib/action-result'
 import { formatRecipientToast } from '../notification-toast'
 import type { EventTravelFields } from '@/lib/travel'
+import { getGameScores, type GameScore } from './game-report-actions'
 
 interface Event extends EventTravelFields {
   id: string
@@ -180,6 +181,42 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     })
     return () => { cancelled = true }
   }, [rsvpEventKey])
+
+  // Staff: saved game scores (057) for the "Stats in: 2-1 W" chip on past
+  // games. Only games/tournaments; re-run when that set changes.
+  const [gameScores, setGameScores] = useState<Record<string, GameScore>>({})
+  const gameEventKey = canEdit
+    ? allEvents
+        .filter(e => (e.type === 'game' || e.type === 'tournament') && e.status !== 'cancelled')
+        .map(e => `${e.id}|${e.end_time}`)
+        .sort()
+        .join(',')
+    : ''
+  useEffect(() => {
+    if (!gameEventKey) return
+    const now = Date.now()
+    const ids = gameEventKey
+      .split(',')
+      .map(k => k.split('|'))
+      .filter(([, end]) => new Date(end).getTime() < now)
+      .map(([id]) => id)
+    if (ids.length === 0) return
+    let cancelled = false
+    getGameScores(ids).catch(() => ({ ok: false as const, error: '' })).then(res => {
+      if (cancelled || !res.ok) return
+      setGameScores(prev => ({ ...prev, ...res.data }))
+    })
+    return () => { cancelled = true }
+  }, [gameEventKey])
+
+  function handleGameStatsSaved(eventId: string, score: GameScore | null) {
+    setGameScores(prev => {
+      const next = { ...prev }
+      if (score) next[eventId] = score
+      else delete next[eventId]
+      return next
+    })
+  }
 
   function saveRsvp(
     eventId: string,
@@ -460,6 +497,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           rsvpTallies={rsvpTallies}
           showRsvpTally={canEdit}
           matchSheets={matchSheets}
+          gameScores={gameScores}
+          onGameStatsSaved={handleGameStatsSaved}
         />
       ) : (
         <CalendarView

@@ -6,6 +6,25 @@ import { revalidatePath } from 'next/cache'
 import { getEffectiveRole, getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
+/** One game on the player's stats table (057). Confirmed stats only. */
+export interface PlayerGameLine {
+  event_id: string
+  title: string
+  start_time: string
+  started: boolean
+  minutes: number | null
+  goals: number
+  assists: number
+  shots: number
+  shots_on_goal: number
+  yellow_cards: number
+  red_cards: number
+  saves: number | null
+  goals_against: number | null
+  team_score: number | null
+  opponent_score: number | null
+}
+
 async function getUserProfile() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -57,6 +76,45 @@ export async function getPlayerProfile(playerId: string) {
     .order('start_time', { ascending: false })
     .limit(20)
 
+  // Game stats (057). RLS returns rows to staff of the club and to the
+  // player who owns this roster row; anyone else gets none. Rows only exist
+  // once staff confirm a report, so drafts never show here.
+  const { data: statRows } = await supabase
+    .from('player_game_stats')
+    .select('event_id, started, minutes, goals, assists, shots, shots_on_goal, yellow_cards, red_cards, saves, goals_against, events(title, start_time)')
+    .eq('player_id', playerId)
+  const statEventIds = (statRows ?? []).map(r => r.event_id as string)
+  const { data: scoreRows } = statEventIds.length > 0
+    ? await supabase.rpc('get_game_scores', { p_event_ids: statEventIds })
+    : { data: [] }
+  const scoreByEvent = new Map(
+    ((scoreRows ?? []) as { event_id: string; team_score: number | null; opponent_score: number | null }[])
+      .map(r => [r.event_id, r]),
+  )
+  const gameStats: PlayerGameLine[] = (statRows ?? [])
+    .map(r => {
+      const ev = (Array.isArray(r.events) ? r.events[0] : r.events) as { title: string; start_time: string } | null
+      const score = scoreByEvent.get(r.event_id as string)
+      return {
+        event_id: r.event_id as string,
+        title: ev?.title ?? 'Game',
+        start_time: ev?.start_time ?? '',
+        started: Boolean(r.started),
+        minutes: (r.minutes as number | null) ?? null,
+        goals: (r.goals as number) ?? 0,
+        assists: (r.assists as number) ?? 0,
+        shots: (r.shots as number) ?? 0,
+        shots_on_goal: (r.shots_on_goal as number) ?? 0,
+        yellow_cards: (r.yellow_cards as number) ?? 0,
+        red_cards: (r.red_cards as number) ?? 0,
+        saves: (r.saves as number | null) ?? null,
+        goals_against: (r.goals_against as number | null) ?? null,
+        team_score: score?.team_score ?? null,
+        opponent_score: score?.opponent_score ?? null,
+      }
+    })
+    .sort((a, b) => b.start_time.localeCompare(a.start_time))
+
   // Calculate category averages
   const categoryAverages: Record<string, { total: number; count: number; avg: number }> = {}
   for (const f of feedback ?? []) {
@@ -75,6 +133,7 @@ export async function getPlayerProfile(playerId: string) {
     feedback: feedback ?? [],
     recentEvents: recentEvents ?? [],
     categoryAverages,
+    gameStats,
     userRole: await getEffectiveRole(profile.role),
     userProfileId: profile.id,
     isOwner,

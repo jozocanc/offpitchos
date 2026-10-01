@@ -9,6 +9,9 @@ import { submitPlayerSize } from './actions'
 import { useToast } from '@/components/toast'
 import { teamLabel } from '@/lib/team-label'
 import { GEAR_SIZES, gearSizeLabel } from '@/lib/constants'
+import EmptyState from '@/components/empty-state'
+import { formatResult, isGoalkeeper } from '@/lib/game-stats'
+import type { PlayerGameLine } from './actions'
 
 const JERSEY_SIZES: readonly string[] = GEAR_SIZES
 
@@ -133,11 +136,98 @@ function GearSizesEditor({
   )
 }
 
-export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, userRole, playerId, isOwner }: {
+function SeasonStats({ games, position }: { games: PlayerGameLine[]; position: string | null }) {
+  const timezone = useClubTimezone()
+  const keeper = isGoalkeeper(position) || games.some(g => g.saves != null || g.goals_against != null)
+  const sum = (f: (g: PlayerGameLine) => number | null) => games.reduce((n, g) => n + (f(g) ?? 0), 0)
+  const totals = [
+    { label: 'Games', value: games.length },
+    { label: 'Starts', value: games.filter(g => g.started).length },
+    { label: 'Minutes', value: sum(g => g.minutes) },
+    { label: 'Goals', value: sum(g => g.goals) },
+    { label: 'Assists', value: sum(g => g.assists) },
+    { label: 'Shots', value: sum(g => g.shots) },
+    { label: 'SOG', value: sum(g => g.shots_on_goal) },
+    { label: 'Cards', value: `${sum(g => g.yellow_cards)}Y ${sum(g => g.red_cards)}R` },
+    ...(keeper
+      ? [
+          { label: 'Saves', value: sum(g => g.saves) },
+          { label: 'GA', value: sum(g => g.goals_against) },
+        ]
+      : []),
+  ]
+
+  return (
+    <div className="bg-dark-secondary border border-white/5 rounded-xl p-6 mb-6">
+      <h3 className="font-bold text-white mb-4">Season stats</h3>
+      {games.length === 0 ? (
+        <EmptyState
+          compact
+          title="No game stats yet."
+          body="Staff add them after each game from the schedule."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+            {totals.map(t => (
+              <div key={t.label} className="bg-dark rounded-lg px-2 py-2 text-center">
+                <p className="text-lg font-bold text-green tabular-nums">{t.value}</p>
+                <p className="text-[11px] text-gray">{t.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 overflow-x-auto -mx-2 px-2">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray text-left border-b border-white/5">
+                  <th className="font-medium py-2 pr-3">Date</th>
+                  <th className="font-medium py-2 pr-3">Opponent</th>
+                  <th className="font-medium py-2 pr-3">Result</th>
+                  <th className="font-medium py-2 px-2 text-center" title="Started">GS</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Minutes">Min</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Goals">G</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Assists">A</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Shots">Sh</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Shots on goal">SOG</th>
+                  <th className="font-medium py-2 px-2 text-right" title="Yellow / red cards">Cards</th>
+                  {keeper && <th className="font-medium py-2 px-2 text-right" title="Saves">Sv</th>}
+                  {keeper && <th className="font-medium py-2 px-2 text-right" title="Goals against">GA</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {games.map(g => (
+                  <tr key={g.event_id} className="border-b border-white/5 last:border-0">
+                    <td className="py-2 pr-3 text-gray whitespace-nowrap">{g.start_time ? formatMonthDay(g.start_time, timezone) : ''}</td>
+                    <td className="py-2 pr-3 text-white">{g.title}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap font-medium">{formatResult(g.team_score, g.opponent_score) ?? '-'}</td>
+                    <td className="py-2 px-2 text-center text-gray">{g.started ? 'Yes' : ''}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.minutes ?? '-'}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.goals}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.assists}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.shots}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.shots_on_goal}</td>
+                    <td className="py-2 px-2 text-right tabular-nums whitespace-nowrap">
+                      {g.yellow_cards || g.red_cards ? `${g.yellow_cards}Y ${g.red_cards}R` : '-'}
+                    </td>
+                    {keeper && <td className="py-2 px-2 text-right tabular-nums">{g.saves ?? '-'}</td>}
+                    {keeper && <td className="py-2 px-2 text-right tabular-nums">{g.goals_against ?? '-'}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function PlayerProfileClient({ player, feedback, recentEvents, categoryAverages, gameStats = [], userRole, playerId, isOwner }: {
   player: Player
   feedback: Feedback[]
   recentEvents: RecentEvent[]
   categoryAverages: Record<string, { avg: number; count: number }>
+  gameStats?: PlayerGameLine[]
   userRole: string
   playerId: string
   isOwner: boolean
@@ -192,6 +282,13 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
           </div>
         )}
       </div>
+
+      {/* Season stats (057): staff for any player, a player on their own
+          profile. RLS already limits the rows; this keeps the card off
+          other players' pages. */}
+      {(isOwner || canAddFeedback) && (
+        <SeasonStats games={gameStats} position={player.position} />
+      )}
 
       {/* Development trend chart — only renders when there's enough rated
           feedback to actually draw a line. Otherwise it stays out of the
