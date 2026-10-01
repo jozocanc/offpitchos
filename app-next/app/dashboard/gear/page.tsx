@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { redirect } from 'next/navigation'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { getGearData } from './actions'
@@ -10,10 +10,9 @@ export const metadata: Metadata = {
 }
 
 export default async function GearPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-  const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
+  // Request-memoized claims + profile, shared with getGearData().
+  if (!(await getAuthUserId())) redirect('/login')
+  const prof = await getCurrentProfile()
   const role = await getEffectiveRole(prof?.role ?? 'player')
   if (role !== 'doc') redirect('/dashboard')
 

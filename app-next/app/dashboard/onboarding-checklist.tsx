@@ -1,13 +1,18 @@
 import Link from 'next/link'
-import { getOnboardingState, dismissOnboardingForm } from './onboarding-checklist-actions'
+import { getOnboardingState, dismissOnboardingForm, type OnboardingState } from './onboarding-checklist-actions'
 
 // Post-wizard setup checklist for DOCs. Auto-completes each step as the
 // underlying data appears (teams, coaches, players, events) and can only
 // be dismissed once all four are done. Returns null when dismissed, when
 // the user is not a DOC, or when they have no club yet — the dashboard
 // can mount this unconditionally for DOC view.
-export default async function OnboardingChecklist() {
-  const state = await getOnboardingState()
+export default async function OnboardingChecklist({
+  statePromise,
+}: {
+  /** Started early by the dashboard so it overlaps the page's other queries. */
+  statePromise?: Promise<OnboardingState>
+} = {}) {
+  const state = await (statePromise ?? getOnboardingState())
   // Nothing left to do: get out of the way instead of showing four ticks.
   if (!state.visible || state.allComplete) return null
 

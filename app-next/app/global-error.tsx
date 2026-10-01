@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 export default function GlobalError({
   error: _error,
   reset,
@@ -37,6 +39,11 @@ export default function GlobalError({
             >
               Try again
             </button>
+            <div style={{ marginTop: '16px' }}>
+              <Link href="/dashboard" style={{ color: '#1F4E3D', fontSize: '14px', fontWeight: 600 }}>
+                Go to dashboard
+              </Link>
+            </div>
           </div>
         </div>
       </body>

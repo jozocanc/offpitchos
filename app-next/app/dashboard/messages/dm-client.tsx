@@ -2,7 +2,12 @@
 import { dayKey, formatMonthDay, formatTime } from '@/lib/format-datetime'
 import { useClubTimezone } from '@/components/club-timezone'
 
-import { useEffect, useState, useTransition, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useToast, isPreviewBlocked, networkErrorMessage } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
+import Modal from '@/components/modal'
+import { Skeleton } from '@/components/skeleton'
+import EmptyState from '@/components/empty-state'
 import {
   getDMThreads,
   getThreadMessages,
@@ -25,7 +30,8 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
   useEffect(() => { loadThreads() }, [])
 
   async function loadThreads() {
-    const data = await getDMThreads()
+    const data = await getDMThreads().catch(() => null)
+    if (!data) { setThreads(prev => prev ?? []); return }
     setThreads(data)
     // If we were deep-linked to a user that has no messages yet, we still
     // want to open the thread view.
@@ -65,6 +71,7 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
           {threads === null ? 'Loading…' : `${threads.length} conversation${threads.length === 1 ? '' : 's'}`}
         </p>
         <button
+          type="button"
           onClick={() => setPickerOpen(true)}
           className="bg-green text-dark font-bold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity text-sm"
         >
@@ -73,19 +80,32 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
       </div>
 
       {threads === null ? (
-        <div className="text-gray text-sm">Loading…</div>
-      ) : threads.length === 0 ? (
-        <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
-          <p className="text-gray text-lg">No direct messages yet.</p>
-          <p className="text-gray text-sm mt-1">
-            Start a conversation. Phone numbers stay private.
-          </p>
+        <div className="space-y-2" role="status" aria-label="Loading conversations">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-dark-secondary rounded-xl p-4 border border-white/5 flex items-start gap-3">
+              <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+              <div className="flex-1">
+                <div className="flex justify-between gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+                <Skeleton className="h-3.5 w-3/4 mt-2" />
+              </div>
+            </div>
+          ))}
         </div>
+      ) : threads.length === 0 ? (
+        <EmptyState
+          title="No direct messages yet"
+          body="Message a coach or teammate one to one. Phone numbers stay private."
+          action={{ label: '+ New message', onClick: () => setPickerOpen(true) }}
+        />
       ) : (
         <div className="space-y-2">
           {threads.map(t => (
             <button
               key={t.otherUserId}
+              type="button"
               onClick={() => openThread(t.otherUserId, t.otherName)}
               className="w-full text-left bg-dark-secondary rounded-xl p-4 border border-white/5 hover:border-green/40 transition-colors flex items-start gap-3"
             >
@@ -125,6 +145,16 @@ export default function DMClient({ initialOpenUserId }: { initialOpenUserId?: st
   )
 }
 
+// A message the viewer just sent: shows instantly as "Sending…", is replaced
+// by the server copy once it lands, or stays as "Not sent" with Retry.
+interface PendingDM {
+  tempId: string
+  content: string
+  createdAt: string
+  status: 'sending' | 'failed'
+  error?: string
+}
+
 function ThreadView({
   otherUserId,
   otherName,
@@ -136,10 +166,12 @@ function ThreadView({
 }) {
   const timezone = useClubTimezone()
   const [messages, setMessages] = useState<DMMessage[] | null>(null)
+  const [pending, setPending] = useState<PendingDM[]>([])
+  const [unsending, setUnsending] = useState<Set<string>>(new Set())
   const [text, setText] = useState('')
-  const [isSending, startSend] = useTransition()
-  const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   useEffect(() => {
     loadAndMarkRead()
@@ -148,48 +180,80 @@ function ThreadView({
   }, [otherUserId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadAndMarkRead() {
-    const data = await getThreadMessages(otherUserId)
+    // Polling: a dropped request just waits for the next tick.
+    const data = await getThreadMessages(otherUserId).catch(() => null)
+    if (!data) { setMessages(prev => prev ?? []); return }
     setMessages(data)
-    await markThreadRead(otherUserId)
+    await markThreadRead(otherUserId).catch(() => {})
   }
 
   useEffect(() => {
     // Scroll to newest message on update.
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [messages])
+  }, [messages, pending])
+
+  async function deliver(content: string, tempId: string) {
+    setPending(prev => [
+      ...prev.filter(p => p.tempId !== tempId),
+      { tempId, content, createdAt: new Date().toISOString(), status: 'sending' },
+    ])
+    let error: string | undefined
+    try {
+      error = (await sendDM(otherUserId, content)).error
+    } catch {
+      error = networkErrorMessage()
+    }
+    if (error) {
+      if (isPreviewBlocked(error)) {
+        setPending(prev => prev.filter(p => p.tempId !== tempId))
+        setText(t => t || content)
+        toast(error, 'error')
+        return
+      }
+      setPending(prev => prev.map(p => p.tempId === tempId ? { ...p, status: 'failed', error } : p))
+      return
+    }
+    await loadAndMarkRead()
+    setPending(prev => prev.filter(p => p.tempId !== tempId))
+  }
 
   function handleSend() {
     const content = text.trim()
     if (!content) return
-    setError(null)
-    startSend(async () => {
-      const result = await sendDM(otherUserId, content)
-      if (result.error) {
-        setError(result.error)
-        return
-      }
-      setText('')
-      await loadAndMarkRead()
-    })
+    setText('')
+    void deliver(content, `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`)
   }
 
-  function handleUnsend(id: string) {
-    if (!confirm('Unsend this message?')) return
-    startSend(async () => {
-      const result = await unsendDM(id)
-      if (result.error) alert(result.error)
-      await loadAndMarkRead()
+  async function handleUnsend(id: string) {
+    const ok = await confirm({
+      title: 'Unsend this message?',
+      message: `It disappears for ${otherName} too.`,
+      confirmLabel: 'Unsend',
+      destructive: true,
     })
+    if (!ok) return
+    setUnsending(prev => new Set(prev).add(id))
+    let error: string | undefined
+    try {
+      error = (await unsendDM(id)).error
+    } catch {
+      error = networkErrorMessage()
+    }
+    if (error) toast(error, 'error')
+    await loadAndMarkRead()
+    setUnsending(prev => { const n = new Set(prev); n.delete(id); return n })
   }
 
   return (
     <div className="flex flex-col h-[calc(100dvh-14rem)] md:h-[calc(100vh-12rem)] max-h-[700px]">
       <div className="flex items-center gap-3 pb-4 border-b border-white/5 shrink-0">
         <button
+          type="button"
           onClick={onBack}
-          className="text-gray hover:text-white text-sm"
+          aria-label="Back to conversations"
+          className="text-gray hover:text-white text-sm px-2 py-1 -ml-2 rounded-lg"
         >← Back</button>
-        <div className="w-10 h-10 rounded-full bg-green/10 text-green font-bold flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-green/10 text-green font-bold flex items-center justify-center" aria-hidden="true">
           {otherName.slice(0, 1).toUpperCase()}
         </div>
         <div>
@@ -198,45 +262,79 @@ function ThreadView({
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto py-4 space-y-2">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto py-4 space-y-2" aria-live="polite">
         {messages === null ? (
-          <div className="text-gray text-sm">Loading…</div>
-        ) : messages.length === 0 ? (
+          <div className="space-y-3" role="status" aria-label="Loading messages">
+            <div className="flex justify-start"><Skeleton className="h-10 w-48 rounded-2xl" /></div>
+            <div className="flex justify-end"><Skeleton className="h-10 w-40 rounded-2xl" /></div>
+            <div className="flex justify-start"><Skeleton className="h-14 w-56 rounded-2xl" /></div>
+          </div>
+        ) : messages.length === 0 && pending.length === 0 ? (
           <div className="text-center text-gray text-sm py-12">
             No messages yet. Say hi.
           </div>
         ) : (
-          messages.map(m => (
-            <div key={m.id} className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm group relative ${
-                  m.isMine
-                    ? 'bg-green text-dark rounded-br-sm'
-                    : 'bg-dark-secondary text-white rounded-bl-sm border border-white/5'
-                }`}
-              >
-                <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                <div className={`flex items-center gap-2 mt-1 text-[10px] ${m.isMine ? 'text-dark/60' : 'text-gray'}`}>
-                  <span>{formatTimeShort(m.createdAt, timezone)}</span>
-                  {m.isMine && (
-                    <button
-                      onClick={() => handleUnsend(m.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                    >
-                      unsend
-                    </button>
-                  )}
+          <>
+            {messages.filter(m => !unsending.has(m.id)).map(m => (
+              <div key={m.id} className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm group relative ${
+                    m.isMine
+                      ? 'bg-green text-dark rounded-br-sm'
+                      : 'bg-dark-secondary text-white rounded-bl-sm border border-white/5'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                  <div className={`flex items-center gap-2 mt-1 text-[10px] ${m.isMine ? 'text-dark/60' : 'text-gray'}`}>
+                    <span>{formatTimeShort(m.createdAt, timezone)}</span>
+                    {m.isMine && (
+                      <button
+                        type="button"
+                        onClick={() => handleUnsend(m.id)}
+                        className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:underline"
+                      >
+                        unsend
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+            {pending.map(p => (
+              <div key={p.tempId} className="flex flex-col items-end">
+                <div
+                  className={`max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2 text-sm ${
+                    p.status === 'failed'
+                      ? 'bg-red/10 text-white border border-red/30'
+                      : 'bg-green text-dark opacity-70'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{p.content}</p>
+                  <p className={`mt-1 text-[10px] ${p.status === 'failed' ? 'text-red' : 'text-dark/60'}`}>
+                    {p.status === 'sending' ? 'Sending…' : 'Not sent'}
+                  </p>
+                </div>
+                {p.status === 'failed' && (
+                  <div className="flex items-center gap-3 mt-1 text-xs">
+                    {p.error && <span className="text-red">{p.error}</span>}
+                    <button type="button" onClick={() => void deliver(p.content, p.tempId)} className="font-bold text-green hover:underline">
+                      Retry
+                    </button>
+                    <button type="button" onClick={() => setPending(prev => prev.filter(x => x.tempId !== p.tempId))} className="text-gray hover:text-white">
+                      Discard
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
         )}
       </div>
 
-      {error && <p className="text-red text-sm mb-2 shrink-0">{error}</p>}
-
       <div className="flex gap-2 pt-3 border-t border-white/5 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <label htmlFor="dm-input" className="sr-only">Message {otherName}</label>
         <textarea
+          id="dm-input"
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => {
@@ -248,16 +346,18 @@ function ThreadView({
           placeholder="Type a message…"
           rows={1}
           maxLength={2000}
-          className="flex-1 bg-dark-secondary border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors resize-none"
+          className="flex-1 bg-dark-secondary border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors resize-none"
         />
         <button
+          type="button"
           onClick={handleSend}
-          disabled={isSending || !text.trim()}
+          disabled={!text.trim()}
           className="bg-green text-dark font-bold px-5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 shrink-0"
         >
           Send
         </button>
       </div>
+      {confirmDialog}
     </div>
   )
 }
@@ -273,7 +373,7 @@ function NewMessagePicker({
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    getDMableUsers().then(setUsers)
+    getDMableUsers().then(setUsers).catch(() => setUsers([]))
   }, [])
 
   const filtered = (users ?? []).filter(u =>
@@ -281,56 +381,57 @@ function NewMessagePicker({
   )
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-dark border border-white/10 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="p-5 border-b border-white/5 flex items-center justify-between">
-          <h2 className="font-bold text-white">New message</h2>
-          <button onClick={onClose} className="text-gray hover:text-white text-2xl leading-none">×</button>
-        </div>
-        <div className="p-5 border-b border-white/5">
-          <input
-            autoFocus
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search by name…"
-            className="w-full bg-dark-secondary border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray focus:outline-none focus:border-green"
-          />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {users === null ? (
-            <div className="text-gray text-sm p-6">Loading…</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-gray text-sm p-6 text-center">
-              {users.length === 0 ? 'No one to message yet.' : 'No matches.'}
-            </div>
-          ) : (
-            filtered.map(u => (
-              <button
-                key={u.userId}
-                onClick={() => onPick(u)}
-                className="w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-colors flex items-center gap-3"
-              >
-                <div className="w-9 h-9 rounded-full bg-green/10 text-green font-bold flex items-center justify-center shrink-0">
-                  {u.name.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold truncate">{u.name}</p>
-                  <p className="text-gray text-xs truncate">
-                    {u.role}{u.teams.length > 0 ? ` · ${u.teams.join(', ')}` : ''}
-                  </p>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
+    <Modal title="New message" onClose={onClose} bodyClassName="p-5 pb-2">
+      <div className="sticky top-0 z-10 bg-dark-secondary -mx-5 px-5 pb-4 border-b border-white/5">
+        <label htmlFor="dm-search" className="sr-only">Search by name</label>
+        <input
+          id="dm-search"
+          autoFocus
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search by name…"
+          className="w-full bg-dark border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm text-white placeholder-gray focus:outline-none focus:border-green"
+        />
       </div>
-    </div>
+      <div className="-mx-5">
+        {users === null ? (
+          <div className="p-4 space-y-3" role="status" aria-label="Loading people">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24 mt-1.5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-gray text-sm p-6 text-center">
+            {users.length === 0 ? 'No one to message yet. Once coaches and players join your team, they show up here.' : 'No one matches that name.'}
+          </div>
+        ) : (
+          filtered.map(u => (
+            <button
+              key={u.userId}
+              type="button"
+              onClick={() => onPick(u)}
+              className="w-full text-left px-5 py-4 border-b border-white/5 hover:bg-white/5 transition-colors flex items-center gap-3"
+            >
+              <div className="w-9 h-9 rounded-full bg-green/10 text-green font-bold flex items-center justify-center shrink-0" aria-hidden="true">
+                {u.name.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold truncate">{u.name}</p>
+                <p className="text-gray text-xs truncate">
+                  {u.role}{u.teams.length > 0 ? ` · ${u.teams.join(', ')}` : ''}
+                </p>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </Modal>
   )
 }
 

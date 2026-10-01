@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 import {
   uploadClubFile,
   deleteClubFile,
@@ -19,6 +20,7 @@ export default function FilesClient({ files, role }: Props) {
   const isDoc = role === 'doc'
   const router = useRouter()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
   const [query, setQuery] = useState('')
   const [uploading, setUploading] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -46,8 +48,13 @@ export default function FilesClient({ files, role }: Props) {
     router.refresh()
   }
 
-  function handleDelete(file: ClubFile) {
-    if (!confirm(`Delete ${file.name}? This cannot be undone.`)) return
+  async function handleDelete(file: ClubFile) {
+    if (!(await confirm({
+      title: `Delete ${file.name}?`,
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
     setPendingDeleteId(file.id)
     startTransition(async () => {
       const result = await deleteClubFile(file.id)
@@ -149,6 +156,7 @@ export default function FilesClient({ files, role }: Props) {
           ))}
         </ul>
       )}
+      {dialog}
     </>
   )
 }

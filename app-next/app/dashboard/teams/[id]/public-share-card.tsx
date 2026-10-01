@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { setTeamPublicShare, rotateTeamPublicShareToken } from './actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 interface Props {
   teamId: string
@@ -17,6 +18,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
 
   const shareUrl = token ? `${baseUrl}/share/${token}` : null
 
@@ -45,8 +47,13 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
     })
   }
 
-  function rotate() {
-    if (!confirm('Rotate the share link? Anyone using the old link will lose access immediately.')) return
+  async function rotate() {
+    if (!(await confirm({
+      title: 'Rotate the share link?',
+      message: 'Anyone using the old link will lose access immediately.',
+      confirmLabel: 'Rotate',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       try {
         const r = await rotateTeamPublicShareToken(teamId)
@@ -129,6 +136,7 @@ export default function PublicShareCard({ teamId, initialEnabled, initialToken, 
           </div>
         </>
       )}
+      {dialog}
     </section>
   )
 }

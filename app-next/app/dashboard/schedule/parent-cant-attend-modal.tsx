@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
-import { getMyKidsOnTeam, parentExcuseChildren } from './attendance-actions'
-import { useToast } from '@/components/toast'
+import { useState, useEffect } from 'react'
+import { getMyKidsOnTeam } from './attendance-actions'
+import Modal from '@/components/modal'
+import { Skeleton } from '@/components/skeleton'
 
 interface Player {
   id: string
@@ -11,42 +12,45 @@ interface Player {
   jersey_number: number | null
 }
 
-// Player-facing "I can't make it" modal. Loads the player row(s) linked
-// to the viewer's account on this event's team. A player normally has
-// exactly one linked row, in which case it is acted on directly with no
-// picker. If several rows are linked (legacy data) a checkbox list is
-// shown instead. On submit, marks the selected player(s) as "excused" in
-// the attendance table and pushes a notification to the team's coaches
-// with the optional reason.
+// Player-facing "I can't make it" modal. A player normally has exactly one
+// linked roster row; the schedule passes it in (knownPlayerIds) so the
+// modal opens straight to the optional reason with no loading step. With
+// several linked rows (legacy data) it loads them and shows a picker.
+//
+// The modal only collects input. onSubmit hands it to the schedule, which
+// flips the card to "You can't make it" right away, saves in the
+// background and rolls back with a toast if the save fails.
 export default function ParentCantAttendModal({
-  eventId,
   teamId,
   eventTitle,
+  knownPlayerIds,
+  onSubmit,
   onClose,
 }: {
   eventId: string
   teamId: string
   eventTitle: string
+  knownPlayerIds?: string[]
+  onSubmit: (input: { playerIds: string[]; reason: string; playerCount: number }) => void
   onClose: () => void
 }) {
+  const single = knownPlayerIds?.length === 1
   const [players, setPlayers] = useState<Player[]>([])
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(new Set(single ? knownPlayerIds : []))
   const [reason, setReason] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [isPending, startTransition] = useTransition()
-  const { toast } = useToast()
+  const [loading, setLoading] = useState(!single)
 
   useEffect(() => {
+    if (single) return
     getMyKidsOnTeam(teamId)
       .then(res => {
         if (!res.ok) return
         const data = res.data
         setPlayers(data)
-        // One linked player (the normal case): act on it directly.
         if (data.length === 1) setSelected(new Set([data[0].id]))
       })
       .finally(() => setLoading(false))
-  }, [teamId])
+  }, [teamId, single])
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -57,69 +61,53 @@ export default function ParentCantAttendModal({
     })
   }
 
-  function handleSubmit() {
-    if (selected.size === 0) {
-      toast('Select at least one player', 'error')
-      return
-    }
-    startTransition(async () => {
-      try {
-        const excuseRes = await parentExcuseChildren({
-          eventId,
-          teamId,
-          playerIds: Array.from(selected),
-          reason,
-        })
-        if (!excuseRes.ok) { toast(excuseRes.error, 'error'); return }
-        const result = excuseRes.data
-        const parts = [players.length === 1 ? 'Marked as not attending' : `${result.excused} marked excused`]
-        if (result.notifiedCoaches > 0) {
-          parts.push(`coach${result.notifiedCoaches === 1 ? '' : 'es'} notified`)
-        }
-        toast(parts.join(' · '), 'success')
-        onClose()
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to excuse'
-        toast(msg, 'error')
-      }
-    })
+  const playerCount = single ? 1 : players.length
+  const canSubmit = selected.size > 0
+
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault()
+    if (!canSubmit) return
+    onSubmit({ playerIds: Array.from(selected), reason: reason.trim(), playerCount })
+    onClose()
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-2">I Can&apos;t Make It</h2>
-        <p className="text-gray text-sm mb-6">{eventTitle}</p>
+  const reasonField = (
+    <>
+      <label htmlFor="cant-reason" className="block text-xs text-gray uppercase tracking-wide mb-2">
+        Reason (optional)
+      </label>
+      <input
+        id="cant-reason"
+        type="text"
+        value={reason}
+        onChange={e => setReason(e.target.value)}
+        placeholder="e.g. Class conflict, injury, travel"
+        maxLength={200}
+        autoFocus
+        className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6"
+      />
+    </>
+  )
 
+  return (
+    <Modal title="I Can't Make It" description={eventTitle} onClose={onClose}>
+      <form onSubmit={handleSubmit}>
         {loading ? (
-          <div className="animate-pulse space-y-3">
-            {[1, 2].map(i => <div key={i} className="h-12 bg-dark rounded-xl" />)}
+          <div className="space-y-3 mb-6">
+            {[1, 2].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}
           </div>
-        ) : players.length === 0 ? (
+        ) : playerCount === 0 ? (
           <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
             <p className="text-gray text-sm">
               Your account isn&apos;t linked to a player on this team yet. Ask your coach to send you an invite.
             </p>
           </div>
-        ) : players.length === 1 ? (
+        ) : playerCount === 1 ? (
           <>
             <p className="text-sm text-gray mb-4">
               Your coaches will be notified that you can&apos;t make it.
             </p>
-            <label className="block text-xs text-gray uppercase tracking-wide mb-2">
-              Reason (optional)
-            </label>
-            <input
-              type="text"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder="e.g. Class conflict, injury, travel"
-              maxLength={200}
-              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6"
-            />
+            {reasonField}
           </>
         ) : (
           <>
@@ -132,8 +120,10 @@ export default function ParentCantAttendModal({
                 return (
                   <button
                     key={p.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isSelected}
                     onClick={() => toggle(p.id)}
-                    disabled={isPending}
                     className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                       isSelected
                         ? 'border-green/40 bg-green/5'
@@ -151,6 +141,7 @@ export default function ParentCantAttendModal({
                     )}
                     <span className="text-sm font-medium flex-1">{p.first_name} {p.last_name}</span>
                     <span
+                      aria-hidden="true"
                       className={`w-5 h-5 rounded-md border flex items-center justify-center ${
                         isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
                       }`}
@@ -165,39 +156,29 @@ export default function ParentCantAttendModal({
                 )
               })}
             </div>
-
-            <label className="block text-xs text-gray uppercase tracking-wide mb-2">
-              Reason (optional)
-            </label>
-            <input
-              type="text"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder="e.g. Class conflict, injury, travel"
-              maxLength={200}
-              className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-6"
-            />
+            {reasonField}
           </>
         )}
 
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 bg-dark border border-white/10 text-gray font-medium py-3 rounded-xl hover:text-white transition-colors"
           >
             Cancel
           </button>
-          {players.length > 0 && (
+          {playerCount > 0 && !loading && (
             <button
-              onClick={handleSubmit}
-              disabled={isPending || selected.size === 0}
+              type="submit"
+              disabled={!canSubmit}
               className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              {isPending ? 'Sending...' : 'Notify Coach'}
+              Notify Coach
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

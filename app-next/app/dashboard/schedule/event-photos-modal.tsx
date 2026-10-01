@@ -7,6 +7,8 @@ import {
   deleteEventPhoto,
   type EventPhoto,
 } from './photo-actions'
+import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast'
 
 interface Props {
   eventId: string
@@ -21,6 +23,8 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   const [, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { confirm, dialog } = useConfirm()
+  const { toast } = useToast()
 
   useEffect(() => { load() }, [eventId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -56,12 +60,16 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
     await load()
   }
 
-  function handleDelete(photoId: string) {
-    if (!confirm('Delete this photo?')) return
+  async function handleDelete(photoId: string) {
+    if (!(await confirm({
+      title: 'Delete this photo?',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const result = await deleteEventPhoto(photoId)
       if (result.error) {
-        alert(result.error)
+        toast(result.error, 'error')
         return
       }
       await load()
@@ -69,7 +77,10 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
     })
   }
 
+  // The dialog renders as a sibling of the backdrop so its clicks don't bubble
+  // to onClose, and it stacks above the lightbox (both sit at z-50 at the root).
   return (
+    <>
     <div
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
       onClick={onClose}
@@ -157,6 +168,8 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
         />
       )}
     </div>
+    {dialog}
+    </>
   )
 }
 

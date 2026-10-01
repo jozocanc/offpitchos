@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { ROLES, type Role } from '@/lib/constants'
 
 // Parent is deliberately absent: the product is team-only now, so there is no
@@ -173,17 +174,10 @@ async function pickPreviewPlayer(
  * showing a broken empty state.
  */
 export const getViewerIdentity = cache(async (): Promise<ViewerIdentity> => {
-  const supabase = await createClient()
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const realUserId = (claimsData?.claims?.sub as string | undefined) ?? ''
-
-  const { data: profile } = realUserId
-    ? await supabase
-        .from('profiles')
-        .select('id, club_id, role')
-        .eq('user_id', realUserId)
-        .single()
-    : { data: null }
+  // Shares the request-memoized claims + profile read with the layout, the
+  // page and getClubTimezone(), instead of issuing its own.
+  const realUserId = (await getAuthUserId()) ?? ''
+  const profile = realUserId ? await getCurrentProfile() : null
 
   const realProfileId = (profile?.id as string | undefined) ?? null
   const real: ViewerIdentity = {
@@ -199,6 +193,7 @@ export const getViewerIdentity = cache(async (): Promise<ViewerIdentity> => {
   const effective = await getEffectiveRole(profile.role as string)
   if (effective !== ROLES.PLAYER) return real
 
+  const supabase = await createClient()
   const sample = profile.club_id
     ? await pickPreviewPlayer(supabase, profile.club_id as string)
     : null

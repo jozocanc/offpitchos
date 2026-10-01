@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { isStaff } from '@/lib/constants'
 import { getReadinessData } from './data'
@@ -13,10 +13,9 @@ export default async function ReadinessPage({
 }: {
   searchParams: Promise<{ team?: string; date?: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-  const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
+  // Request-memoized claims + profile, shared with getReadinessData().
+  if (!(await getAuthUserId())) redirect('/login')
+  const prof = await getCurrentProfile()
   // "View as Player" resolves to 'player' here, so the preview is bounced
   // like every other staff page.
   const role = await getEffectiveRole(prof?.role ?? 'player')

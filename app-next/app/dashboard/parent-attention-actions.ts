@@ -6,8 +6,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 import { isMember } from '@/lib/constants'
-import { getClubTimezone } from '@/lib/club-timezone-server'
-import { formatShortDate } from '@/lib/format-datetime'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
+import { DEFAULT_TIMEZONE, formatShortDate } from '@/lib/format-datetime'
 import { getViewerIdentity, assertNotPreview } from '@/lib/admin-role'
 
 // Player-scoped prioritization. Mirrors the DOC and coach attention panels
@@ -61,6 +61,19 @@ export interface ParentAttentionResult {
 }
 
 async function getParentContext() {
+  // Request-memoized claims + profile (lib/current-profile): a local JWT
+  // check instead of an auth-server round-trip. The row embeds the club
+  // timezone, so the RSVP dates below need no second profile read.
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
+
+  if (!profile?.club_id) throw new Error('No team found')
+  const supabase = await createClient()
+  return { profile, supabase }
+}
+
+// The claim write keeps the auth-server user check it always had.
+async function getParentWriteContext() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -76,11 +89,14 @@ async function getParentContext() {
 }
 
 export async function getParentAttention(): Promise<ParentAttentionResult> {
-  const { profile: realProfile, supabase } = await getParentContext()
-  // In "View as → Player" preview this is the club's sample player; the DOC's
-  // own client can read their rows under players_doc_all. Otherwise it is the
-  // signed-in user.
-  const viewer = await getViewerIdentity()
+  // In "View as → Player" preview the viewer is the club's sample player; the
+  // DOC's own client can read their rows under players_doc_all. Otherwise it
+  // is the signed-in user. Independent lookups, so they resolve together.
+  const [{ profile: realProfile, supabase }, viewer] = await Promise.all([
+    getParentContext(),
+    getViewerIdentity(),
+  ])
+  const timezone = realProfile.timezone ?? DEFAULT_TIMEZONE
   const user = { id: viewer.userId }
   const profile = { ...realProfile, id: viewer.profileId ?? realProfile.id }
 
@@ -142,17 +158,81 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
   // "not me" so we never offer a row a teammate has already linked.
   // Service client: members can't necessarily read teammates' profiles, and
   // a silently empty read here would offer every row as claimable.
-  let claimable: ClaimablePlayer[] = []
   const candidateOwnerIds = Array.from(
     new Set(players.filter(p => p.parent_id !== user.id).map(p => p.parent_id)),
   )
 
-  if (candidateOwnerIds.length > 0) {
-    const { data: candidateProfiles } = await createServiceClient()
-      .from('profiles')
-      .select('user_id, role')
-      .in('user_id', candidateOwnerIds)
+  const myPlayerIds = myPlayers.map(p => p.id)
+  const myTeamIds = Array.from(new Set(myPlayers.map(p => p.team_id)))
+  const nowDate = new Date()
+  const nowIso = nowDate.toISOString()
+  const weekOut = new Date(nowDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
+  // Every read below depends only on the roster rows above, so they run in
+  // one parallel wave (the RSVP lookup chains off its upcoming events). The
+  // signals are still assembled in their original order afterwards.
+  const [candidateProfiles, upcomingAndRsvps, regs, feedbackRows] = await Promise.all([
+    candidateOwnerIds.length > 0
+      ? createServiceClient()
+          .from('profiles')
+          .select('user_id, role')
+          .in('user_id', candidateOwnerIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+    // Signal 2: sessions in the next 7 days on the player's team.
+    myPlayers.length > 0
+      ? supabase
+          .from('events')
+          .select('id, title, start_time, status, team_id')
+          .in('team_id', myTeamIds)
+          .gte('start_time', nowIso)
+          .lte('start_time', weekOut)
+          .neq('status', 'cancelled')
+          .order('start_time', { ascending: true })
+          .limit(10)
+          .then(async ({ data: upcoming }) => {
+            const upcomingEvents = upcoming ?? []
+            const rsvps = upcomingEvents.length > 0
+              ? (await supabase
+                  .from('event_rsvps')
+                  .select('event_id, player_id')
+                  .in('event_id', upcomingEvents.map(e => e.id))
+                  .in('player_id', myPlayerIds)).data
+              : null
+            return { upcomingEvents, rsvps }
+          })
+      : Promise.resolve({ upcomingEvents: [], rsvps: null }),
+    // Signal 4: unpaid camps.
+    myPlayers.length > 0
+      ? supabase
+          .from('camp_registrations')
+          .select('id, payment_status, camp_detail_id, player_id, camp_details(event_id, fee_cents, events(title, start_time))')
+          .in('player_id', myPlayerIds)
+          .eq('payment_status', 'unpaid')
+          .then(r => r.data)
+      : Promise.resolve(null),
+    // Signal 5: new coach feedback in the last 7 days.
+    myPlayers.length > 0
+      ? supabase
+          .from('player_feedback')
+          .select('id, player_id, category, notes, created_at')
+          .in('player_id', myPlayerIds)
+          .gte('created_at', sevenDaysAgo)
+          .order('created_at', { ascending: false })
+          .limit(10)
+          .then(r => r.data)
+      : Promise.resolve(null),
+  ])
+
+  // Which rows on their team are still "unclaimed", i.e. parent_id does not
+  // resolve to a member (player) account? Unclaimed rows point at whoever
+  // created them, usually the DOC. We check profile role rather than just
+  // "not me" so we never offer a row a teammate has already linked.
+  // Service client: members can't necessarily read teammates' profiles, and
+  // a silently empty read here would offer every row as claimable.
+  let claimable: ClaimablePlayer[] = []
+  if (candidateOwnerIds.length > 0) {
     const linkedUserIds = new Set(
       (candidateProfiles ?? [])
         .filter(p => isMember(p.role))
@@ -196,30 +276,8 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
   // answered yet. One signal per session, capped so a busy week doesn't
   // bury everything else.
   if (myPlayers.length > 0) {
-    const nowIso = new Date().toISOString()
-    const weekOut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    const myTeamIds = Array.from(new Set(myPlayers.map(p => p.team_id)))
-    const myPlayerIds = myPlayers.map(p => p.id)
-
-    const { data: upcoming } = await supabase
-      .from('events')
-      .select('id, title, start_time, status, team_id')
-      .in('team_id', myTeamIds)
-      .gte('start_time', nowIso)
-      .lte('start_time', weekOut)
-      .neq('status', 'cancelled')
-      .order('start_time', { ascending: true })
-      .limit(10)
-
-    const upcomingEvents = upcoming ?? []
+    const { upcomingEvents, rsvps } = upcomingAndRsvps
     if (upcomingEvents.length > 0) {
-      const timezone = await getClubTimezone()
-      const { data: rsvps } = await supabase
-        .from('event_rsvps')
-        .select('event_id, player_id')
-        .in('event_id', upcomingEvents.map(e => e.id))
-        .in('player_id', myPlayerIds)
-
       const answered = new Set((rsvps ?? []).map(r => `${r.event_id}:${r.player_id}`))
       let added = 0
       for (const ev of upcomingEvents) {
@@ -255,12 +313,6 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
 
   // --- Signal 4: Unpaid camps ------------------------------------------
   if (myPlayers.length > 0) {
-    const { data: regs } = await supabase
-      .from('camp_registrations')
-      .select('id, payment_status, camp_detail_id, player_id, camp_details(event_id, fee_cents, events(title, start_time))')
-      .in('player_id', myPlayers.map(p => p.id))
-      .eq('payment_status', 'unpaid')
-
     type RegRow = {
       id: string
       player_id: string
@@ -293,16 +345,6 @@ export async function getParentAttention(): Promise<ParentAttentionResult> {
 
   // --- Signal 5: New coach feedback in the last 7 days -----------------
   if (myPlayers.length > 0) {
-    const nowDate = new Date()
-    const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const { data: feedbackRows } = await supabase
-      .from('player_feedback')
-      .select('id, player_id, category, notes, created_at')
-      .in('player_id', myPlayers.map(p => p.id))
-      .gte('created_at', sevenDaysAgo)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
     const seenPerPlayer = new Map<string, number>()
     for (const fb of feedbackRows ?? []) {
       const count = (seenPerPlayer.get(fb.player_id) ?? 0) + 1
@@ -364,7 +406,7 @@ async function _claimPlayers(playerIds: string[]): Promise<{
   skipped: number
 }> {
   await assertNotPreview()
-  const { user, profile, supabase } = await getParentContext()
+  const { user, profile, supabase } = await getParentWriteContext()
   if (!isMember(profile.role)) throw new Error('Only players can link a roster spot')
   if (playerIds.length === 0) return { claimed: 0, skipped: 0 }
   if (playerIds.length > 1) throw new Error('Pick just one roster spot: yours')

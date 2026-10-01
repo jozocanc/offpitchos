@@ -9,6 +9,7 @@ import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole, getViewerIdentity, assertNotPreview, isPlayerPreview, PREVIEW_WRITE_ERROR } from '@/lib/admin-role'
 import { isMember, isStaff } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -324,33 +325,57 @@ export interface AudienceCounts {
 }
 
 export async function getMessagesData() {
-  const { profile, supabase } = await getUserProfile()
+  // Request-memoized claims + profile (lib/current-profile): a local JWT
+  // check instead of an auth-server round-trip, and the same row
+  // getViewerIdentity() reads. Same redirect / error as getUserProfile().
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
+  if (!profile?.club_id) throw new Error('No team found')
+  const supabase = await createClient()
   const service = createServiceClient()
-  // In "View as → Player" preview, member reads ("my player", which
-  // announcements reach me) are for the club's sample player.
-  const viewer = await getViewerIdentity()
-  const user = { id: viewer.userId }
-  const previewTeamIds: Set<string> | null = viewer.isPreview ? new Set<string>() : null
-  if (previewTeamIds && viewer.previewPlayer && viewer.profileId) {
-    previewTeamIds.add(viewer.previewPlayer.teamId)
-    const { data: tms } = await supabase
-      .from('team_members')
-      .select('team_id')
-      .eq('profile_id', viewer.profileId)
-    for (const tm of tms ?? []) previewTeamIds.add(tm.team_id as string)
-  }
 
-  const { data: announcements } = await supabase
-    .from('announcements')
-    .select(`
-      id, team_id, title, body, pinned, created_at, author_id, poll_enabled,
-      author:profiles!announcements_author_id_fkey ( id, display_name ),
-      teams ( name, age_group ),
-      announcement_replies ( id )
-    `)
-    .eq('club_id', profile.club_id!)
-    .order('pinned', { ascending: false })
-    .order('created_at', { ascending: false })
+  // Wave 1: everything that only needs the club / profile id, in parallel.
+  const [viewerAndPreview, { data: announcements }, { data: teams }, { data: clubProfiles }, userRole] = await Promise.all([
+    // In "View as → Player" preview, member reads ("my player", which
+    // announcements reach me) are for the club's sample player.
+    getViewerIdentity().then(async viewer => {
+      const previewTeamIds: Set<string> | null = viewer.isPreview ? new Set<string>() : null
+      if (previewTeamIds && viewer.previewPlayer && viewer.profileId) {
+        previewTeamIds.add(viewer.previewPlayer.teamId)
+        const { data: tms } = await supabase
+          .from('team_members')
+          .select('team_id')
+          .eq('profile_id', viewer.profileId)
+        for (const tm of tms ?? []) previewTeamIds.add(tm.team_id as string)
+      }
+      return { viewer, previewTeamIds }
+    }),
+    supabase
+      .from('announcements')
+      .select(`
+        id, team_id, title, body, pinned, created_at, author_id, poll_enabled,
+        author:profiles!announcements_author_id_fkey ( id, display_name ),
+        teams ( name, age_group ),
+        announcement_replies ( id )
+      `)
+      .eq('club_id', profile.club_id)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('teams')
+      .select('id, name, age_group')
+      .eq('club_id', profile.club_id)
+      .order('age_group'),
+    // Club-wide audience for the compose modal (see below).
+    service
+      .from('profiles')
+      .select('role')
+      .eq('club_id', profile.club_id)
+      .neq('id', profile.id),
+    getEffectiveRole(profile.role as string),
+  ])
+  const { viewer, previewTeamIds } = viewerAndPreview
+  const user = { id: viewer.userId }
 
   // A real player only sees club-wide posts and their own teams' posts.
   if (previewTeamIds && announcements) {
@@ -358,52 +383,108 @@ export async function getMessagesData() {
     announcements.splice(0, announcements.length, ...scoped)
   }
 
-  const { data: teams } = await supabase
-    .from('teams')
-    .select('id, name, age_group')
-    .eq('club_id', profile.club_id!)
-    .order('age_group')
-
-  // Read receipts: for each announcement, count total notifications and how
-  // many are read. Uses service client so the author sees every recipient's
-  // status regardless of RLS scope.
   const announcementIds = (announcements ?? []).map(a => a.id)
-  const readStatsByAnnouncement = new Map<string, { total: number; read: number }>()
-  if (announcementIds.length > 0) {
-    const { data: notifRows } = await service
-      .from('notifications')
-      .select('announcement_id, read')
-      .eq('type', 'announcement_posted')
-      .in('announcement_id', announcementIds)
+  const pollAnnouncements = (announcements ?? []).filter(a => a.poll_enabled)
+  const pollAnnouncementIds = pollAnnouncements.map(a => a.id)
+  const teamIds = (teams ?? []).map(t => t.id)
 
-    for (const row of notifRows ?? []) {
-      if (!row.announcement_id) continue
-      const entry = readStatsByAnnouncement.get(row.announcement_id) ?? { total: 0, read: 0 }
-      entry.total += 1
-      if (row.read) entry.read += 1
-      readStatsByAnnouncement.set(row.announcement_id, entry)
-    }
+  // Poll audience sizes: one head count per distinct team (plus one for the
+  // club when a poll is club-wide) instead of one count per poll, run in the
+  // same wave as everything else below.
+  const pollTeamIds = Array.from(new Set(pollAnnouncements.map(a => a.team_id).filter(Boolean) as string[]))
+  const hasClubWidePoll = pollAnnouncements.some(a => !a.team_id)
+
+  // Wave 2: everything keyed on the announcement / team ids, in parallel.
+  const [notifRows, myNotifs, responseRows, teamPlayerCounts, clubPlayerCount, mine, memberships] = await Promise.all([
+    // Read receipts: for each announcement, count total notifications and how
+    // many are read. Uses service client so the author sees every recipient's
+    // status regardless of RLS scope.
+    announcementIds.length > 0
+      ? service
+          .from('notifications')
+          .select('announcement_id, read')
+          .eq('type', 'announcement_posted')
+          .in('announcement_id', announcementIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+    // Whether the *current user* has read each announcement — drives the
+    // real unread dot shown to recipients.
+    announcementIds.length > 0
+      ? supabase
+          .from('notifications')
+          .select('announcement_id, read')
+          .eq('profile_id', profile.id)
+          .eq('type', 'announcement_posted')
+          .in('announcement_id', announcementIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+    // All responses for these polls (service client — tally is public within the club)
+    pollAnnouncementIds.length > 0
+      ? service
+          .from('announcement_responses')
+          .select('announcement_id, player_id, response')
+          .in('announcement_id', pollAnnouncementIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+    Promise.all(
+      pollTeamIds.map(teamId =>
+        service
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .eq('team_id', teamId)
+          .then(r => [teamId, r.count ?? 0] as const),
+      ),
+    ),
+    hasClubWidePoll
+      ? service
+          .from('players')
+          .select('id', { count: 'exact', head: true })
+          .eq('club_id', profile.club_id)
+          .then(r => r.count ?? 0)
+      : Promise.resolve(0),
+    // Player row(s) linked to this account (normally exactly one: the
+    // player's own row, via players.parent_id) + their current responses
+    pollAnnouncementIds.length > 0
+      ? supabase
+          .from('players')
+          .select('id, first_name, last_name, team_id, club_id')
+          .eq('parent_id', user.id)
+          .then(async ({ data: myPlayers }) => {
+            const myResponses = (myPlayers ?? []).length > 0
+              ? (await supabase
+                  .from('announcement_responses')
+                  .select('announcement_id, player_id, response')
+                  .in('announcement_id', pollAnnouncementIds)
+                  .in('player_id', (myPlayers ?? []).map(p => p.id))).data
+              : null
+            return { myPlayers, myResponses }
+          })
+      : Promise.resolve({ myPlayers: null, myResponses: null }),
+    teamIds.length > 0
+      ? service
+          .from('team_members')
+          .select('team_id, role')
+          .in('team_id', teamIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+  ])
+
+  const readStatsByAnnouncement = new Map<string, { total: number; read: number }>()
+  for (const row of notifRows ?? []) {
+    if (!row.announcement_id) continue
+    const entry = readStatsByAnnouncement.get(row.announcement_id) ?? { total: 0, read: 0 }
+    entry.total += 1
+    if (row.read) entry.read += 1
+    readStatsByAnnouncement.set(row.announcement_id, entry)
   }
 
-  // Whether the *current user* has read each announcement — drives the
-  // real unread dot shown to recipients.
   const ownReadByAnnouncement = new Map<string, boolean>()
-  if (announcementIds.length > 0) {
-    const { data: myNotifs } = await supabase
-      .from('notifications')
-      .select('announcement_id, read')
-      .eq('profile_id', profile.id)
-      .eq('type', 'announcement_posted')
-      .in('announcement_id', announcementIds)
-
-    for (const row of myNotifs ?? []) {
-      if (!row.announcement_id) continue
-      ownReadByAnnouncement.set(row.announcement_id, !!row.read)
-    }
+  for (const row of myNotifs ?? []) {
+    if (!row.announcement_id) continue
+    ownReadByAnnouncement.set(row.announcement_id, !!row.read)
   }
 
   // ---- Poll data: per-announcement tallies + the viewer's linked player's current response ----
-  const pollAnnouncementIds = (announcements ?? []).filter(a => a.poll_enabled).map(a => a.id)
   const pollTallyByAnnouncement = new Map<string, { yes: number; no: number; maybe: number; totalKids: number }>()
   const myKidsByAnnouncement = new Map<string, Array<{
     playerId: string
@@ -413,12 +494,6 @@ export async function getMessagesData() {
   }>>()
 
   if (pollAnnouncementIds.length > 0) {
-    // All responses for these polls (service client — tally is public within the club)
-    const { data: responseRows } = await service
-      .from('announcement_responses')
-      .select('announcement_id, player_id, response')
-      .in('announcement_id', pollAnnouncementIds)
-
     for (const row of responseRows ?? []) {
       const entry = pollTallyByAnnouncement.get(row.announcement_id) ?? { yes: 0, no: 0, maybe: 0, totalKids: 0 }
       if (row.response === 'yes') entry.yes += 1
@@ -428,50 +503,22 @@ export async function getMessagesData() {
     }
 
     // Total possible respondents per announcement (= number of players in the audience)
-    for (const a of announcements ?? []) {
-      if (!a.poll_enabled) continue
-      let totalKids = 0
-      if (a.team_id) {
-        const { count } = await service
-          .from('players')
-          .select('id', { count: 'exact', head: true })
-          .eq('team_id', a.team_id)
-        totalKids = count ?? 0
-      } else {
-        // Club-wide: all players in the club
-        const { count } = await service
-          .from('players')
-          .select('id', { count: 'exact', head: true })
-          .eq('club_id', profile.club_id!)
-        totalKids = count ?? 0
-      }
+    const playersByTeam = new Map<string, number>(teamPlayerCounts)
+    for (const a of pollAnnouncements) {
+      // Team poll: that team's players. Club-wide: all players in the club.
+      const totalKids = a.team_id ? (playersByTeam.get(a.team_id) ?? 0) : clubPlayerCount
       const entry = pollTallyByAnnouncement.get(a.id) ?? { yes: 0, no: 0, maybe: 0, totalKids: 0 }
       entry.totalKids = totalKids
       pollTallyByAnnouncement.set(a.id, entry)
     }
 
-    // Player row(s) linked to this account (normally exactly one: the
-    // player's own row, via players.parent_id) + their current responses
-    const { data: myPlayers } = await supabase
-      .from('players')
-      .select('id, first_name, last_name, team_id, club_id')
-      .eq('parent_id', user.id)
-
+    const { myPlayers, myResponses } = mine
     const myResponseByKey = new Map<string, string>() // key = `${announcementId}:${playerId}`
-    if ((myPlayers ?? []).length > 0) {
-      const { data: myResponses } = await supabase
-        .from('announcement_responses')
-        .select('announcement_id, player_id, response')
-        .in('announcement_id', pollAnnouncementIds)
-        .in('player_id', (myPlayers ?? []).map(p => p.id))
-
-      for (const row of myResponses ?? []) {
-        myResponseByKey.set(`${row.announcement_id}:${row.player_id}`, row.response)
-      }
+    for (const row of myResponses ?? []) {
+      myResponseByKey.set(`${row.announcement_id}:${row.player_id}`, row.response)
     }
 
-    for (const a of announcements ?? []) {
-      if (!a.poll_enabled) continue
+    for (const a of pollAnnouncements) {
       const kidsForThis = (myPlayers ?? []).filter(p =>
         a.team_id ? p.team_id === a.team_id : p.club_id === profile.club_id
       )
@@ -509,25 +556,11 @@ export async function getMessagesData() {
   const audienceByTeam: Record<string, AudienceCounts> = {}
   let clubWide: AudienceCounts = { players: 0, coaches: 0 }
 
-  const teamIds = (teams ?? []).map(t => t.id)
-  if (teamIds.length > 0) {
-    const { data: memberships } = await service
-      .from('team_members')
-      .select('team_id, role')
-      .in('team_id', teamIds)
-
-    for (const m of memberships ?? []) {
-      if (!audienceByTeam[m.team_id]) audienceByTeam[m.team_id] = { players: 0, coaches: 0 }
-      if (isMember(m.role)) audienceByTeam[m.team_id].players += 1
-      else if (isStaff(m.role)) audienceByTeam[m.team_id].coaches += 1
-    }
+  for (const m of memberships ?? []) {
+    if (!audienceByTeam[m.team_id]) audienceByTeam[m.team_id] = { players: 0, coaches: 0 }
+    if (isMember(m.role)) audienceByTeam[m.team_id].players += 1
+    else if (isStaff(m.role)) audienceByTeam[m.team_id].coaches += 1
   }
-
-  const { data: clubProfiles } = await service
-    .from('profiles')
-    .select('role')
-    .eq('club_id', profile.club_id)
-    .neq('id', profile.id)
 
   for (const p of clubProfiles ?? []) {
     if (isMember(p.role)) clubWide.players += 1
@@ -537,7 +570,7 @@ export async function getMessagesData() {
   return {
     announcements: announcementsWithStats,
     teams: previewTeamIds ? (teams ?? []).filter(t => previewTeamIds.has(t.id)) : (teams ?? []),
-    userRole: await getEffectiveRole(profile.role),
+    userRole,
     // Preview: the sample player's id, so the head coach's own posts don't
     // render author controls (pin/delete) inside the player view.
     userProfileId: viewer.isPreview && viewer.profileId ? viewer.profileId : profile.id,

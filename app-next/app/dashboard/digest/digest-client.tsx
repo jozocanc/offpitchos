@@ -5,6 +5,7 @@ import { useClubTimezone } from '@/components/club-timezone'
 import { useState, useTransition } from 'react'
 import { generateDigestNow, emailDigest } from './actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 interface DigestRow {
   id: string
@@ -99,6 +100,7 @@ function fmtWeek(weekStart: string) {
 export default function DigestClient({ digests, isDoc }: { digests: DigestRow[]; isDoc: boolean }) {
   const timezone = useClubTimezone()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [emailing, setEmailing] = useState<string | null>(null)
   const [latest, ...rest] = digests
@@ -117,8 +119,11 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
     })
   }
 
-  function handleEmail(id: string) {
-    if (!confirm('Email this digest to your coaching staff?')) return
+  async function handleEmail(id: string) {
+    if (!(await confirm({
+      title: 'Email this digest to your coaching staff?',
+      confirmLabel: 'Send',
+    }))) return
     setEmailing(id)
     startTransition(async () => {
       try {
@@ -225,6 +230,7 @@ export default function DigestClient({ digests, isDoc }: { digests: DigestRow[];
           </div>
         </section>
       )}
+      {dialog}
     </div>
   )
 }

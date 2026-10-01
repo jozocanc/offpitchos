@@ -3,13 +3,19 @@
 import { useTransition } from 'react'
 import { removeMember } from './actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 export default function RemoveMemberButton({ teamId, userId }: { teamId: string; userId: string }) {
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
 
-  function handleRemove() {
-    if (!confirm('Remove this member from the team?')) return
+  async function handleRemove() {
+    if (!(await confirm({
+      title: 'Remove this member from the team?',
+      confirmLabel: 'Remove',
+      destructive: true,
+    }))) return
     // The result used to be discarded, so a blocked removal looked the same
     // as a successful one.
     startTransition(async () => {
@@ -19,6 +25,7 @@ export default function RemoveMemberButton({ teamId, userId }: { teamId: string;
   }
 
   return (
+    <>
     <button
       onClick={handleRemove}
       disabled={isPending}
@@ -26,5 +33,7 @@ export default function RemoveMemberButton({ teamId, userId }: { teamId: string;
     >
       {isPending ? 'Removing...' : 'Remove'}
     </button>
+    {dialog}
+    </>
   )
 }

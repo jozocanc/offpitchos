@@ -81,3 +81,53 @@
     border-color: rgba(15, 21, 16, 0.08);
   }
 }
+
+/* Loading skeletons: a soft ink tint with a light sweep, so placeholders
+   read as "content is coming" on both the cream page and white cards.
+   Used through components/skeleton.tsx. */
+@layer utilities {
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(15, 21, 16, 0.06);
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+  }
+
+  .modal-enter {
+    animation: modalIn 0.16s ease-out;
+  }
+}
+
+@keyframes skeletonShimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+  .modal-enter, .toast-enter { animation: none; }
+}
+
+/* Phones: iOS Safari zooms the page when a focused field's text is under
+   16px. Unlayered so it beats text-xs/text-sm utilities on form fields;
+   fields deliberately set larger (text-lg and up) keep their size. */
+@media (max-width: 767px) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):not(.text-lg, .text-xl, .text-2xl, .text-3xl) {
+    font-size: 16px;
+  }
+  a, button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

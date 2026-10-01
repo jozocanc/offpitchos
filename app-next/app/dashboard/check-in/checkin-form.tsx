@@ -9,7 +9,7 @@ import {
   type CheckinRow,
   type CheckinStatus,
 } from '@/lib/checkin'
-import { useToast } from '@/components/toast'
+import { useToast, isPreviewBlocked, networkErrorMessage } from '@/components/toast'
 
 const SCALES = [
   { key: 'sleep', label: 'Sleep', low: 'Poor', high: 'Great' },
@@ -80,21 +80,37 @@ export default function CheckinForm({
       return
     }
     setError(null)
+    const input = {
+      sleep: values.sleep as number,
+      soreness: values.soreness as number,
+      energy: values.energy as number,
+      status,
+      note: note.trim() || null,
+    }
+    // Optimistic: show the "Checked in" summary right away with these
+    // answers. A failed save reopens the form with the answers intact.
+    const previous = saved
+    setSaved({
+      id: previous?.id ?? 'pending',
+      playerId: previous?.playerId ?? '',
+      checkinDate: previous?.checkinDate ?? '',
+      updatedAt: previous?.updatedAt ?? new Date().toISOString(),
+      ...input,
+    })
+    setEditing(false)
     startTransition(async () => {
-      const res = await submitCheckin({
-        sleep: values.sleep as number,
-        soreness: values.soreness as number,
-        energy: values.energy as number,
-        status,
-        note: note.trim() || null,
-      })
+      const res = await submitCheckin(input)
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
       if (!res.ok) {
+        setSaved(previous)
+        setEditing(true)
         setError(res.error)
-        toast(res.error, 'error')
+        toast(res.error, 'error', isPreviewBlocked(res.error) ? undefined : {
+          action: { label: 'Retry', onClick: submit },
+        })
         return
       }
       setSaved(res.data)
-      setEditing(false)
       toast('Checked in. Thanks.', 'success')
     })
   }
@@ -110,8 +126,8 @@ export default function CheckinForm({
             </svg>
           </span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-bold text-sm">Checked in today</p>
+            <div className="flex items-center gap-2 flex-wrap" aria-live="polite">
+              <p className="font-bold text-sm">{pending ? 'Saving check-in…' : 'Checked in today'}</p>
               <CheckinStatusChip status={saved.status} />
             </div>
             <p className="text-gray text-xs mt-1 tabular-nums">
@@ -122,7 +138,8 @@ export default function CheckinForm({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-bold text-green px-3 py-2 rounded-lg hover:bg-green/10 transition-colors shrink-0"
+            disabled={pending}
+            className="text-xs font-bold text-green px-3 py-2 rounded-lg hover:bg-green/10 transition-colors shrink-0 disabled:opacity-50"
           >
             Edit
           </button>
@@ -226,7 +243,7 @@ export default function CheckinForm({
             </button>
           )}
 
-          {error && <p className="text-sm text-red-700 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p role="alert" className="text-sm text-red-700 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
 
           <div className="flex gap-2">
             {saved && (
@@ -246,7 +263,7 @@ export default function CheckinForm({
                 complete ? 'bg-green text-dark-secondary hover:opacity-90' : 'bg-green/30 text-dark-secondary'
               } disabled:opacity-60`}
             >
-              {pending ? 'Saving...' : saved ? 'Save changes' : 'Submit'}
+              {pending ? 'Saving…' : saved ? 'Save changes' : 'Submit'}
             </button>
           </div>
 

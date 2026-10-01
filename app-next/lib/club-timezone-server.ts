@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentProfile } from '@/lib/current-profile'
 import { createServiceClient } from '@/lib/supabase/service'
 import { DEFAULT_TIMEZONE } from '@/lib/format-datetime'
 
@@ -18,22 +18,11 @@ import { DEFAULT_TIMEZONE } from '@/lib/format-datetime'
  * profile has a null club_id), so callers never have to handle undefined.
  */
 export const getClubTimezone = cache(async (): Promise<string> => {
-  const supabase = await createClient()
-
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const sub = claimsData?.claims?.sub
-  if (!sub) return DEFAULT_TIMEZONE
-
-  const { data } = await supabase
-    .from('profiles')
-    .select('clubs(timezone)')
-    .eq('user_id', sub)
-    .single()
-
-  // Supabase returns a to-one embed as an object or a single-element array
-  // depending on how it infers the relationship; normalize both.
-  const club = Array.isArray(data?.clubs) ? data.clubs[0] : data?.clubs
-  return (club as { timezone?: string } | null)?.timezone ?? DEFAULT_TIMEZONE
+  // Rides on the shared, request-memoized profile read (lib/current-profile),
+  // which already embeds clubs(timezone), so asking for the zone costs no
+  // query of its own once anything else has loaded the profile.
+  const profile = await getCurrentProfile()
+  return profile?.timezone ?? DEFAULT_TIMEZONE
 })
 
 /**

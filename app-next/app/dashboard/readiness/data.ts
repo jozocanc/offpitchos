@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getClubTimezone } from '@/lib/club-timezone-server'
+import { getCurrentProfile } from '@/lib/current-profile'
 import { addDaysToKey, dayKey } from '@/lib/format-datetime'
 import { READINESS_LOOKBACK_DAYS, isCheckinStatus, isFlagged, type CheckinStatus } from '@/lib/checkin'
 
@@ -47,17 +48,15 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export async function getReadinessData(opts: { team?: string; date?: string }): Promise<ReadinessData> {
   const supabase = await createClient()
-  const timeZone = await getClubTimezone()
+  // Both request-memoized (lib/current-profile): the page already loaded the
+  // profile for its role check, so the timezone and club id cost no query.
+  const [timeZone, profile] = await Promise.all([getClubTimezone(), getCurrentProfile()])
   const today = dayKey(new Date(), timeZone)
   const earliest = addDaysToKey(today, -READINESS_LOOKBACK_DAYS)
   const selectedDate =
     opts.date && DATE_RE.test(opts.date) && opts.date <= today && opts.date >= earliest ? opts.date : today
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = user
-    ? await supabase.from('profiles').select('club_id').eq('user_id', user.id).single()
-    : { data: null }
-  const clubId = (profile?.club_id as string | undefined) ?? null
+  const clubId = profile?.club_id ?? null
 
   const historyDays = Array.from({ length: 7 }, (_, i) => addDaysToKey(selectedDate, i - 6))
   const empty: ReadinessData = {
@@ -78,7 +77,7 @@ export async function getReadinessData(opts: { team?: string; date?: string }): 
   const rangeStart = historyDays[0] < yesterday ? historyDays[0] : yesterday
   const nowIso = new Date().toISOString()
 
-  const [rosterRes, checkinRes, eventRes] = await Promise.all([
+  const [rosterRes, checkinRes, { eventRes, rsvps }] = await Promise.all([
     supabase
       .from('players')
       .select('id, first_name, last_name, jersey_number, position')
@@ -100,7 +99,16 @@ export async function getReadinessData(opts: { team?: string; date?: string }): 
       .in('type', ['game', 'tournament'])
       .gte('end_time', nowIso)
       .order('start_time', { ascending: true })
-      .limit(1),
+      .limit(1)
+      // The next game's RSVPs chain straight off it instead of waiting for
+      // the roster and check-ins too.
+      .then(async eventRes => {
+        const id = eventRes.data?.[0]?.id as string | undefined
+        const rsvps = id
+          ? (await supabase.from('event_rsvps').select('player_id, response').eq('event_id', id)).data
+          : null
+        return { eventRes, rsvps }
+      }),
   ])
 
   if (checkinRes.error) console.error('[readiness] check-ins query failed:', checkinRes.error.message)
@@ -117,10 +125,6 @@ export async function getReadinessData(opts: { team?: string; date?: string }): 
 
   const rsvpByPlayer = new Map<string, 'going' | 'not_going'>()
   if (nextEvent) {
-    const { data: rsvps } = await supabase
-      .from('event_rsvps')
-      .select('player_id, response')
-      .eq('event_id', nextEvent.id)
     for (const r of rsvps ?? []) {
       if (r.response === 'going' || r.response === 'not_going') rsvpByPlayer.set(r.player_id as string, r.response)
     }

@@ -3,24 +3,33 @@
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { leaveClub, deleteAccount } from './actions'
+import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast'
 
 export default function DangerZone({ userRole }: { userRole: string }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { confirm, dialog } = useConfirm()
+  const { toast } = useToast()
 
-  function handleLeave() {
-    if (!confirm('Leave this program? You will be removed from the team and lose access. This cannot be undone.')) return
+  async function handleLeave() {
+    if (!(await confirm({
+      title: 'Leave this program?',
+      message: 'You will be removed from the team and lose access. This cannot be undone.',
+      confirmLabel: 'Leave',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const result = await leaveClub()
       if (result.error) {
-        alert(result.error)
+        toast(result.error, 'error')
       } else {
         router.push('/login')
       }
     })
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     // Wording matches what actually happens (migration 037). The account is
     // soft-deleted: display_name is scrubbed to 'Deleted user', club_id is
     // nulled and team memberships are dropped, while the profile row itself
@@ -29,18 +38,29 @@ export default function DangerZone({ userRole }: { userRole: string }) {
     //
     // deleteAccount also anonymises the auth row: the email is replaced with
     // an unroutable placeholder and the name is cleared from user_metadata.
-    // Keep this wording in step with that — it previously said the email was
+    // Keep this wording in step with that. It previously said the email was
     // kept, which stopped being true.
-    if (!confirm(
-      'Delete your account?\n\n' +
-      'Your name and email address will be removed, you will be taken off every team, and you will not be able to sign in again.\n\n' +
-      'Anything you posted stays with the team, but is no longer linked to you. This cannot be undone.'
-    )) return
-    if (!confirm('Are you really sure? This cannot be undone.')) return
+    if (!(await confirm({
+      title: 'Delete your account?',
+      message: (
+        <>
+          <span className="block">Your name and email address will be removed, you will be taken off every team, and you will not be able to sign in again.</span>
+          <span className="block mt-2">Anything you posted stays with the team, but is no longer linked to you. This cannot be undone.</span>
+        </>
+      ),
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
+    if (!(await confirm({
+      title: 'Are you really sure?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete account',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const result = await deleteAccount()
       if (result.error) {
-        alert(result.error)
+        toast(result.error, 'error')
       } else {
         router.push('/login')
       }
@@ -87,6 +107,7 @@ export default function DangerZone({ userRole }: { userRole: string }) {
           </button>
         </div>
       </div>
+      {dialog}
     </section>
   )
 }

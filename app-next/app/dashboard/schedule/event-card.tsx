@@ -56,15 +56,20 @@ interface EventCardProps {
   /** Visitor match sheet (055): true = link live, false = saved but off,
    * undefined = none yet. Staff-only. */
   matchSheetEnabled?: boolean
+  /** Player's own answer for this event. undefined = not loaded yet. */
+  myRsvp?: 'going' | 'not_going' | null
+  /** True while that answer is still being saved. */
+  myRsvpPending?: boolean
 }
 
-export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled }: EventCardProps) {
+export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, teamId, coverageRequest, showCoverageActions, isUnmarked, coaches, showCoaches, rsvpTally, showRsvpTally, matchSheetEnabled, myRsvp, myRsvpPending }: EventCardProps) {
   const [photosOpen, setPhotosOpen] = useState(false)
   const [visitorOpen, setVisitorOpen] = useState(false)
   const timezone = useClubTimezone()
   const start = new Date(event.start_time)
   const end = new Date(event.end_time)
   const isCancelled = event.status === 'cancelled'
+  const isOver = end.getTime() < Date.now()
   // Supabase returns the joined team as an object (to-one) or array
   // depending on context. Normalize so we can read .age_group reliably.
   const team = Array.isArray(event.teams) ? event.teams[0] : event.teams
@@ -215,6 +220,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             )}
             {onAttendance && teamId && (
               <button
+                type="button"
                 onClick={() => onAttendance(event.id, teamId)}
                 className="text-green hover:text-green/80 text-sm transition-colors"
               >
@@ -223,6 +229,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             )}
             {showVisitorInfo && (
               <button
+                type="button"
                 onClick={() => setVisitorOpen(true)}
                 className="text-green hover:text-green/80 text-sm transition-colors"
               >
@@ -230,12 +237,14 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
               </button>
             )}
             <button
+              type="button"
               onClick={() => onEdit(event.id)}
               className="text-gray hover:text-white text-sm transition-colors"
             >
               Edit
             </button>
             <button
+              type="button"
               onClick={() => onCancel(event.id)}
               className="text-red hover:text-red/80 text-sm transition-colors"
             >
@@ -246,6 +255,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         {isDoc && isCancelled && onRestore && (
           <div className="flex gap-2 shrink-0">
             <button
+              type="button"
               onClick={() => onRestore(event.id)}
               className="text-xs font-semibold bg-green/10 hover:bg-green/20 text-green border border-green/20 rounded-full px-3 py-1 transition-colors"
             >
@@ -255,6 +265,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
         )}
         {onCantAttend && !isCancelled && !coverageRequest && (
           <button
+            type="button"
             onClick={() => onCantAttend(event.id)}
             className="text-yellow-500 hover:text-yellow-400 text-sm transition-colors shrink-0"
           >
@@ -262,24 +273,13 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           </button>
         )}
         {(onParentGoing || onParentCantAttend) && !isCancelled && teamId && (
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {onParentGoing && (
-              <button
-                onClick={() => onParentGoing(event.id, teamId)}
-                className="text-green hover:opacity-80 text-sm font-semibold transition-opacity"
-              >
-                I&apos;ll Be There
-              </button>
-            )}
-            {onParentCantAttend && (
-              <button
-                onClick={() => onParentCantAttend(event.id, teamId)}
-                className="text-yellow-500 hover:text-yellow-400 text-xs transition-colors"
-              >
-                Can&apos;t Make It
-              </button>
-            )}
-          </div>
+          <PlayerRsvp
+            response={myRsvp}
+            pending={myRsvpPending ?? false}
+            isOver={isOver}
+            onGoing={onParentGoing ? () => onParentGoing(event.id, teamId) : undefined}
+            onCantMakeIt={onParentCantAttend ? () => onParentCantAttend(event.id, teamId) : undefined}
+          />
         )}
       </div>
       {!isCancelled && <TravelStrip travel={event} eventStartIso={event.start_time} />}
@@ -306,6 +306,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
 
       <div className="mt-3 pt-3 border-t border-white/5">
         <button
+          type="button"
           onClick={() => setPhotosOpen(true)}
           className="text-xs text-gray hover:text-green inline-flex items-center gap-1.5 transition-colors"
         >
@@ -333,6 +334,91 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
           onClose={() => setPhotosOpen(false)}
         />
       )}
+    </div>
+  )
+}
+
+// Player's RSVP corner. Unanswered: the two actions. Answered: what they
+// chose, plus a one-tap switch to the other answer. Optimistic: the parent
+// flips `response` before the server confirms and `pending` shows that.
+function PlayerRsvp({
+  response,
+  pending,
+  isOver,
+  onGoing,
+  onCantMakeIt,
+}: {
+  response: 'going' | 'not_going' | null | undefined
+  pending: boolean
+  isOver: boolean
+  onGoing?: () => void
+  onCantMakeIt?: () => void
+}) {
+  // Still loading the player's answers: hold the space so the card
+  // doesn't jump when they arrive.
+  if (response === undefined) {
+    return <div aria-hidden="true" className="skeleton h-8 w-28 rounded-full shrink-0" />
+  }
+
+  if (response === null) {
+    if (isOver) return null
+    return (
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        {onGoing && (
+          <button
+            type="button"
+            onClick={onGoing}
+            className="text-sm font-bold text-dark bg-green rounded-full px-3.5 py-1.5 hover:opacity-90 transition-opacity"
+          >
+            I&apos;ll Be There
+          </button>
+        )}
+        {onCantMakeIt && (
+          <button
+            type="button"
+            onClick={onCantMakeIt}
+            className="text-xs font-semibold text-gray hover:text-white px-2 py-1 rounded-lg transition-colors"
+          >
+            Can&apos;t Make It
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const going = response === 'going'
+  const switchAction = going ? onCantMakeIt : onGoing
+  return (
+    <div className="flex flex-col items-end gap-1 shrink-0" aria-live="polite">
+      <span
+        className={`inline-flex items-center gap-1.5 text-sm font-bold rounded-full px-3 py-1.5 border transition-colors ${
+          going
+            ? 'bg-green/10 text-green border-green/20'
+            : 'bg-yellow-500/10 text-yellow-700 border-yellow-500/25'
+        } ${pending ? 'opacity-70' : ''}`}
+      >
+        {going ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        )}
+        {going ? 'You\u2019re going' : 'You can\u2019t make it'}
+      </span>
+      {pending ? (
+        <span className="text-[11px] text-gray px-2 py-1">Saving…</span>
+      ) : switchAction && !isOver ? (
+        <button
+          type="button"
+          onClick={switchAction}
+          className="text-xs font-semibold text-gray hover:text-white px-2 py-1 rounded-lg transition-colors"
+        >
+          {going ? 'Can\u2019t make it?' : 'I can make it'}
+        </button>
+      ) : null}
     </div>
   )
 }

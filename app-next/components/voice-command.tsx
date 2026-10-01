@@ -198,7 +198,7 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
   return (
     <>
       {showPanel && (
-        <div className="fixed bottom-24 right-4 sm:right-6 w-[min(420px,calc(100vw-2rem))] z-50 bg-dark-secondary border border-white/10 rounded-2xl shadow-2xl p-4">
+        <div className="fixed bottom-[calc(148px+env(safe-area-inset-bottom))] md:bottom-24 right-4 sm:right-6 w-[min(420px,calc(100vw-2rem))] z-50 bg-dark-secondary border border-white/10 rounded-2xl shadow-2xl p-4">
           {transcript && state !== 'executing' && state !== 'result' && (
             <div className="mb-3">
               <p className="text-xs text-gray mb-1">You said:</p>
@@ -291,7 +291,7 @@ export default function VoiceCommand({ userRole }: VoiceCommandProps) {
         disabled={isProcessing || isExecuting || isConfirming}
         aria-label={isListening ? 'Stop listening' : 'Voice command'}
         title='Voice command. Try: "Cancel practice tonight"'
-        className={`fixed bottom-6 right-4 sm:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all
+        className={`fixed bottom-[calc(76px+env(safe-area-inset-bottom))] md:bottom-6 right-4 sm:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all
           ${isListening
             ? 'bg-red-500 text-white animate-pulse ring-4 ring-red-500/30 scale-110'
             : 'bg-green text-dark hover:scale-110 shadow-[0_0_40px_rgba(0,255,135,0.35)]'

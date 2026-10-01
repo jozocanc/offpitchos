@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { createAnnouncement } from './actions'
-import { useToast } from '@/components/toast'
+import { useToast, networkErrorMessage } from '@/components/toast'
+import Modal from '@/components/modal'
 import { formatRecipientToast } from '../notification-toast'
 import { isStaff } from '@/lib/constants'
 import { teamLabel } from '@/lib/team-label'
@@ -78,7 +79,7 @@ export default function NewAnnouncementModal({
           body: body.trim(),
           pollEnabled: pollEnabled && !isPlayer,
         })
-        if (!annRes.ok) { toast(annRes.error, 'error'); return }
+        if (!annRes.ok) { setError(annRes.error); toast(annRes.error, 'error'); return }
         const result = annRes.data
         toast(
           formatRecipientToast({
@@ -90,24 +91,20 @@ export default function NewAnnouncementModal({
           result.totalRecipients === 0 || result.emailFailed > 0 ? 'error' : 'success',
         )
         onClose()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong')
+      } catch {
+        setError(networkErrorMessage())
       }
     })
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-lg border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-6">{isPlayer ? 'Message Coach' : 'New Announcement'}</h2>
-
-        <label className="block text-sm font-medium text-gray mb-2">
+    <Modal title={isPlayer ? 'Message Coach' : 'New Announcement'} onClose={onClose} size="lg" dismissible={!isPending}>
+      <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
+        <label htmlFor="ann-team" className="block text-sm font-medium text-gray mb-2">
           {isPlayer ? 'Which team?' : 'Audience'}
         </label>
         <select
+          id="ann-team"
           value={teamId}
           onChange={e => setTeamId(e.target.value)}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-2"
@@ -122,7 +119,6 @@ export default function NewAnnouncementModal({
         <div className={`text-xs mb-4 flex items-center gap-2 ${
           audienceTotal === 0 ? 'text-yellow-400' : 'text-gray'
         }`}>
-          <span>{isPlayer ? '💬' : '📣'}</span>
           <span>
             {audienceTotal === 0
               ? isPlayer ? 'No coaches on this team yet.' : 'Nobody is on this team yet, so nobody will receive the announcement.'
@@ -132,10 +128,11 @@ export default function NewAnnouncementModal({
           </span>
         </div>
 
-        <label className="block text-sm font-medium text-gray mb-2">
+        <label htmlFor="ann-title" className="block text-sm font-medium text-gray mb-2">
           {isPlayer ? 'Subject' : 'Title'}
         </label>
         <input
+          id="ann-title"
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
@@ -144,8 +141,9 @@ export default function NewAnnouncementModal({
           autoFocus
         />
 
-        <label className="block text-sm font-medium text-gray mb-2">Message</label>
+        <label htmlFor="ann-body" className="block text-sm font-medium text-gray mb-2">Message</label>
         <textarea
+          id="ann-body"
           value={body}
           onChange={e => setBody(e.target.value)}
           placeholder={isPlayer ? 'Write your message to the coach...' : 'Write your announcement...'}
@@ -170,24 +168,26 @@ export default function NewAnnouncementModal({
           </label>
         )}
 
-        {error && <p className="text-red text-sm mt-2 mb-2">{error}</p>}
+        {error && <p role="alert" className="text-red text-sm mt-2 mb-2">{error}</p>}
 
         <div className="flex gap-3 mt-6">
           <button
+            type="button"
             onClick={onClose}
+            disabled={isPending}
             className="flex-1 bg-dark border border-white/10 text-gray font-medium py-3 rounded-xl hover:text-white transition-colors"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={isPending}
             className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPending ? 'Sending...' : isPlayer ? 'Send Message' : 'Post Announcement'}
+            {isPending ? (isPlayer ? 'Sending…' : 'Posting…') : isPlayer ? 'Send Message' : 'Post Announcement'}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

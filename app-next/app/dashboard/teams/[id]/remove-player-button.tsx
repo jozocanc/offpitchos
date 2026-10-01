@@ -3,13 +3,19 @@
 import { useTransition } from 'react'
 import { removePlayer } from './player-actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 export default function RemovePlayerButton({ playerId, teamId }: { playerId: string; teamId: string }) {
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
 
-  function handleRemove() {
-    if (!confirm('Remove this player from the team?')) return
+  async function handleRemove() {
+    if (!(await confirm({
+      title: 'Remove this player from the team?',
+      confirmLabel: 'Remove',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const r = await removePlayer(playerId, teamId)
       if (!r.ok) toast(r.error, 'error')
@@ -17,6 +23,7 @@ export default function RemovePlayerButton({ playerId, teamId }: { playerId: str
   }
 
   return (
+    <>
     <button
       onClick={handleRemove}
       disabled={isPending}
@@ -24,5 +31,7 @@ export default function RemovePlayerButton({ playerId, teamId }: { playerId: str
     >
       {isPending ? '...' : 'Remove'}
     </button>
+    {dialog}
+    </>
   )
 }

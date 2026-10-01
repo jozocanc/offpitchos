@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 import { assertNotPreview, getViewerIdentity } from '@/lib/admin-role'
 import { getClubTimezoneById } from '@/lib/club-timezone-server'
+import { getCurrentProfile } from '@/lib/current-profile'
 import { dayKey } from '@/lib/format-datetime'
 import {
   CHECKIN_NOTE_MAX,
@@ -72,7 +73,12 @@ export async function getMyCheckinState(): Promise<MyCheckinState> {
     return { player: null, today: '', checkin: null, isPreview: viewer.isPreview }
   }
 
-  const timeZone = await getClubTimezoneById(p.club_id)
+  // The viewer's own club (always, including preview) is already in the
+  // request-memoized profile with its timezone, so skip the extra lookup.
+  const me = await getCurrentProfile()
+  const timeZone = me && me.club_id === p.club_id && me.timezone
+    ? me.timezone
+    : await getClubTimezoneById(p.club_id)
   const today = dayKey(new Date(), timeZone)
 
   const { data: existing } = await supabase

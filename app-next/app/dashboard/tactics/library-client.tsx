@@ -15,6 +15,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
 import GenerateModal from './generate-modal'
 import ImportPdfModal from './import-pdf-modal'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 interface Props {
   drills: DrillSummary[]
@@ -25,6 +26,7 @@ interface Props {
 
 export default function LibraryClient({ drills, teams, role, currentProfileId }: Props) {
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [teamId, setTeamId] = useState<string>('all')
@@ -51,8 +53,13 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
     return true
   }), [drills, teamId, category, visibility, search, currentProfileId])
 
-  function handleDelete(id: string) {
-    if (!confirm('Delete this drill? This cannot be undone.')) return
+  async function handleDelete(id: string) {
+    if (!(await confirm({
+      title: 'Delete this drill?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const r = await deleteDrill(id)
       if (!r.ok) { toast(r.error, 'error'); return }
@@ -214,7 +221,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
 
       {/* Floating action bar — visible in select mode */}
       {selectMode && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-dark border border-white/15 rounded-xl px-5 py-3 shadow-2xl">
+        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-dark border border-white/15 rounded-xl px-5 py-3 shadow-2xl">
           <span className="text-sm text-white/70 min-w-[80px]">
             {selectedIds.size === 0 ? 'None selected' : `${selectedIds.size} selected`}
           </span>
@@ -235,6 +242,7 @@ export default function LibraryClient({ drills, teams, role, currentProfileId }:
           </button>
         </div>
       )}
+      {dialog}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useOptimistic, startTransition as startRsvpTransition } from 'react'
 import { ROLES, isMember } from '@/lib/constants'
 import type { EventType } from '@/lib/constants'
 import Filters from './filters'
@@ -13,7 +13,11 @@ import ParentCantAttendModal from './parent-cant-attend-modal'
 import ParentGoingModal from './parent-going-modal'
 import AttendanceModal from './attendance-modal'
 import { cancelEvent, restoreEvent, getPastEvents } from './actions'
-import { useToast } from '@/components/toast'
+import { useToast, isPreviewBlocked, networkErrorMessage } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
+import { getMyRsvpState, parentRsvp, type RsvpResponse } from './rsvp-actions'
+import { parentExcuseChildren } from './attendance-actions'
+import type { ActionResult } from '@/lib/action-result'
 import { formatRecipientToast } from '../notification-toast'
 import type { EventTravelFields } from '@/lib/travel'
 
@@ -86,6 +90,24 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   // sessions without digging into each event individually.
   const [unmarkedPastEventIds, setUnmarkedPastEventIds] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
+  const { confirm, dialog: confirmDialog } = useConfirm()
+
+  // ---- Player RSVP state (optimistic) ----
+  // Confirmed answers from the server; null until the first load returns.
+  const [myRsvps, setMyRsvps] = useState<Record<string, RsvpResponse> | null>(null)
+  const [playersByTeam, setPlayersByTeam] = useState<Record<string, string[]>>({})
+  // Optimistic overlay: a tap paints the new answer at once and React drops
+  // the overlay when the save's transition ends. On success the confirmed
+  // map is updated inside the transition, so nothing flickers; on failure
+  // the card falls back to the previous answer by itself.
+  const [shownRsvps, setShownRsvp] = useOptimistic(
+    myRsvps,
+    (state, u: { eventId: string; response: RsvpResponse }) => ({ ...(state ?? {}), [u.eventId]: u.response }),
+  )
+  const [pendingRsvpIds, markRsvpPending] = useOptimistic(
+    new Set<string>(),
+    (state, eventId: string) => new Set(state).add(eventId),
+  )
 
   // Share schedule state with the voice command so "cancel this practice"
   // / "move these to Tuesday" works. Cleared on unmount.
@@ -132,17 +154,118 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   async function togglePast() {
     if (!showPast && pastEvents.length === 0) {
       setLoadingPast(true)
-      const pastRes = await getPastEvents()
+      const pastRes = await getPastEvents().catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      setLoadingPast(false)
       if (!pastRes.ok) { toast(pastRes.error, 'error'); return }
       const past = pastRes.data
       setPastEvents(past.events as Event[])
       setUnmarkedPastEventIds(new Set(past.unmarkedEventIds))
-      setLoadingPast(false)
     }
     setShowPast(!showPast)
   }
 
   const allEvents = showPast || view === 'calendar' ? [...pastEvents, ...events] : events
+
+  // Load the player's own answers for every event on screen. Small read,
+  // re-run only when the set of event ids changes.
+  const rsvpEventKey = isPlayer ? allEvents.map(e => e.id).sort().join(',') : ''
+  useEffect(() => {
+    if (!rsvpEventKey) return
+    let cancelled = false
+    getMyRsvpState(rsvpEventKey.split(',')).catch(() => ({ ok: false as const, error: '' })).then(res => {
+      if (cancelled) return
+      if (!res.ok) { setMyRsvps(prev => prev ?? {}); return }
+      setMyRsvps(prev => ({ ...(prev ?? {}), ...res.data.responses }))
+      setPlayersByTeam(res.data.playersByTeam)
+    })
+    return () => { cancelled = true }
+  }, [rsvpEventKey])
+
+  function saveRsvp(
+    eventId: string,
+    response: RsvpResponse,
+    call: () => Promise<ActionResult<{ notifiedCoaches: number }>>,
+    successMessage: string,
+  ) {
+    const previous = myRsvps?.[eventId] ?? null
+    startRsvpTransition(async () => {
+      setShownRsvp({ eventId, response })
+      markRsvpPending(eventId)
+      let res: ActionResult<{ notifiedCoaches: number }>
+      try {
+        res = await call()
+      } catch {
+        res = { ok: false, error: networkErrorMessage() }
+      }
+      if (!res.ok) {
+        // Overlay drops when this transition ends: the card rolls back.
+        const error = res.error
+        toast(error, 'error', isPreviewBlocked(error) ? undefined : {
+          action: { label: 'Retry', onClick: () => saveRsvp(eventId, response, call, successMessage) },
+        })
+        return
+      }
+      const notified = res.data.notifiedCoaches
+      startRsvpTransition(() => {
+        setMyRsvps(prev => ({ ...(prev ?? {}), [eventId]: response }))
+      })
+      toast(
+        notified > 0 ? `${successMessage} · coach${notified === 1 ? '' : 'es'} notified` : successMessage,
+        'success',
+        previous && previous !== response
+          ? { action: { label: 'Undo', onClick: () => undoRsvp(eventId, previous) } }
+          : undefined,
+      )
+    })
+  }
+
+  function rsvpGoing(eventId: string, teamId: string, playerIds: string[], playerCount = 1) {
+    saveRsvp(
+      eventId,
+      'going',
+      () => parentRsvp({ eventId, teamId, playerIds, response: 'going' }),
+      playerCount === 1 ? 'You\u2019re going' : `${playerIds.length} confirmed`,
+    )
+  }
+
+  function rsvpCantMakeIt(eventId: string, teamId: string, playerIds: string[], reason: string, playerCount = 1) {
+    saveRsvp(
+      eventId,
+      'not_going',
+      async () => {
+        // Excuse = the coach-facing record + push with the reason. The RSVP
+        // row keeps the forecast tally and this card in sync with it.
+        const ex = await parentExcuseChildren({ eventId, teamId, playerIds, reason })
+        if (!ex.ok) return ex
+        await parentRsvp({ eventId, teamId, playerIds, response: 'not_going' })
+        return { ok: true, data: { notifiedCoaches: ex.data.notifiedCoaches } }
+      },
+      playerCount === 1 ? 'Marked as not attending' : `${playerIds.length} marked excused`,
+    )
+  }
+
+  // Undo puts back the previous answer. Going back to "going" is one tap;
+  // going back to "can't make it" re-sends the excuse without a reason.
+  function undoRsvp(eventId: string, previous: RsvpResponse) {
+    const ev = [...events, ...pastEvents].find(e => e.id === eventId)
+    const ids = ev ? playersByTeam[ev.team_id] ?? [] : []
+    if (!ev || ids.length === 0) return
+    if (previous === 'going') rsvpGoing(eventId, ev.team_id, ids)
+    else rsvpCantMakeIt(eventId, ev.team_id, ids, '')
+  }
+
+  function handlePlayerGoing(eventId: string, teamId: string) {
+    const ids = playersByTeam[teamId] ?? []
+    if (ids.length === 1) { rsvpGoing(eventId, teamId, ids); return }
+    // Zero or several linked rows: the picker explains or lets them choose.
+    const ev = [...events, ...pastEvents].find(e => e.id === eventId)
+    setParentGoingEvent({ eventId, teamId, title: ev?.title ?? '' })
+  }
+
+  function handlePlayerCantMakeIt(eventId: string, teamId: string) {
+    const ev = [...events, ...pastEvents].find(e => e.id === eventId)
+    setParentCantAttendEvent({ eventId, teamId, title: ev?.title ?? '' })
+  }
 
   // Apply filters
   const filtered = allEvents.filter(e => {
@@ -159,8 +282,15 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     }
   }
 
-  function handleCancel(eventId: string) {
-    if (!confirm('Cancel this event? Coaches and players on this team will be notified.')) return
+  async function handleCancel(eventId: string) {
+    const ok = await confirm({
+      title: 'Cancel this event?',
+      message: 'Coaches and players on this team will be notified.',
+      confirmLabel: 'Cancel event',
+      cancelLabel: 'Keep it',
+      destructive: true,
+    })
+    if (!ok) return
     startTransition(async () => {
       try {
         const cRes = await cancelEvent(eventId)
@@ -176,8 +306,13 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
     })
   }
 
-  function handleRestore(eventId: string) {
-    if (!confirm('Bring this event back? Coaches and players on this team will be notified.')) return
+  async function handleRestore(eventId: string) {
+    const ok = await confirm({
+      title: 'Bring this event back?',
+      message: 'Coaches and players on this team will be notified.',
+      confirmLabel: 'Restore event',
+    })
+    if (!ok) return
     startTransition(async () => {
       try {
         const rRes = await restoreEvent(eventId)
@@ -224,18 +359,22 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
         <div className="flex items-center gap-3">
           {/* Past toggle */}
           <button
+            type="button"
+            aria-pressed={showPast}
             onClick={togglePast}
             className={`px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
               showPast ? 'bg-white/10 border-white/20 text-white' : 'border-white/10 text-gray hover:text-white'
             }`}
             disabled={loadingPast}
           >
-            {loadingPast ? 'Loading...' : showPast ? 'Hide Past' : 'Show Past'}
+            {loadingPast ? 'Loading…' : showPast ? 'Hide Past' : 'Show Past'}
           </button>
 
           {/* View toggle */}
           <div className="flex bg-dark rounded-xl border border-white/10 overflow-hidden">
             <button
+              type="button"
+              aria-pressed={view === 'agenda'}
               onClick={() => setView('agenda')}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 view === 'agenda' ? 'bg-green text-dark' : 'text-gray hover:text-white'
@@ -244,6 +383,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
               Agenda
             </button>
             <button
+              type="button"
+              aria-pressed={view === 'calendar'}
               onClick={() => { setView('calendar'); void ensurePastLoaded() }}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 view === 'calendar' ? 'bg-green text-dark' : 'text-gray hover:text-white'
@@ -255,6 +396,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
 
           {canCreate && (
             <button
+              type="button"
               onClick={handleAddNew}
               className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
             >
@@ -284,14 +426,30 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           onRestore={handleRestore}
           isDoc={userRole === ROLES.DOC}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
-          onParentCantAttend={isPlayer ? ((eventId: string, teamId: string) => {
-            const ev = [...events, ...pastEvents].find(e => e.id === eventId)
-            setParentCantAttendEvent({ eventId, teamId, title: ev?.title ?? '' })
-          }) : undefined}
-          onParentGoing={isPlayer ? ((eventId: string, teamId: string) => {
-            const ev = [...events, ...pastEvents].find(e => e.id === eventId)
-            setParentGoingEvent({ eventId, teamId, title: ev?.title ?? '' })
-          }) : undefined}
+          onParentCantAttend={isPlayer ? handlePlayerCantMakeIt : undefined}
+          onParentGoing={isPlayer ? handlePlayerGoing : undefined}
+          myRsvps={isPlayer ? (shownRsvps ?? undefined) : undefined}
+          pendingRsvpIds={pendingRsvpIds}
+          empty={
+            filterTeam || filterType
+              ? {
+                  title: 'No events match these filters',
+                  body: 'Try another team or event type.',
+                  action: { label: 'Clear filters', onClick: () => { setFilterTeam(null); setFilterType(null) } },
+                }
+              : canCreate
+                ? {
+                    title: 'No events scheduled yet',
+                    body: 'Add practices, games and travel so your staff and players know where to be.',
+                    action: { label: '+ Add Event', onClick: handleAddNew },
+                  }
+                : {
+                    title: 'Nothing on the schedule yet',
+                    body: isPlayer
+                      ? 'When your coaches add practices and games, they show up here.'
+                      : 'The head coach hasn\u2019t added any events yet.',
+                  }
+          }
           onAttendance={canEdit ? handleAttendance : undefined}
           canEdit={canEdit}
           coverageRequests={coverageRequests}
@@ -328,6 +486,10 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           eventId={parentCantAttendEvent.eventId}
           teamId={parentCantAttendEvent.teamId}
           eventTitle={parentCantAttendEvent.title}
+          knownPlayerIds={playersByTeam[parentCantAttendEvent.teamId]}
+          onSubmit={({ playerIds, reason, playerCount }) =>
+            rsvpCantMakeIt(parentCantAttendEvent.eventId, parentCantAttendEvent.teamId, playerIds, reason, playerCount)
+          }
           onClose={() => setParentCantAttendEvent(null)}
         />
       )}
@@ -338,6 +500,9 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           eventId={parentGoingEvent.eventId}
           teamId={parentGoingEvent.teamId}
           eventTitle={parentGoingEvent.title}
+          onSubmit={({ playerIds, playerCount }) =>
+            rsvpGoing(parentGoingEvent.eventId, parentGoingEvent.teamId, playerIds, playerCount)
+          }
           onClose={() => setParentGoingEvent(null)}
         />
       )}
@@ -362,6 +527,8 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           userRole={userRole}
         />
       )}
+
+      {confirmDialog}
     </>
   )
 }

@@ -13,6 +13,7 @@ import { sendEmailToProfiles } from '@/lib/email'
 import { getRsvpTalliesForEvents } from './rsvp-actions'
 import { type ActionResult, toActionError, unwrap } from '@/lib/action-result'
 import { getClubTimezone } from '@/lib/club-timezone-server'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import {
   type TravelInput,
   type EventTravelFields,
@@ -796,56 +797,76 @@ async function _getPastEvents() {
 }
 
 export async function getScheduleData() {
-  const { user, profile, supabase } = await getUserProfile()
+  // Request-memoized claims + profile (lib/current-profile): a local JWT
+  // check instead of an auth-server round-trip, and the same row
+  // getViewerIdentity() reads below. Same redirect / error as getUserProfile().
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
+  if (!profile?.club_id) throw new Error('No team found')
+  const clubId = profile.club_id
+  const supabase = await createClient()
 
   // Only load today and future events (past events are rarely needed)
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  const { data: events } = await supabase
-    .from('events')
-    .select(`
-      id, team_id, type, title, start_time, end_time,
-      venue_id, address, link, recurrence_group, notes, status,
-      travel_depart_at, travel_depart_location, travel_return_at,
-      travel_mode, travel_hotel, travel_notes,
-      teams ( name, age_group ),
-      venues ( name, address )
-    `)
-    .eq('club_id', profile.club_id!)
-    .gte('start_time', todayStart.toISOString())
-    .order('start_time', { ascending: true })
-
-  const { data: teams } = await supabase
-    .from('teams')
-    .select('id, name, age_group')
-    .eq('club_id', profile.club_id!)
-    .order('age_group')
-
-  const { data: venues } = await supabase
-    .from('venues')
-    .select('id, name, address')
-    .eq('club_id', profile.club_id!)
-    .order('name')
-
-  // Check coverage timeouts. Result intentionally ignored: this is a
-  // best-effort sweep inside a page-data load, and a failure here must not
-  // take down the whole schedule.
-  await checkAndEscalateTimeouts()
-
-  // Get coverage requests for events
-  const { data: coverageRequests } = await supabase
-    .from('coverage_requests')
-    .select('id, event_id, status, covering_coach_id, unavailable_coach_id, profiles!coverage_requests_covering_coach_id_fkey ( display_name )')
-    .eq('club_id', profile.club_id!)
-    .in('status', ['pending', 'accepted', 'escalated', 'resolved'])
-
-  // Coach assignments per team — DOC sees "Coaches: Name1, Name2" on
-  // each event card so they know at a glance who's running each session.
-  const { data: coachMembers } = await supabase
-    .from('team_members')
-    .select('team_id, profiles(display_name)')
-    .eq('role', 'coach')
+  // Wave 1: everything that only needs the club id, fired together instead of
+  // one after another. The coverage sweep still finishes before coverage
+  // requests are read (chained), so freshly escalated rows show as escalated.
+  const [
+    { data: events },
+    { data: teams },
+    { data: venues },
+    { data: coverageRequests },
+    { data: coachMembers },
+    previewTeams,
+    userRole,
+  ] = await Promise.all([
+    supabase
+      .from('events')
+      .select(`
+        id, team_id, type, title, start_time, end_time,
+        venue_id, address, link, recurrence_group, notes, status,
+        travel_depart_at, travel_depart_location, travel_return_at,
+        travel_mode, travel_hotel, travel_notes,
+        teams ( name, age_group ),
+        venues ( name, address )
+      `)
+      .eq('club_id', clubId)
+      .gte('start_time', todayStart.toISOString())
+      .order('start_time', { ascending: true }),
+    supabase
+      .from('teams')
+      .select('id, name, age_group')
+      .eq('club_id', clubId)
+      .order('age_group'),
+    supabase
+      .from('venues')
+      .select('id, name, address')
+      .eq('club_id', clubId)
+      .order('name'),
+    // Check coverage timeouts, then get coverage requests for events. The
+    // sweep's result is intentionally ignored: this is a best-effort sweep
+    // inside a page-data load, and a failure here must not take down the
+    // whole schedule.
+    checkAndEscalateTimeouts().then(() =>
+      supabase
+        .from('coverage_requests')
+        .select('id, event_id, status, covering_coach_id, unavailable_coach_id, profiles!coverage_requests_covering_coach_id_fkey ( display_name )')
+        .eq('club_id', clubId)
+        .in('status', ['pending', 'accepted', 'escalated', 'resolved']),
+    ),
+    // Coach assignments per team — DOC sees "Coaches: Name1, Name2" on
+    // each event card so they know at a glance who's running each session.
+    supabase
+      .from('team_members')
+      .select('team_id, profiles(display_name)')
+      .eq('role', 'coach'),
+    // Player preview: only the sample player's teams, and no staff-only
+    // coverage data (a real player can't read coverage_requests).
+    getPreviewTeamIds(supabase),
+    getEffectiveRole(profile.role as string),
+  ])
 
   const coachesByTeam: Record<string, string[]> = {}
   for (const cm of coachMembers ?? []) {
@@ -855,25 +876,26 @@ export async function getScheduleData() {
     coachesByTeam[cm.team_id].push(name)
   }
 
-  // RSVP forecast counts per upcoming event so the agenda can paint
-  // "8 going · 2 not coming · 5 no response" without extra round-trips.
+  // Wave 2 (needs the event ids): RSVP forecast counts per upcoming event so
+  // the agenda can paint "8 going · 2 not coming · 5 no response" without
+  // extra round-trips, and the visitor match sheets (055) for the "Visitor
+  // info shared" chip. Match sheets are staff-only under RLS; a player (or
+  // preview) just gets an empty map.
   const upcomingEventIds = (events ?? []).map(e => e.id)
-  const rsvpTallies = unwrap(await getRsvpTalliesForEvents(upcomingEventIds))
+  const [rsvpTalliesRes, sheetRows] = await Promise.all([
+    getRsvpTalliesForEvents(upcomingEventIds),
+    !previewTeams && upcomingEventIds.length > 0
+      ? supabase
+          .from('match_sheets')
+          .select('event_id, enabled')
+          .in('event_id', upcomingEventIds)
+          .then(r => r.data)
+      : Promise.resolve(null),
+  ])
+  const rsvpTallies = unwrap(rsvpTalliesRes)
 
-  // Player preview: only the sample player's teams, and no staff-only
-  // coverage data (a real player can't read coverage_requests).
-  const previewTeams = await getPreviewTeamIds(supabase)
-
-  // Visitor match sheets (055) for the "Visitor info shared" chip. Staff-only
-  // under RLS; a player (or preview) just gets an empty map.
   const matchSheets: Record<string, boolean> = {}
-  if (!previewTeams && upcomingEventIds.length > 0) {
-    const { data: sheetRows } = await supabase
-      .from('match_sheets')
-      .select('event_id, enabled')
-      .in('event_id', upcomingEventIds)
-    for (const r of sheetRows ?? []) matchSheets[r.event_id as string] = Boolean(r.enabled)
-  }
+  for (const r of sheetRows ?? []) matchSheets[r.event_id as string] = Boolean(r.enabled)
 
   return {
     events: previewTeams ? (events ?? []).filter(e => previewTeams.has(e.team_id)) : (events ?? []),
@@ -883,7 +905,7 @@ export async function getScheduleData() {
     coachesByTeam,
     rsvpTallies,
     matchSheets,
-    userRole: await getEffectiveRole(profile.role),
+    userRole,
     userProfileId: profile.id,
   }
 }

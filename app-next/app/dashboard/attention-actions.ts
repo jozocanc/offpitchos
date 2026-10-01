@@ -3,8 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
-import { getClubTimezone } from '@/lib/club-timezone-server'
-import { dayKey } from '@/lib/format-datetime'
+import { DEFAULT_TIMEZONE, dayKey, formatShortDate, formatTime } from '@/lib/format-datetime'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { isFlagged } from '@/lib/checkin'
 
 const anthropic = new Anthropic({
@@ -24,6 +24,15 @@ const anthropic = new Anthropic({
 const ATTENTION_CACHE_TTL_MS = 30 * 1000 // 30 seconds
 const attentionCache = new Map<string, { data: AttentionResult; expiresAt: number }>()
 
+// The deterministic signal gather (9 parallel queries) is shared between the
+// fast first paint (getAttentionSignals) and the AI-ranked list
+// (getAttentionList), which the dashboard asks for back to back. Keeping the
+// in-flight promise for a few seconds means the AI call reuses the rows the
+// fast path just read instead of querying everything twice. Short TTL so it
+// never stretches the 30s staleness bound above in any meaningful way.
+const SIGNALS_CACHE_TTL_MS = 10 * 1000
+const signalsCache = new Map<string, { promise: Promise<GatheredSignals>; expiresAt: number }>()
+
 // Explicit cache bust for callers that make atomic bulk data changes
 // large enough that 30s of stale is unacceptable UX. Deletes every
 // entry whose key starts with `${clubId}:` so all timezone variants
@@ -31,6 +40,9 @@ const attentionCache = new Map<string, { data: AttentionResult; expiresAt: numbe
 export async function bustAttentionCache(clubId: string): Promise<void> {
   for (const key of attentionCache.keys()) {
     if (key.startsWith(`${clubId}:`)) attentionCache.delete(key)
+  }
+  for (const key of signalsCache.keys()) {
+    if (key.startsWith(`${clubId}:`)) signalsCache.delete(key)
   }
 }
 
@@ -61,21 +73,32 @@ export interface AttentionResult {
   items: AttentionItem[]
   totalSignals: number
   generatedAt: string
+  /**
+   * true when `items` is the AI-triaged list; false when it is the
+   * deterministic first pass from getAttentionSignals(), shown while the AI
+   * ranking is still on its way.
+   */
+  ranked?: boolean
 }
 
+// Request-memoized profile (lib/current-profile): no auth-server round-trip,
+// and on the dashboard render it is the same row the page already loaded.
 async function getUserProfile() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const userId = await getAuthUserId()
+  if (!userId) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, club_id, role')
-    .eq('user_id', user.id)
-    .single()
-
+  const profile = await getCurrentProfile()
   if (!profile?.club_id) throw new Error('No program found')
-  return { user, profile, supabase }
+  const supabase = await createClient()
+  return {
+    profile: { ...profile, club_id: profile.club_id },
+    supabase,
+    // Times in the list are the team's, not the viewer's browser zone. The
+    // profile row embeds the club timezone, so this is the same value the
+    // club-timezone helper returns, without a second profile read when called
+    // as a Server Action (where cache() does not memoize).
+    timeZone: profile.timezone ?? DEFAULT_TIMEZONE,
+  }
 }
 
 const ATTENTION_PROMPT = `You are triaging the inbox of the head coach of a college or club soccer team. They run a small coaching staff (assistant, goalkeeping and fitness coaches) and a roster of adult players. There are no parents.
@@ -135,23 +158,31 @@ Return JSON only, no preamble, no markdown. Match this exact schema:
   ]
 }`
 
-export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRefresh: boolean = false): Promise<AttentionResult> {
-  // Times in the list are the team's, not the viewer's browser zone.
-  const timeZone = await getClubTimezone()
-  const { profile, supabase } = await getUserProfile()
+interface GatheredSignals {
+  generatedAt: string
+  /** Prompt text for the model, or null when there are no signals at all. */
+  signalsText: string | null
+  hrefBySignalId: Map<string, string>
+  totalSignals: number
+  /** Deterministic, rule-ranked items: the fast first paint. */
+  fallbackItems: AttentionItem[]
+}
 
-  // Only DOCs get the triaged attention list
-  if (profile.role !== 'doc') {
-    return { items: [], totalSignals: 0, generatedAt: new Date().toISOString() }
-  }
+type Supabase = Awaited<ReturnType<typeof createClient>>
 
-  // Per-club cache (the data is club-scoped, not user-scoped)
-  const cacheKey = `${profile.club_id}:${timeZone}`
-  if (!forceRefresh) {
-    const cached = readCache(cacheKey)
-    if (cached) return cached
-  }
+const URGENCY_ORDER: Record<AttentionItem['urgency'], number> = { critical: 0, important: 1, routine: 2 }
 
+/**
+ * The raw signal gather that used to sit inline in getAttentionList: nine
+ * club-scoped queries in parallel, turned into (a) the prompt text for the
+ * model and (b) a deterministic list ranked by the same urgency rules the
+ * prompt spells out, so the panel has something useful to show immediately.
+ */
+async function gatherSignals(
+  supabase: Supabase,
+  profile: { id: string; club_id: string },
+  timeZone: string,
+): Promise<GatheredSignals> {
   const now = new Date()
   const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
   const past48h = new Date(now.getTime() - 48 * 60 * 60 * 1000)
@@ -389,18 +420,108 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     signalParts.push(`- signalId=${signalId} | ${n} player${n === 1 ? '' : 's'} flagged in this morning's check-in (${flaggedOut} out, others report soreness 4+, sleep 2 or less, or energy 2 or less). ${todaysCheckins.length} checked in so far today. Suggested description: "${n} player${n === 1 ? '' : 's'} flagged in this morning's check-in".`)
   }
 
-  if (signalParts.length === 1) {
-    // Only the header — no signals at all
-    const empty: AttentionResult = {
-      items: [],
-      totalSignals: 0,
-      generatedAt: now.toISOString(),
-    }
-    writeCache(cacheKey, empty)
-    return empty
-  }
 
-  const signalsText = signalParts.join('\n')
+  // Deterministic first pass. Mirrors the prompt's urgency guidance and only
+  // ever uses signal ids/hrefs computed above, so a later AI result can
+  // replace it item for item.
+  const fallbackItems: AttentionItem[] = []
+  const pushItem = (item: AttentionItem) => {
+    if (hrefBySignalId.has(item.id)) fallbackItems.push(item)
+  }
+  const clip = (text: string) => (text.length > 120 ? `${text.slice(0, 117)}...` : text)
+
+  for (const c of coverage) {
+    const event = unwrap<any>(c.events)
+    const expiresIn = new Date(c.timeout_at).getTime() - now.getTime()
+    pushItem({
+      id: `coverage-${c.id}`,
+      title: 'Coverage request',
+      description: clip(`${event?.title ?? 'An event'}: ${expiresIn < 0 ? 'request expired' : `expires in ${Math.round(expiresIn / 60000)} min`}`),
+      urgency: expiresIn < 30 * 60000 ? 'critical' : 'important',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get(`coverage-${c.id}`)!,
+    })
+  }
+  if (flaggedCheckins.length > 0) {
+    const n = flaggedCheckins.length
+    pushItem({
+      id: 'checkin-flagged',
+      title: 'Check-in flags',
+      description: `${n} player${n === 1 ? '' : 's'} flagged in this morning's check-in`,
+      urgency: 'important',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get('checkin-flagged')!,
+    })
+  }
+  for (const e of unmarkedPastEvents) {
+    pushItem({
+      id: `attendance-${e.id}`,
+      title: 'Attendance not marked',
+      description: clip(`${e.title} on ${formatShortDate(e.start_time, timeZone)}`),
+      urgency: 'important',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get(`attendance-${e.id}`)!,
+    })
+  }
+  for (const r of replies) {
+    const ann = unwrap<any>(r.announcements)
+    pushItem({
+      id: `reply-${r.id}`,
+      title: 'New player reply',
+      description: clip(`On "${ann?.title ?? 'announcement'}": ${(r.body ?? '').replace(/\n/g, ' ')}`),
+      urgency: 'important',
+      actionLabel: 'Open',
+      actionHref: hrefBySignalId.get(`reply-${r.id}`)!,
+    })
+  }
+  if (missingGearCount > 0) {
+    pushItem({
+      id: 'gear-missing',
+      title: 'Gear sizes missing',
+      description: `${missingGearCount} player${missingGearCount === 1 ? '' : 's'} missing jersey or shorts sizes`,
+      urgency: missingGearCount > 2 ? 'important' : 'routine',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get('gear-missing')!,
+    })
+  }
+  for (const reg of unpaidCampRegs) {
+    const cd = unwrap<any>(reg.camp_details)
+    const ev = unwrap<any>(cd?.events)
+    if (!ev?.id || fallbackItems.some(i => i.id === `camp-unpaid-${ev.id}`)) continue
+    pushItem({
+      id: `camp-unpaid-${ev.id}`,
+      title: 'Unpaid camp fees',
+      description: clip(`${ev.title ?? 'Camp'} has unpaid registrations`),
+      urgency: 'important',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get(`camp-unpaid-${ev.id}`)!,
+    })
+  }
+  for (const e of upcoming) {
+    const isMatch = e.type === 'game' || e.type === 'tournament'
+    pushItem({
+      id: `event-${e.id}`,
+      title: clip(e.title).slice(0, 60),
+      description: clip(`${formatShortDate(e.start_time, timeZone)} at ${formatTime(e.start_time, timeZone)}`),
+      urgency: isMatch ? 'important' : 'routine',
+      actionLabel: 'View',
+      actionHref: hrefBySignalId.get(`event-${e.id}`)!,
+    })
+  }
+  for (const inv of pendingInvites) {
+    const daysOld = Math.floor((now.getTime() - new Date(inv.created_at).getTime()) / 86400000)
+    pushItem({
+      id: `invite-${inv.id}`,
+      title: 'Pending invite',
+      description: clip(`${inv.role} invite to ${inv.email ?? 'unknown email'} is ${daysOld} days old`),
+      urgency: 'routine',
+      actionLabel: 'Review',
+      actionHref: hrefBySignalId.get(`invite-${inv.id}`)!,
+    })
+  }
+  // Stable sort: urgency first, insertion order (above) within a level.
+  fallbackItems.sort((a, b) => URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency])
+
   const totalSignals =
     coverage.length +
     upcoming.length +
@@ -410,6 +531,94 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     unmarkedPastEvents.length +
     unpaidCampRegs.length +
     (flaggedCheckins.length > 0 ? 1 : 0)
+
+  return {
+    generatedAt: now.toISOString(),
+    // Only the header line means no signals at all.
+    signalsText: signalParts.length === 1 ? null : signalParts.join('\n'),
+    hrefBySignalId,
+    totalSignals: signalParts.length === 1 ? 0 : totalSignals,
+    fallbackItems: fallbackItems.slice(0, 5),
+  }
+}
+
+/**
+ * Shared, short-lived gather so getAttentionSignals() and getAttentionList()
+ * called back to back hit the database once. A failed gather is evicted so
+ * the next call retries instead of replaying the error.
+ */
+function getSignalsShared(
+  supabase: Supabase,
+  profile: { id: string; club_id: string },
+  timeZone: string,
+  forceRefresh: boolean,
+): Promise<GatheredSignals> {
+  const key = `${profile.club_id}:${timeZone}`
+  const hit = signalsCache.get(key)
+  if (!forceRefresh && hit && Date.now() <= hit.expiresAt) return hit.promise
+
+  const promise = gatherSignals(supabase, profile, timeZone)
+  signalsCache.set(key, { promise, expiresAt: Date.now() + SIGNALS_CACHE_TTL_MS })
+  promise.catch(() => {
+    if (signalsCache.get(key)?.promise === promise) signalsCache.delete(key)
+  })
+  return promise
+}
+
+/**
+ * Fast first result for the head coach's panel: the deterministic signal
+ * list, no model call. Returns the cached AI-ranked list instead when one is
+ * still fresh, so a warm dashboard shows the final answer straight away.
+ */
+export async function getAttentionSignals(_clientTimeZone: string = 'UTC'): Promise<AttentionResult> {
+  const { profile, supabase, timeZone } = await getUserProfile()
+
+  if (profile.role !== 'doc') {
+    return { items: [], totalSignals: 0, generatedAt: new Date().toISOString(), ranked: true }
+  }
+
+  const cached = readCache(`${profile.club_id}:${timeZone}`)
+  if (cached) return cached
+
+  const gathered = await getSignalsShared(supabase, profile, timeZone, false)
+  return {
+    items: gathered.fallbackItems,
+    totalSignals: gathered.totalSignals,
+    generatedAt: gathered.generatedAt,
+    // Nothing to rank: the empty list IS the final answer.
+    ranked: gathered.signalsText === null,
+  }
+}
+
+export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRefresh: boolean = false): Promise<AttentionResult> {
+  const { profile, supabase, timeZone } = await getUserProfile()
+
+  // Only DOCs get the triaged attention list
+  if (profile.role !== 'doc') {
+    return { items: [], totalSignals: 0, generatedAt: new Date().toISOString(), ranked: true }
+  }
+
+  // Per-club cache (the data is club-scoped, not user-scoped)
+  const cacheKey = `${profile.club_id}:${timeZone}`
+  if (!forceRefresh) {
+    const cached = readCache(cacheKey)
+    if (cached) return cached
+  }
+
+  const { signalsText, hrefBySignalId, totalSignals, generatedAt, fallbackItems } =
+    await getSignalsShared(supabase, profile, timeZone, forceRefresh)
+
+  if (signalsText === null) {
+    // Only the header — no signals at all
+    const empty: AttentionResult = {
+      items: [],
+      totalSignals: 0,
+      generatedAt,
+      ranked: true,
+    }
+    writeCache(cacheKey, empty)
+    return empty
+  }
 
   // Call Claude to triage
   let items: AttentionItem[] = []
@@ -458,12 +667,16 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
     }
   } catch (err) {
     console.error('[attention] Claude call failed:', err)
+    // The panel is already showing the deterministic list; keep it rather
+    // than swapping it for an empty "Looks quiet" when the model is down.
+    items = fallbackItems
   }
 
   const result: AttentionResult = {
     items,
     totalSignals,
-    generatedAt: now.toISOString(),
+    generatedAt,
+    ranked: true,
   }
   writeCache(cacheKey, result)
   return result

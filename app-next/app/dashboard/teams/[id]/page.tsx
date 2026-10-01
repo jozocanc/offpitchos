@@ -19,6 +19,7 @@ import { formatMonthDayYear } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
 import { isMember, roleLabel } from '@/lib/constants'
 import { getEffectiveRole } from '@/lib/admin-role'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 
 interface Member {
   profile_id: string
@@ -63,68 +64,94 @@ export default async function TeamDetailPage({
 }) {
   const { id } = await params
 
+  // Request-memoized claims + profile (lib/current-profile): one local JWT
+  // check and one profile query, shared with getClubTimezone().
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
+
   const supabase = await createClient()
-  const timezone = await getClubTimezone()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('club_id, role')
-    .eq('user_id', user.id)
-    .single()
-
   const clubId = profile?.club_id ?? ''
+  const isStaffViewer = profile?.role === 'doc' || profile?.role === 'coach'
 
-  const { data: team } = await supabase
-    .from('teams')
-    .select('id, name, age_group, group_chat_link, invite_code, public_enabled, public_share_token')
-    .eq('id', id)
-    .eq('club_id', clubId)
-    .single()
+  // Attendance window: last-30-day scheduled events for this team. The rows
+  // are aggregated per player on the server to avoid shipping them to the
+  // client.
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const nowIso = now.toISOString()
+
+  // Everything below only needs the team id and the viewer's profile, so it
+  // fires in one parallel wave instead of eight sequential round-trips. The
+  // team-not-found check still runs before anything is rendered.
+  const [
+    timezone,
+    { data: team },
+    { data: membersRaw },
+    { data: playerInvites },
+    { data: playersRaw },
+    rosterRes,
+    { data: attRows },
+  ] = await Promise.all([
+    getClubTimezone(),
+    supabase
+      .from('teams')
+      .select('id, name, age_group, group_chat_link, invite_code, public_enabled, public_share_token')
+      .eq('id', id)
+      .eq('club_id', clubId)
+      .single(),
+    // Team members joined with profiles. team_members has profile_id (not
+    // user_id), but we need the profile's user_id to match against
+    // players.parent_id for the "linked" check.
+    supabase
+      .from('team_members')
+      .select('profile_id, role, profiles(display_name, user_id, staff_title)')
+      .eq('team_id', id),
+    // Active player invite links. Legacy 'parent' invites are included so
+    // any still-pending ones stay visible and revocable.
+    supabase
+      .from('invites')
+      .select('id, token, expires_at, created_at')
+      .eq('team_id', id)
+      .in('role', ['player', 'parent'])
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false }) as unknown as Promise<{ data: TeamInvite[] | null }>,
+    // Players on this team (including size fields so we can flag gear gaps inline).
+    supabase
+      .from('players')
+      .select('id, first_name, last_name, jersey_number, position, parent_id, jersey_size, shorts_size')
+      .eq('team_id', id)
+      .order('jersey_number', { ascending: true, nullsFirst: false })
+      .order('last_name', { ascending: true }),
+    // A player's RLS only returns their own row (migration 053). Show them the
+    // squad through get_team_roster: name, number and position, nothing private.
+    !isStaffViewer
+      ? supabase.rpc('get_team_roster', { p_team_id: id })
+      : Promise.resolve({ data: null }),
+    // Attendance rows for those events, filtered through the event join in a
+    // single query (same rows as listing the event ids first).
+    supabase
+      .from('attendance')
+      .select('player_id, status, events!inner(team_id, status, start_time)')
+      .eq('events.team_id', id)
+      .eq('events.status', 'scheduled')
+      .gte('events.start_time', thirtyDaysAgo)
+      .lte('events.start_time', nowIso),
+  ])
 
   if (!team) notFound()
-
-  // Fetch team members joined with profiles. team_members has profile_id
-  // (not user_id), but we need the profile's user_id to match against
-  // players.parent_id for the "linked" check.
-  const { data: membersRaw } = await supabase
-    .from('team_members')
-    .select('profile_id, role, profiles(display_name, user_id, staff_title)')
-    .eq('team_id', id)
 
   const members = (membersRaw ?? []).map(m => ({
     ...m,
     user_id: (m.profiles as any)?.user_id ?? '',
   })) as unknown as Member[]
 
-  // Fetch active player invite links. Legacy 'parent' invites are included so
-  // any still-pending ones stay visible and revocable.
-  const { data: playerInvites } = await supabase
-    .from('invites')
-    .select('id, token, expires_at, created_at')
-    .eq('team_id', id)
-    .in('role', ['player', 'parent'])
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false }) as { data: TeamInvite[] | null }
-
-  // Fetch players on this team (including size fields so we can flag gear gaps inline).
-  const { data: playersRaw } = await supabase
-    .from('players')
-    .select('id, first_name, last_name, jersey_number, position, parent_id, jersey_size, shorts_size')
-    .eq('team_id', id)
-    .order('jersey_number', { ascending: true, nullsFirst: false })
-    .order('last_name', { ascending: true })
-
   let players = (playersRaw ?? []) as Player[]
 
-  // A player's RLS only returns their own row (migration 053). Show them the
-  // squad through get_team_roster: name, number and position, nothing private.
-  if (profile?.role !== 'doc' && profile?.role !== 'coach') {
-    const { data: roster } = await supabase.rpc('get_team_roster', { p_team_id: id })
+  if (!isStaffViewer) {
+    const roster = rosterRes.data as Pick<Player, 'id' | 'first_name' | 'last_name' | 'jersey_number' | 'position'>[] | null
     if (roster && roster.length > 0) {
       const own = new Map(players.map(p => [p.id, p]))
-      players = (roster as Pick<Player, 'id' | 'first_name' | 'last_name' | 'jersey_number' | 'position'>[]).map(r => own.get(r.id) ?? {
+      players = roster.map(r => own.get(r.id) ?? {
         ...r,
         parent_id: '',
         jersey_size: null,
@@ -133,36 +160,12 @@ export default async function TeamDetailPage({
     }
   }
 
-  // Attendance: pull last-30-day scheduled events for this team, then pull the
-  // attendance rows keyed by (event_id, player_id). We aggregate per player on
-  // the server to avoid shipping raw rows to the client.
-  const now = new Date()
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const nowIso = now.toISOString()
-
-  const { data: recentEvents } = await supabase
-    .from('events')
-    .select('id')
-    .eq('team_id', id)
-    .eq('status', 'scheduled')
-    .gte('start_time', thirtyDaysAgo)
-    .lte('start_time', nowIso)
-
-  const recentEventIds = (recentEvents ?? []).map(e => e.id)
-
   const perPlayerTotals: Record<string, { total: number; present: number }> = {}
-  if (recentEventIds.length > 0) {
-    const { data: attRows } = await supabase
-      .from('attendance')
-      .select('player_id, status')
-      .in('event_id', recentEventIds)
-
-    for (const row of attRows ?? []) {
-      const t = perPlayerTotals[row.player_id] ?? { total: 0, present: 0 }
-      t.total += 1
-      if (row.status === 'present' || row.status === 'late') t.present += 1
-      perPlayerTotals[row.player_id] = t
-    }
+  for (const row of attRows ?? []) {
+    const t = perPlayerTotals[row.player_id] ?? { total: 0, present: 0 }
+    t.total += 1
+    if (row.status === 'present' || row.status === 'late') t.present += 1
+    perPlayerTotals[row.player_id] = t
   }
 
   // players.parent_id is the account linked to the roster row (the player's

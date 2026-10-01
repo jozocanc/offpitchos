@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { getAttentionList, type AttentionItem, type AttentionResult } from './attention-actions'
+import { getAttentionList, getAttentionSignals, type AttentionItem, type AttentionResult } from './attention-actions'
 import { requestMissingSizes } from './gear/actions'
 import { resendInvite } from './coaches/actions'
 import { useToast } from '@/components/toast'
@@ -42,27 +42,60 @@ const URGENCY_STYLES: Record<AttentionItem['urgency'], { dot: string; label: str
   },
 }
 
-export default function AttentionPanel() {
+export default function AttentionPanel({
+  initialSignals,
+  initialRanked,
+}: {
+  /**
+   * Started by the dashboard's server render and streamed in with the page,
+   * so the panel never waits for hydration + a Server Action round-trip.
+   * `initialSignals` is the fast deterministic list (database only);
+   * `initialRanked` is the AI-triaged list that replaces it when it lands.
+   * Either may resolve to null if the server-side call failed, in which case
+   * the panel falls back to fetching through the Server Actions itself.
+   */
+  initialSignals?: Promise<AttentionResult | null>
+  initialRanked?: Promise<AttentionResult | null>
+} = {}) {
   const [data, setData] = useState<AttentionResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pendingSignal, setPendingSignal] = useState<string | null>(null)
   const [completedSignals, setCompletedSignals] = useState<Set<string>>(new Set())
   const { toast } = useToast()
+  // Whether anything is on screen, so a failed AI call after the fast list
+  // has painted doesn't replace useful items with an error box.
+  const hasDataRef = useRef(false)
+
+  const show = useCallback((result: AttentionResult) => {
+    hasDataRef.current = true
+    setData(result)
+  }, [])
 
   const load = useCallback(async (forceRefresh = false) => {
     setLoading(true)
     setError(null)
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (!forceRefresh) {
+        // Fast pass first: the raw signals (or a still-cached AI list) in a
+        // few hundred ms, then the AI-ranked list replaces it below.
+        try {
+          const fast = await getAttentionSignals(timeZone)
+          show(fast)
+          if (fast.ranked) return
+        } catch {
+          // Fall through to the AI call, which reports its own failure.
+        }
+      }
       const result = await getAttentionList(timeZone, forceRefresh)
-      setData(result)
+      show(result)
     } catch {
-      setError('Could not load attention list.')
+      if (!hasDataRef.current) setError('Could not load attention list.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [show])
 
   const handleGearRequest = useCallback(async (signalId: string) => {
     if (pendingSignal) return
@@ -115,8 +148,32 @@ export default function AttentionPanel() {
   }, [pendingSignal, toast, load])
 
   useEffect(() => {
-    load(false)
-  }, [load])
+    if (!initialSignals || !initialRanked) {
+      load(false)
+      return
+    }
+    let alive = true
+    let rankedLanded = false
+    setLoading(true)
+    initialSignals.then(fast => {
+      if (!alive || rankedLanded || !fast) return
+      show(fast)
+      if (fast.ranked) setLoading(false)
+    }, () => {})
+    initialRanked.then(ranked => {
+      if (!alive) return
+      rankedLanded = true
+      if (ranked) {
+        show(ranked)
+        setLoading(false)
+      } else {
+        load(false)
+      }
+    }, () => {
+      if (alive) load(false)
+    })
+    return () => { alive = false }
+  }, [initialSignals, initialRanked, load, show])
 
   // Re-render once a minute so "Updated X ago" stays current without re-fetching
   const [, tick] = useState(0)

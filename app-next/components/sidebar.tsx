@@ -5,9 +5,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import NotificationBell from './notification-bell'
 import Wordmark from './wordmark'
+import MobileTabBar, { isNavItemActive } from './mobile-tab-bar'
 
-interface NavItem {
+export interface NavItem {
   label: string
+  /** Shorter label for the phone tab bar, where width is tight. */
+  shortLabel?: string
   href: string
   icon: React.ReactNode
   disabled?: boolean
@@ -93,12 +96,11 @@ function TacticsIcon() {
   )
 }
 
-function MenuIcon() {
+function CheckInIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-      <line x1="3" y1="18" x2="21" y2="18" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
     </svg>
   )
 }
@@ -166,24 +168,17 @@ function ReadinessIcon() {
   )
 }
 
-function CloseIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
-
 // Coverage (substitute-coach requests) is deliberately absent: a college staff
 // of three to five has no need for it. The route and code still exist.
-// Players get a lean nav: Dashboard, Schedule, Messages, Files, Ask.
+// Players get a lean nav: Dashboard, Schedule, Messages, Check-in, Files, Ask.
+// The phone tab bar (mobile-tab-bar.tsx) is built from this same list.
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
+  { label: 'Dashboard', shortLabel: 'Home', href: '/dashboard', icon: <HomeIcon /> },
   { label: 'Schedule', href: '/dashboard/schedule', icon: <CalendarIcon /> },
   { label: 'Readiness', href: '/dashboard/readiness', icon: <ReadinessIcon />, roles: ['doc', 'coach'] },
   { label: 'Teams', href: '/dashboard/teams', icon: <TeamsIcon />, roles: ['doc', 'coach'] },
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
+  { label: 'Check-in', href: '/dashboard/check-in', icon: <CheckInIcon />, roles: ['player'] },
   { label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] },
   { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
   { label: 'Staff', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
@@ -210,7 +205,6 @@ interface SidebarProps {
 
 export default function Sidebar({ userEmail, userRole, canSwitchRole = false, singleTeam = false }: SidebarProps) {
   const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
   const [viewAs, setViewAs] = useState(userRole)
   const router = useRouter()
 
@@ -242,7 +236,7 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false, si
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {filteredNavItems.map(item => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          const isActive = isNavItemActive(pathname, item.href)
 
           if (item.disabled) {
             return (
@@ -262,7 +256,6 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false, si
             <Link
               key={item.label}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 relative group
                 ${isActive
                   ? 'bg-dark-secondary text-white'
@@ -279,8 +272,8 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false, si
         })}
       </nav>
 
-      {/* User info + sign out — pb includes safe-area for iPhone home bar */}
-      <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/5">
+      {/* User info + sign out */}
+      <div className="px-4 py-4 border-t border-white/5">
         {canSwitchRole && (
           <div className="mb-3">
             <p className="text-[10px] uppercase tracking-wider text-gray mb-1.5">View as</p>
@@ -326,30 +319,15 @@ export default function Sidebar({ userEmail, userRole, canSwitchRole = false, si
         {sidebarContent}
       </aside>
 
-      {/* Mobile: hamburger button */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-dark-secondary rounded-lg text-white"
-        onClick={() => setMobileOpen(o => !o)}
-        aria-label="Toggle menu"
-      >
-        {mobileOpen ? <CloseIcon /> : <MenuIcon />}
-      </button>
-
-      {/* Mobile: overlay */}
-      {mobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile: slide-in sidebar */}
-      <aside
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-dark border-r border-white/5 flex flex-col transform transition-transform duration-200 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
-      >
-        {sidebarContent}
-      </aside>
+      {/* Phones: fixed bottom tab bar + "More" sheet, from the same filtered list */}
+      <MobileTabBar
+        items={filteredNavItems}
+        isPlayer={navRole === 'player'}
+        userEmail={userEmail}
+        canSwitchRole={canSwitchRole}
+        activeRole={activeRole}
+        onSwitchRole={switchRole}
+      />
     </>
   )
 }

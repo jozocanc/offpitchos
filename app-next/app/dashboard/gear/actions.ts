@@ -9,6 +9,7 @@ import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
 import { ROLES } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 
 async function getUserProfile() {
   const supabase = await createClient()
@@ -61,18 +62,59 @@ export interface GearData {
 const MEMBER_ROLES = [ROLES.PLAYER, ROLES.PARENT]
 
 export async function getGearData(): Promise<GearData> {
-  const { user, profile, supabase } = await getUserProfile()
+  // Request-memoized claims + profile (lib/current-profile): on the page
+  // render it is the row the page's role check already loaded, and no
+  // auth-server round-trip. Same redirect / error as getUserProfile().
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
+  if (!profile?.club_id) throw new Error('No program found')
+  const clubId = profile.club_id
+  const supabase = await createClient()
 
-  const { data: teams } = await supabase
-    .from('teams')
-    .select('id, name, age_group')
-    .eq('club_id', profile.club_id)
-    .order('age_group', { ascending: true })
-
-  const { data: players } = await supabase
-    .from('players')
-    .select('id, first_name, last_name, team_id, jersey_size, shorts_size, collect_token, parent_id, has_travel_id, passport_expiry')
-    .eq('club_id', profile.club_id)
+  // One parallel wave instead of five sequential queries. The "responded
+  // since the last request" read needs the request time, so it chains off
+  // the settings row inside the wave.
+  const [{ data: teams }, { data: players }, { settings, updatedPlayers }, { data: memberProfiles }, userRole] =
+    await Promise.all([
+      supabase
+        .from('teams')
+        .select('id, name, age_group')
+        .eq('club_id', clubId)
+        .order('age_group', { ascending: true }),
+      supabase
+        .from('players')
+        .select('id, first_name, last_name, team_id, jersey_size, shorts_size, collect_token, parent_id, has_travel_id, passport_expiry')
+        .eq('club_id', clubId),
+      // Last-requested tracking + response progress
+      supabase
+        .from('club_settings')
+        .select('last_gear_size_request_at, last_gear_size_request_parent_count')
+        .eq('club_id', clubId)
+        .maybeSingle()
+        .then(async ({ data: settings }) => {
+          const requestedAt = settings?.last_gear_size_request_at ?? null
+          // Linked player rows updated since the request AND now with both
+          // sizes filled.
+          const updatedPlayers = requestedAt
+            ? (await supabase
+                .from('players')
+                .select('parent_id')
+                .eq('club_id', clubId)
+                .not('jersey_size', 'is', null)
+                .not('shorts_size', 'is', null)
+                .gt('updated_at', requestedAt)).data
+            : null
+          return { settings, updatedPlayers }
+        }),
+      // Unlinked rows keep parent_id pointing at the staff member who added them,
+      // so "has an account" means parent_id belongs to a player (member) profile.
+      supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('club_id', clubId)
+        .in('role', MEMBER_ROLES),
+      getEffectiveRole(profile.role as string),
+    ])
 
   const teamSummaries: TeamGearSummary[] = (teams ?? []).map(team => {
     const teamPlayers = (players ?? []).filter(p => p.team_id === team.id)
@@ -114,38 +156,16 @@ export async function getGearData(): Promise<GearData> {
     }
   })
 
-  // Last-requested tracking + response progress
-  const { data: settings } = await supabase
-    .from('club_settings')
-    .select('last_gear_size_request_at, last_gear_size_request_parent_count')
-    .eq('club_id', profile.club_id)
-    .maybeSingle()
-
   const lastRequestedAt = settings?.last_gear_size_request_at ?? null
   // Column name predates the team-only product; it now stores player accounts.
   const lastRequestedPlayerCount = settings?.last_gear_size_request_parent_count ?? 0
 
-  // Unlinked rows keep parent_id pointing at the staff member who added them,
-  // so "has an account" means parent_id belongs to a player (member) profile.
-  const { data: memberProfiles } = await supabase
-    .from('profiles')
-    .select('user_id')
-    .eq('club_id', profile.club_id)
-    .in('role', MEMBER_ROLES)
   const memberUserIds = new Set((memberProfiles ?? []).map(p => p.user_id))
 
   let respondedSinceRequest = 0
   if (lastRequestedAt) {
     // Count distinct linked player accounts whose row was updated since the
     // request AND now has both sizes filled.
-    const { data: updatedPlayers } = await supabase
-      .from('players')
-      .select('parent_id')
-      .eq('club_id', profile.club_id)
-      .not('jersey_size', 'is', null)
-      .not('shorts_size', 'is', null)
-      .gt('updated_at', lastRequestedAt)
-
     const responded = new Set(
       (updatedPlayers ?? [])
         .map(p => p.parent_id)
@@ -156,7 +176,7 @@ export async function getGearData(): Promise<GearData> {
 
   return {
     teams: teamSummaries,
-    userRole: await getEffectiveRole(profile.role),
+    userRole,
     lastRequestedAt,
     lastRequestedPlayerCount,
     respondedSinceRequest,

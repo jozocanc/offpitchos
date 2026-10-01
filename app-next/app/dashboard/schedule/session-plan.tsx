@@ -11,6 +11,7 @@ import {
   type AttachedDrill,
 } from './actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 interface PickerDrill {
   id: string
@@ -27,6 +28,7 @@ interface Props {
 
 export default function SessionPlan({ eventId, eventDurationMin }: Props) {
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
   const [drills, setDrills] = useState<AttachedDrill[] | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerDrills, setPickerDrills] = useState<PickerDrill[] | null>(null)
@@ -57,7 +59,11 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
   }
 
   async function onDetach(attachmentId: string) {
-    if (!confirm('Remove this drill from the session plan?')) return
+    if (!(await confirm({
+      title: 'Remove this drill from the session plan?',
+      confirmLabel: 'Remove',
+      destructive: true,
+    }))) return
     const r = await detachDrill(attachmentId)
     if (!r.ok) { toast(r.error, 'error'); return }
     refresh()
@@ -218,6 +224,7 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
           </div>
         </div>
       )}
+      {dialog}
     </section>
   )
 }

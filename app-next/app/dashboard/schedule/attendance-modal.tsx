@@ -3,7 +3,9 @@
 import { useState, useEffect, useTransition } from 'react'
 import { getAttendanceData, markAttendance, markBulkAttendance } from './attendance-actions'
 import { addFeedback } from '../players/[id]/actions'
-import { useToast } from '@/components/toast'
+import { useToast, networkErrorMessage } from '@/components/toast'
+import Modal from '@/components/modal'
+import { Skeleton } from '@/components/skeleton'
 
 interface Player {
   id: string
@@ -47,31 +49,53 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
   const [notes, setNotes] = useState<Record<string, NoteState>>({})
   const { toast } = useToast()
 
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   useEffect(() => {
-    getAttendanceData(eventId, teamId).then(res => {
-      if (!res.ok) { toast(res.error, 'error'); setLoading(false); return }
-      setPlayers(res.data.players)
-      setAttendance(res.data.attendance)
-      setLoading(false)
-    })
+    getAttendanceData(eventId, teamId)
+      .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      .then(res => {
+        if (!res.ok) { setLoadError(res.error); setLoading(false); return }
+        setPlayers(res.data.players)
+        setAttendance(res.data.attendance)
+        setLoading(false)
+      })
   }, [eventId, teamId])
 
+  // Marks paint instantly; a failed save puts the previous mark back.
   function handleMark(playerId: string, status: Status) {
+    const before = attendance[playerId]
     setAttendance(prev => ({ ...prev, [playerId]: status }))
     startTransition(async () => {
       const r = await markAttendance(eventId, playerId, status)
-      if (!r.ok) toast(r.error, 'error')
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      if (!r.ok) {
+        setAttendance(prev => {
+          const next = { ...prev }
+          if (before === undefined) delete next[playerId]
+          else next[playerId] = before
+          return next
+        })
+        toast(r.error, 'error')
+      }
     })
   }
 
   function handleMarkAll(status: 'present' | 'absent') {
     const ids = players.map(p => p.id)
+    const snapshot = attendance
     const newAttendance: Record<string, string> = {}
     ids.forEach(id => { newAttendance[id] = status })
     setAttendance(prev => ({ ...prev, ...newAttendance }))
     startTransition(async () => {
       const r = await markBulkAttendance(eventId, ids, status)
-      if (!r.ok) toast(r.error, 'error')
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      if (!r.ok) {
+        setAttendance(snapshot)
+        toast(r.error, 'error')
+        return
+      }
+      toast(`Everyone marked ${status}`, 'success')
     })
   }
 
@@ -144,29 +168,17 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
   const totalPlayers = players.length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-dark-secondary rounded-2xl border border-white/10 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col toast-enter">
+    <Modal title="Attendance" description={eventTitle} onClose={onClose} size="lg" bodyClassName="p-6">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold">Attendance</h2>
-              <p className="text-gray text-xs mt-0.5">{eventTitle}</p>
-            </div>
-            <button onClick={onClose} className="text-gray hover:text-white transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
+        <div className="pb-3 border-b border-white/5">
           {!loading && totalPlayers > 0 && (
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center justify-between">
               <p className="text-sm text-gray">
                 {presentCount}/{totalPlayers} present
               </p>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => handleMarkAll('present')}
                   disabled={isPending}
                   className="text-xs font-medium text-green border border-green/20 px-3 py-1 rounded-lg hover:bg-green/10 transition-colors"
@@ -174,6 +186,7 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                   All Present
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleMarkAll('absent')}
                   disabled={isPending}
                   className="text-xs font-medium text-red border border-red/20 px-3 py-1 rounded-lg hover:bg-red/10 transition-colors"
@@ -186,17 +199,30 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
         </div>
 
         {/* Player list */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="max-h-[55dvh] overflow-y-auto py-4 -mx-1 px-1">
           {loading ? (
-            <div className="animate-pulse space-y-3">
+            <div className="space-y-3">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-12 bg-dark rounded-xl" />
+                <div key={i} className="flex items-center gap-3 py-2">
+                  <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                  <Skeleton className="h-4 flex-1 max-w-[10rem]" />
+                  <Skeleton className="h-6 w-28 rounded-md" />
+                </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="text-center py-8">
+              <p className="text-sm font-bold">Couldn&apos;t load the roster</p>
+              <p className="text-gray text-sm mt-1">{loadError}</p>
+            </div>
           ) : players.length === 0 ? (
-            <p className="text-gray text-sm text-center py-8">
-              No players registered on this team yet. Add players from the team page.
-            </p>
+            <div className="text-center py-8">
+              <p className="text-sm font-bold">No players on this team yet</p>
+              <p className="text-gray text-sm mt-1">Add players to the roster, then take attendance here.</p>
+              <a href={`/dashboard/teams/${teamId}`} className="inline-block mt-4 bg-green text-dark font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90">
+                Go to the team page
+              </a>
+            </div>
           ) : (
             <div className="space-y-2">
               {players.map(player => {
@@ -220,6 +246,9 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                         {(['present', 'late', 'absent', 'excused'] as Status[]).map(status => (
                           <button
                             key={status}
+                            type="button"
+                            aria-label={`Mark ${player.first_name} ${status}`}
+                            aria-pressed={currentStatus === status}
                             onClick={() => handleMark(player.id, status)}
                             className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all capitalize ${
                               currentStatus === status
@@ -235,6 +264,8 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                             mini feedback editor scoped to this event. */}
                         {!noteState && (
                           <button
+                            type="button"
+                            aria-label={`Add a note for ${player.first_name}`}
                             onClick={() => openNote(player.id)}
                             title="Add a quick note for this player on this event"
                             className="text-[10px] font-bold px-2 py-1 rounded-md border border-white/5 text-gray/50 hover:border-white/20 hover:text-gray transition-all"
@@ -256,6 +287,9 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                           {[1, 2, 3, 4, 5].map(n => (
                             <button
                               key={n}
+                              type="button"
+                              aria-label={`Rating ${n}`}
+                              aria-pressed={n === noteState.rating}
                               onClick={() => updateNoteField(player.id, { rating: n })}
                               className={`w-7 h-7 rounded-md text-xs font-bold transition-colors ${
                                 n <= noteState.rating ? 'bg-green text-dark' : 'bg-white/5 text-gray hover:text-white'
@@ -275,12 +309,14 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                         />
                         <div className="flex gap-2 justify-end">
                           <button
+                            type="button"
                             onClick={() => cancelNote(player.id)}
                             className="text-xs text-gray hover:text-white px-2 py-1"
                           >
                             Cancel
                           </button>
                           <button
+                            type="button"
                             onClick={() => saveNote(player.id)}
                             disabled={!noteState.notes.trim()}
                             className="text-xs font-bold bg-green text-dark px-3 py-1 rounded-md hover:opacity-90 disabled:opacity-40"
@@ -300,7 +336,6 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

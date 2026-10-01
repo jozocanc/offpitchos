@@ -175,7 +175,7 @@ export default async function TeamsPage({
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Teams</h1>
           <p className="text-gray text-sm mt-1">{teams.length} team{teams.length !== 1 ? 's' : ''} in your program</p>

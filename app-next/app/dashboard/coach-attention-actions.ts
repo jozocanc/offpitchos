@@ -2,8 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getClubTimezone } from '@/lib/club-timezone-server'
-import { formatMonthDay, formatShortDate, formatTime } from '@/lib/format-datetime'
+import { DEFAULT_TIMEZONE, formatMonthDay, formatShortDate, formatTime } from '@/lib/format-datetime'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 
 // A lightweight, coach-scoped version of the DOC attention panel. We keep
 // this separate from the DOC list because the coach's priorities are a
@@ -31,100 +31,139 @@ export interface CoachAttentionResult {
 }
 
 async function getCoachContext() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, club_id, role')
-    .eq('user_id', user.id)
-    .single()
+  // Shared request-memoized claims + profile (lib/current-profile): a local
+  // JWT check instead of an auth-server round-trip. The profile row already
+  // embeds the club timezone, so the zone costs no second profile query
+  // (same value getClubTimezone() returns).
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
 
   if (!profile?.club_id) throw new Error('No team found')
-  return { user, profile, supabase }
+  const supabase = await createClient()
+  return {
+    profile: { ...profile, club_id: profile.club_id },
+    timezone: profile.timezone ?? DEFAULT_TIMEZONE,
+    supabase,
+  }
+}
+
+type CoverageRow = {
+  id: string
+  unavailable_coach_id: string | null
+  events: any
 }
 
 export async function getCoachAttention(): Promise<CoachAttentionResult> {
-  const timezone = await getClubTimezone()
-  const { user, profile, supabase } = await getCoachContext()
+  const { profile, timezone, supabase } = await getCoachContext()
 
-  const signals: CoachSignal[] = []
-
-  // --- Signal 1: Coverage waiting for me ----------------------------------
-  // Pending requests in my club that I didn't create and haven't responded
-  // to yet. Pulled wide then filtered in memory because Supabase joins are
-  // awkward for "not in subquery" semantics.
-  const { data: pendingRequests } = await supabase
-    .from('coverage_requests')
-    .select('id, event_id, status, unavailable_coach_id, events(title, start_time, teams(age_group))')
-    .eq('club_id', profile.club_id)
-    .eq('status', 'pending')
-
-  const pendingList = (pendingRequests ?? []).filter(
-    r => r.unavailable_coach_id !== profile.id,
-  )
-
-  if (pendingList.length > 0) {
-    const myResponses = await supabase
-      .from('coverage_responses')
-      .select('coverage_request_id')
-      .eq('coach_id', profile.id)
-      .in('coverage_request_id', pendingList.map(r => r.id))
-
-    const respondedIds = new Set((myResponses.data ?? []).map(r => r.coverage_request_id))
-    const actionable = pendingList.filter(r => !respondedIds.has(r.id))
-
-    for (const req of actionable) {
-      const ev = Array.isArray(req.events) ? req.events[0] : req.events
-      const team = ev?.teams
-        ? Array.isArray(ev.teams) ? ev.teams[0] : ev.teams
-        : null
-      const dateStr = ev?.start_time ? formatShortDate(ev.start_time, timezone) : ''
-      const timeStr = ev?.start_time ? formatTime(ev.start_time, timezone) : ''
-
-      signals.push({
-        id: `coverage:${req.id}`,
-        type: 'coverage_waiting',
-        title: `Cover ${ev?.title ?? 'an event'}?`,
-        subtitle: [team?.age_group, `${dateStr} at ${timeStr}`].filter(Boolean).join(' · '),
-        urgency: 'critical',
-        href: '/dashboard/coverage',
-      })
-    }
-  }
-
-  // --- Signal 2: Attendance unmarked on my teams' recent events -----------
-  // "Recent" = last 7 days, already ended. Scope to teams I'm assigned to
-  // as a coach so I don't see every team in the club.
   const nowDate = new Date()
   const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const nowIso = nowDate.toISOString()
 
-  const { data: myTeams } = await supabase
-    .from('team_members')
-    .select('team_id')
-    .eq('profile_id', profile.id)
-    .eq('role', 'coach')
+  // The three signals are independent, so their queries run side by side
+  // (each chain keeps its own internal order); the list is still assembled
+  // in the original order below.
+  const [actionableCoverage, teamSignals] = await Promise.all([
+    // --- Signal 1: Coverage waiting for me --------------------------------
+    // Pending requests in my club that I didn't create and haven't responded
+    // to yet. Pulled wide then filtered in memory because Supabase joins are
+    // awkward for "not in subquery" semantics.
+    (async (): Promise<CoverageRow[]> => {
+      const { data: pendingRequests } = await supabase
+        .from('coverage_requests')
+        .select('id, event_id, status, unavailable_coach_id, events(title, start_time, teams(age_group))')
+        .eq('club_id', profile.club_id)
+        .eq('status', 'pending')
 
-  const myTeamIds = (myTeams ?? []).map(tm => tm.team_id)
+      const pendingList = (pendingRequests ?? []).filter(
+        r => r.unavailable_coach_id !== profile.id,
+      ) as CoverageRow[]
+      if (pendingList.length === 0) return []
 
-  if (myTeamIds.length > 0) {
-    const { data: recentEvents } = await supabase
-      .from('events')
-      .select('id, title, start_time, team_id, teams(name, age_group)')
-      .in('team_id', myTeamIds)
-      .eq('status', 'scheduled')
-      .gte('start_time', sevenDaysAgo)
-      .lte('end_time', nowIso)
-      .order('start_time', { ascending: false })
+      const myResponses = await supabase
+        .from('coverage_responses')
+        .select('coverage_request_id')
+        .eq('coach_id', profile.id)
+        .in('coverage_request_id', pendingList.map(r => r.id))
 
+      const respondedIds = new Set((myResponses.data ?? []).map(r => r.coverage_request_id))
+      return pendingList.filter(r => !respondedIds.has(r.id))
+    })(),
+    // Signals 2 + 3 are scoped to teams I'm assigned to as a coach so I
+    // don't see every team in the club.
+    (async () => {
+      const { data: myTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('profile_id', profile.id)
+        .eq('role', 'coach')
+
+      const myTeamIds = (myTeams ?? []).map(tm => tm.team_id)
+      if (myTeamIds.length === 0) return null
+
+      const [recent, { data: myFeedback }, { data: finishedEvents }] = await Promise.all([
+        // "Recent" = last 7 days, already ended.
+        (async () => {
+          const { data: recentEvents } = await supabase
+            .from('events')
+            .select('id, title, start_time, team_id, teams(name, age_group)')
+            .in('team_id', myTeamIds)
+            .eq('status', 'scheduled')
+            .gte('start_time', sevenDaysAgo)
+            .lte('end_time', nowIso)
+            .order('start_time', { ascending: false })
+
+          if (!recentEvents || recentEvents.length === 0) return { recentEvents, attendanceRows: null }
+          const { data: attendanceRows } = await supabase
+            .from('attendance')
+            .select('event_id')
+            .in('event_id', recentEvents.map(e => e.id))
+          return { recentEvents, attendanceRows }
+        })(),
+        supabase
+          .from('player_feedback')
+          .select('event_id')
+          .eq('coach_id', profile.id)
+          .gte('created_at', sevenDaysAgo),
+        supabase
+          .from('events')
+          .select('id, title, start_time, team_id, type, teams(name)')
+          .in('team_id', myTeamIds)
+          .eq('status', 'scheduled')
+          .in('type', ['practice', 'game', 'tournament'])
+          .gte('start_time', sevenDaysAgo)
+          .lte('end_time', nowIso)
+          .order('start_time', { ascending: false })
+          .limit(10),
+      ])
+      return { ...recent, myFeedback, finishedEvents }
+    })(),
+  ])
+
+  const signals: CoachSignal[] = []
+
+  for (const req of actionableCoverage) {
+    const ev = Array.isArray(req.events) ? req.events[0] : req.events
+    const team = ev?.teams
+      ? Array.isArray(ev.teams) ? ev.teams[0] : ev.teams
+      : null
+    const dateStr = ev?.start_time ? formatShortDate(ev.start_time, timezone) : ''
+    const timeStr = ev?.start_time ? formatTime(ev.start_time, timezone) : ''
+
+    signals.push({
+      id: `coverage:${req.id}`,
+      type: 'coverage_waiting',
+      title: `Cover ${ev?.title ?? 'an event'}?`,
+      subtitle: [team?.age_group, `${dateStr} at ${timeStr}`].filter(Boolean).join(' · '),
+      urgency: 'critical',
+      href: '/dashboard/coverage',
+    })
+  }
+
+  if (teamSignals) {
+    // --- Signal 2: Attendance unmarked on my teams' recent events ---------
+    const { recentEvents, attendanceRows, myFeedback, finishedEvents } = teamSignals
     if (recentEvents && recentEvents.length > 0) {
-      const { data: attendanceRows } = await supabase
-        .from('attendance')
-        .select('event_id')
-        .in('event_id', recentEvents.map(e => e.id))
-
       const eventsWithAttendance = new Set((attendanceRows ?? []).map(r => r.event_id))
 
       for (const ev of recentEvents) {
@@ -142,32 +181,15 @@ export async function getCoachAttention(): Promise<CoachAttentionResult> {
       }
     }
 
-    // --- Signal 3: Feedback owed -----------------------------------------
+    // --- Signal 3: Feedback owed -------------------------------------------
     // Post-game/practice events in the last 7 days where I wrote zero
     // feedback entries. We key by event, not player — one signal per event
     // keeps the list short even if the team has 25 players.
-    const { data: myFeedback } = await supabase
-      .from('player_feedback')
-      .select('event_id')
-      .eq('coach_id', profile.id)
-      .gte('created_at', sevenDaysAgo)
-
     const eventsWithMyFeedback = new Set(
       (myFeedback ?? [])
         .map(f => f.event_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0),
     )
-
-    const { data: finishedEvents } = await supabase
-      .from('events')
-      .select('id, title, start_time, team_id, type, teams(name)')
-      .in('team_id', myTeamIds)
-      .eq('status', 'scheduled')
-      .in('type', ['practice', 'game', 'tournament'])
-      .gte('start_time', sevenDaysAgo)
-      .lte('end_time', nowIso)
-      .order('start_time', { ascending: false })
-      .limit(10)
 
     for (const ev of finishedEvents ?? []) {
       if (eventsWithMyFeedback.has(ev.id)) continue

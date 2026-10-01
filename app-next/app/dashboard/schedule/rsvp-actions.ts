@@ -77,6 +77,65 @@ async function _getMyExistingRsvps(eventId: string, playerIds: string[]) {
   return map
 }
 
+// The viewer's own answer per event, for painting "You're going" / "You
+// can't make it" on each schedule card. Also returns the viewer's linked
+// player ids per team so a one-tap RSVP needs no extra lookup. Read-only.
+// An event_rsvps row wins; with no row, an 'excused' attendance mark (the
+// can't-make-it flow writes one) reads as not going.
+export interface MyRsvpState {
+  responses: Record<string, RsvpResponse>
+  playersByTeam: Record<string, string[]>
+}
+
+export async function getMyRsvpState(
+  ...args: Parameters<typeof _getMyRsvpState>
+): Promise<ActionResult<MyRsvpState>> {
+  try {
+    return { ok: true, data: await _getMyRsvpState(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _getMyRsvpState(eventIds: string[]): Promise<MyRsvpState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const viewer = await getViewerIdentity()
+
+  const { data: players } = await supabase
+    .from('players')
+    .select('id, team_id')
+    .eq('parent_id', viewer.userId)
+
+  const playersByTeam: Record<string, string[]> = {}
+  for (const p of players ?? []) {
+    if (!p.team_id) continue
+    ;(playersByTeam[p.team_id] ??= []).push(p.id)
+  }
+  const playerIds = (players ?? []).map(p => p.id)
+  const responses: Record<string, RsvpResponse> = {}
+  if (playerIds.length === 0 || eventIds.length === 0) return { responses, playersByTeam }
+
+  const [{ data: rsvps }, { data: excused }] = await Promise.all([
+    supabase
+      .from('event_rsvps')
+      .select('event_id, response')
+      .in('event_id', eventIds)
+      .in('player_id', playerIds),
+    supabase
+      .from('attendance')
+      .select('event_id')
+      .eq('status', 'excused')
+      .in('event_id', eventIds)
+      .in('player_id', playerIds),
+  ])
+
+  for (const row of excused ?? []) responses[row.event_id] = 'not_going'
+  for (const row of rsvps ?? []) responses[row.event_id] = row.response as RsvpResponse
+  return { responses, playersByTeam }
+}
+
 export async function parentRsvp(
   ...args: Parameters<typeof _parentRsvp>
 ): Promise<ActionResult<Awaited<ReturnType<typeof _parentRsvp>>>> {
@@ -132,6 +191,18 @@ async function _parentRsvp(input: {
   let notifiedCoaches = 0
   if (input.response === 'going') {
     const service = createServiceClient()
+
+    // Switching back to "going" after "can't make it": the excuse flow wrote
+    // an 'excused' attendance mark, which would keep showing E to the coach.
+    // Only that self-reported mark is cleared; a coach's present/absent/late
+    // stays. Service client because players have no delete policy on
+    // attendance; ownership of these rows was checked above.
+    await service
+      .from('attendance')
+      .delete()
+      .eq('event_id', input.eventId)
+      .in('player_id', ownedPlayers.map(p => p.id))
+      .eq('status', 'excused')
     const { data: event } = await service
       .from('events')
       .select('title')

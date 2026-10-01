@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 import { bustAttentionCache } from './attention-actions'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import {
   DEMO_COACHES,
   DEMO_EVENTS,
@@ -56,35 +57,25 @@ export interface DemoClearResult {
 // role — the `demo_seeds` SELECT policy lets the DOC read their own
 // club's tracking rows directly.
 export async function getDemoSeedState(): Promise<DemoSeedState> {
-  const supabase = await createClient()
-  // getClaims verifies the JWT locally — no auth-server round-trip on the
-  // dashboard render path. This runs inside the page's parallel query batch.
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const claims = claimsData?.claims
-  if (!claims) return { enabled: false, loaded: false, emptyEnough: false }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, club_id, role')
-    .eq('user_id', claims.sub)
-    .single()
+  // Request-memoized claims + profile (lib/current-profile): on the
+  // dashboard render this is the row the page already loaded, so it costs
+  // no query of its own. getClaims verifies the JWT locally.
+  if (!(await getAuthUserId())) return { enabled: false, loaded: false, emptyEnough: false }
+  const profile = await getCurrentProfile()
 
   if (!profile?.club_id || profile.role !== 'doc') {
     return { enabled: DEMO_FLAG_ENABLED(), loaded: false, emptyEnough: false }
   }
 
-  const { count: demoCount } = await supabase
-    .from('demo_seeds')
-    .select('id', { count: 'exact', head: true })
-    .eq('club_id', profile.club_id)
-
-  const loaded = (demoCount ?? 0) > 0
+  const supabase = await createClient()
 
   // Empty-enough = 0 players, 0 events, 0 non-DOC team members. Teams
   // are allowed to be 0 or 1 (the wizard-created team) — anything more
   // means the DOC has started building out real data and we stay out.
-  const [{ count: playerCount }, { count: eventCount }, { count: memberCount }, { count: teamCount }] =
+  // The demo-seed count rides in the same parallel batch.
+  const [{ count: demoCount }, { count: playerCount }, { count: eventCount }, { count: memberCount }, { count: teamCount }] =
     await Promise.all([
+      supabase.from('demo_seeds').select('id', { count: 'exact', head: true }).eq('club_id', profile.club_id),
       supabase.from('players').select('id', { count: 'exact', head: true }).eq('club_id', profile.club_id),
       supabase.from('events').select('id', { count: 'exact', head: true }).eq('club_id', profile.club_id),
       supabase
@@ -93,6 +84,8 @@ export async function getDemoSeedState(): Promise<DemoSeedState> {
         .eq('teams.club_id', profile.club_id),
       supabase.from('teams').select('id', { count: 'exact', head: true }).eq('club_id', profile.club_id),
     ])
+
+  const loaded = (demoCount ?? 0) > 0
 
   const emptyEnough =
     (playerCount ?? 0) === 0 &&

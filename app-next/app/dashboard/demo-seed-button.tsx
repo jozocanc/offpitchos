@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { seedDemoData, clearDemoData, type DemoSeedState } from './demo-seed-actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 
 interface Props {
   state: DemoSeedState
@@ -18,6 +19,7 @@ interface Props {
 export default function DemoSeedButton({ state }: Props) {
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
   const router = useRouter()
   const [loading, setLoading] = useState<'seed' | 'clear' | null>(null)
 
@@ -30,8 +32,12 @@ export default function DemoSeedButton({ state }: Props) {
         <button
           type="button"
           disabled={isPending}
-          onClick={() => {
-            if (!confirm('Clear all sample data from this team?')) return
+          onClick={async () => {
+            if (!(await confirm({
+              title: 'Clear all sample data from this team?',
+              confirmLabel: 'Clear',
+              destructive: true,
+            }))) return
             setLoading('clear')
             startTransition(async () => {
               try {
@@ -51,6 +57,7 @@ export default function DemoSeedButton({ state }: Props) {
         >
           {loading === 'clear' ? 'Clearing…' : 'Clear sample data'}
         </button>
+        {dialog}
       </div>
     )
   }

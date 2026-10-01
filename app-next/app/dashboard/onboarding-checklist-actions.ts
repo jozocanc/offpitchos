@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getCurrentProfile } from '@/lib/current-profile'
 
 export type OnboardingState = {
   visible: boolean
@@ -25,60 +26,52 @@ export async function getOnboardingState(): Promise<OnboardingState> {
     allComplete: false,
   }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return empty
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('club_id, role')
-    .eq('user_id', user.id)
-    .single()
-
+  // Request-memoized claims + profile: on the dashboard render this is the
+  // row the page already loaded, and no auth-server round-trip.
+  const profile = await getCurrentProfile()
   if (!profile?.club_id || profile.role !== 'doc') return empty
+  const clubId = profile.club_id
 
-  // Dismiss flag — null row is fine, treat missing as "not dismissed."
-  const { data: settings } = await supabase
-    .from('club_settings')
-    .select('onboarding_dismissed_at')
-    .eq('club_id', profile.club_id)
-    .maybeSingle()
+  const supabase = await createClient()
 
-  if (settings?.onboarding_dismissed_at) return empty
-
-  // team_members has no club_id — join through teams to scope.
-  const { data: teamRows } = await supabase
-    .from('teams')
-    .select('id')
-    .eq('club_id', profile.club_id)
-  const teamIds = (teamRows ?? []).map(t => t.id)
-
-  const hasTeam = teamIds.length > 0
-
-  let hasCoach = false
-  let hasPlayer = false
-  if (hasTeam) {
-    const { count: coachCount } = await supabase
-      .from('team_members')
+  // One parallel wave instead of six sequential round-trips. team_members has
+  // no club_id, so the coach/player counts join through teams (the same
+  // inner-join scoping getDemoSeedState uses) instead of first listing the
+  // club's team ids. Counts are head-only: no rows come back.
+  const [settingsRes, teamRes, coachRes, playerRes, eventRes] = await Promise.all([
+    // Dismiss flag — null row is fine, treat missing as "not dismissed."
+    supabase
+      .from('club_settings')
+      .select('onboarding_dismissed_at')
+      .eq('club_id', clubId)
+      .maybeSingle(),
+    supabase
+      .from('teams')
       .select('id', { count: 'exact', head: true })
-      .in('team_id', teamIds)
-      .eq('role', 'coach')
-    hasCoach = (coachCount ?? 0) > 0
-
+      .eq('club_id', clubId),
+    supabase
+      .from('team_members')
+      .select('id, teams!inner(club_id)', { count: 'exact', head: true })
+      .eq('teams.club_id', clubId)
+      .eq('role', 'coach'),
     // 'parent' is a legacy member role, still counted.
-    const { count: playerCount } = await supabase
+    supabase
       .from('team_members')
+      .select('id, teams!inner(club_id)', { count: 'exact', head: true })
+      .eq('teams.club_id', clubId)
+      .in('role', ['player', 'parent']),
+    supabase
+      .from('events')
       .select('id', { count: 'exact', head: true })
-      .in('team_id', teamIds)
-      .in('role', ['player', 'parent'])
-    hasPlayer = (playerCount ?? 0) > 0
-  }
+      .eq('club_id', clubId),
+  ])
 
-  const { count: eventCount } = await supabase
-    .from('events')
-    .select('id', { count: 'exact', head: true })
-    .eq('club_id', profile.club_id)
-  const hasEvent = (eventCount ?? 0) > 0
+  if (settingsRes.data?.onboarding_dismissed_at) return empty
+
+  const hasTeam = (teamRes.count ?? 0) > 0
+  const hasCoach = hasTeam && (coachRes.count ?? 0) > 0
+  const hasPlayer = hasTeam && (playerRes.count ?? 0) > 0
+  const hasEvent = (eventRes.count ?? 0) > 0
 
   const allComplete = hasTeam && hasCoach && hasPlayer && hasEvent
 

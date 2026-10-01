@@ -11,6 +11,7 @@ import RevokeButton from './revoke-button'
 import TitleSelect from './title-select'
 import { DEFAULT_STAFF_TITLE } from '@/lib/constants'
 import { getClubTimezone } from '@/lib/club-timezone-server'
+import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { formatMonthDayYear } from '@/lib/format-datetime'
 
 interface Coach {
@@ -34,103 +35,129 @@ interface Invite {
 }
 
 export default async function CoachesPage() {
-  const supabase = await createClient()
-  const timezone = await getClubTimezone()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('club_id, role, display_name')
-    .eq('user_id', user.id)
-    .single()
+  // Request-memoized claims + profile (lib/current-profile): one local JWT
+  // check and one profile query, shared with getClubTimezone() below and with
+  // anything else in this render that asks.
+  if (!(await getAuthUserId())) redirect('/login')
+  const profile = await getCurrentProfile()
 
   // Effective role, so the head coach's "View as: Player" preview is bounced
   // the same way a real player is.
   if ((await getEffectiveRole(profile?.role ?? 'player')) !== 'doc') redirect('/dashboard')
 
+  const supabase = await createClient()
   const clubId = profile?.club_id ?? ''
 
-  // Fetch current coaches with enriched data
-  const { data: coachesRaw } = await supabase
-    .from('profiles')
-    .select('id, user_id, display_name, staff_title')
-    .eq('club_id', clubId)
-    .eq('role', 'coach')
-    .order('display_name')
+  // Wave 1: coaches, pending invites and teams only need the club id.
+  const [timezone, { data: coachesRaw }, { data: invitesRaw }, { data: teams }] = await Promise.all([
+    getClubTimezone(),
+    supabase
+      .from('profiles')
+      .select('id, user_id, display_name, staff_title')
+      .eq('club_id', clubId)
+      .eq('role', 'coach')
+      .order('display_name'),
+    // Pending coach invites
+    supabase
+      .from('invites')
+      .select('id, email, token, expires_at, team_id, staff_title, teams(name)')
+      .eq('club_id', clubId)
+      .eq('role', 'coach')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false }),
+    // Teams for the invite form
+    supabase
+      .from('teams')
+      .select('id, name, age_group')
+      .eq('club_id', clubId)
+      .order('age_group', { ascending: true }),
+  ])
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const now = new Date().toISOString()
 
-  const coaches: Coach[] = await Promise.all(
-    (coachesRaw ?? []).map(async (coach) => {
-      // Get teams assigned to this coach
-      const { data: teamMemberships } = await supabase
-        .from('team_members')
-        .select('teams(name)')
-        .eq('profile_id', coach.id)
-        .eq('role', 'coach')
+  // Wave 2: per-coach stats. Used to be three sequential queries PER coach;
+  // now team assignments and recent events are one batched query each, and
+  // the attendance rate is two head-only counts per coach, all fired at once.
+  // Counting in the database (instead of pulling every attendance row the
+  // coach ever marked) returns the same numbers without the row transfer.
+  const coachRows = coachesRaw ?? []
+  const coachProfileIds = coachRows.map(c => c.id)
+  const coachUserIds = coachRows.map(c => c.user_id).filter(Boolean) as string[]
 
-      const teamNames = (teamMemberships ?? [])
-        .map((tm: any) => {
-          const t = Array.isArray(tm.teams) ? tm.teams[0] : tm.teams
-          return t?.name
-        })
-        .filter(Boolean) as string[]
+  const [membershipsRes, eventsRes, attendanceCounts] = coachRows.length > 0
+    ? await Promise.all([
+        supabase
+          .from('team_members')
+          .select('profile_id, teams(name)')
+          .in('profile_id', coachProfileIds)
+          .eq('role', 'coach'),
+        // Events created by these coaches (last 30 days)
+        coachUserIds.length > 0
+          ? supabase
+              .from('events')
+              .select('created_by')
+              .in('created_by', coachUserIds)
+              .gte('start_time', thirtyDaysAgo)
+              .lte('start_time', now)
+          : Promise.resolve({ data: [] as { created_by: string }[] }),
+        // Attendance marked by each coach: total and present/late
+        Promise.all(
+          coachRows.map(coach =>
+            Promise.all([
+              supabase
+                .from('attendance')
+                .select('id', { count: 'exact', head: true })
+                .eq('marked_by', coach.user_id),
+              supabase
+                .from('attendance')
+                .select('id', { count: 'exact', head: true })
+                .eq('marked_by', coach.user_id)
+                .in('status', ['present', 'late']),
+            ]),
+          ),
+        ),
+      ])
+    : [{ data: [] }, { data: [] }, []] as const
 
-      // Get events created by this coach (last 30 days)
-      const { count: eventsCount } = await supabase
-        .from('events')
-        .select('id', { count: 'exact', head: true })
-        .eq('created_by', coach.user_id)
-        .gte('start_time', thirtyDaysAgo)
-        .lte('start_time', now)
+  const teamNamesByProfile = new Map<string, string[]>()
+  for (const tm of (membershipsRes.data ?? []) as any[]) {
+    const t = Array.isArray(tm.teams) ? tm.teams[0] : tm.teams
+    if (!t?.name) continue
+    const list = teamNamesByProfile.get(tm.profile_id) ?? []
+    list.push(t.name)
+    teamNamesByProfile.set(tm.profile_id, list)
+  }
 
-      // Get attendance marked by this coach
-      const { data: markedAttendance } = await supabase
-        .from('attendance')
-        .select('status')
-        .eq('marked_by', coach.user_id)
+  const eventsByUser = new Map<string, number>()
+  for (const e of (eventsRes.data ?? []) as { created_by: string | null }[]) {
+    if (e.created_by) eventsByUser.set(e.created_by, (eventsByUser.get(e.created_by) ?? 0) + 1)
+  }
 
-      const totalMarked = markedAttendance?.length ?? 0
-      const presentMarked = markedAttendance?.filter(a => a.status === 'present' || a.status === 'late').length ?? 0
-      const attendanceRate = totalMarked > 0 ? Math.round((presentMarked / totalMarked) * 100) : 0
+  const coaches: Coach[] = coachRows.map((coach, i) => {
+    const [totalRes, presentRes] = attendanceCounts[i] ?? [{ count: 0 }, { count: 0 }]
+    const totalMarked = totalRes.count ?? 0
+    const presentMarked = presentRes.count ?? 0
+    const attendanceRate = totalMarked > 0 ? Math.round((presentMarked / totalMarked) * 100) : 0
 
-      return {
-        profile_id: coach.id,
-        staff_title: coach.staff_title ?? DEFAULT_STAFF_TITLE,
-        user_id: coach.user_id,
-        display_name: coach.display_name,
-        teams: teamNames,
-        eventsCount: eventsCount ?? 0,
-        attendanceRate,
-      }
-    })
-  )
-
-  // Fetch pending coach invites
-  const { data: invitesRaw } = await supabase
-    .from('invites')
-    .select('id, email, token, expires_at, team_id, staff_title, teams(name)')
-    .eq('club_id', clubId)
-    .eq('role', 'coach')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
+    return {
+      profile_id: coach.id,
+      staff_title: coach.staff_title ?? DEFAULT_STAFF_TITLE,
+      user_id: coach.user_id,
+      display_name: coach.display_name,
+      teams: teamNamesByProfile.get(coach.id) ?? [],
+      eventsCount: eventsByUser.get(coach.user_id) ?? 0,
+      attendanceRate,
+    }
+  })
 
   const invites = (invitesRaw ?? []) as unknown as Invite[]
-
-  // Fetch teams for the invite form
-  const { data: teams } = await supabase
-    .from('teams')
-    .select('id, name, age_group')
-    .eq('club_id', clubId)
-    .order('age_group', { ascending: true })
 
   const baseUrl = appUrl()
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Coaching Staff</h1>
           <p className="text-gray text-sm mt-1">

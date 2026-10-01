@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { updateTeam, deleteTeam } from './actions'
 import { useToast } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 import { AGE_GROUPS, NO_AGE_GROUP, NO_AGE_GROUP_LABEL } from '@/lib/constants'
 
 
@@ -19,6 +20,7 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
   const [draftAge, setDraftAge] = useState(ageGroup)
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
+  const { confirm, dialog } = useConfirm()
 
   function handleSave() {
     startTransition(async () => {
@@ -28,8 +30,13 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
     })
   }
 
-  function handleDelete() {
-    if (!confirm(`Delete "${name}"? This will remove all members and revoke all pending invites. This cannot be undone.`)) return
+  async function handleDelete() {
+    if (!(await confirm({
+      title: `Delete "${name}"?`,
+      message: 'This will remove all members and revoke all pending invites. This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
     startTransition(async () => {
       const r = await deleteTeam(teamId)
       if (!r.ok) toast(r.error, 'error')
@@ -88,6 +95,7 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
       >
         {isPending ? 'Deleting...' : 'Delete'}
       </button>
+      {dialog}
     </div>
   )
 }

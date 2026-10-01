@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
-import { getMyKidsOnTeamForRsvp, getMyExistingRsvps, parentRsvp, type RsvpResponse } from './rsvp-actions'
-import { useToast } from '@/components/toast'
+import { useState, useEffect } from 'react'
+import { getMyKidsOnTeamForRsvp, getMyExistingRsvps } from './rsvp-actions'
+import Modal from '@/components/modal'
+import { Skeleton } from '@/components/skeleton'
 
 interface Player {
   id: string
@@ -11,26 +12,26 @@ interface Player {
   jersey_number: number | null
 }
 
-// Mirror of ParentCantAttendModal but for the positive flow ("I'll be
-// there"). Submitting writes to event_rsvps as 'going'. A player normally
-// has exactly one linked row, which is confirmed directly with no picker;
-// a checkbox list only appears when several rows are linked (legacy data).
+// "I'll be there" picker. The schedule confirms a single linked player in
+// one tap with no modal, so this only opens when the account has zero or
+// several linked roster rows (legacy data). It collects the selection and
+// hands it to onSubmit; the schedule does the optimistic save.
 export default function ParentGoingModal({
   eventId,
   teamId,
   eventTitle,
+  onSubmit,
   onClose,
 }: {
   eventId: string
   teamId: string
   eventTitle: string
+  onSubmit: (input: { playerIds: string[]; playerCount: number }) => void
   onClose: () => void
 }) {
   const [players, setPlayers] = useState<Player[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [isPending, startTransition] = useTransition()
-  const { toast } = useToast()
 
   useEffect(() => {
     async function load() {
@@ -39,11 +40,8 @@ export default function ParentGoingModal({
       const data = playersRes.data
       setPlayers(data)
       const existingRes = await getMyExistingRsvps(eventId, data.map(k => k.id))
-      if (!existingRes.ok) { setLoading(false); return }
-      const existing = existingRes.data
-      // Preselect players already marked 'going' so a save doesn't blow
-      // them away. A single linked player is always selected, same
-      // shortcut as the can't-attend modal.
+      const existing = existingRes.ok ? existingRes.data : {}
+      // Preselect players already marked 'going' so a save doesn't drop them.
       const initial = new Set<string>()
       for (const k of data) {
         if (existing[k.id] === 'going') initial.add(k.id)
@@ -64,123 +62,97 @@ export default function ParentGoingModal({
     })
   }
 
-  function handleSubmit(response: RsvpResponse) {
-    if (selected.size === 0) {
-      toast('Select at least one player', 'error')
-      return
-    }
-    startTransition(async () => {
-      try {
-        const rsvpRes = await parentRsvp({
-          eventId,
-          teamId,
-          playerIds: Array.from(selected),
-          response,
-        })
-        if (!rsvpRes.ok) { toast(rsvpRes.error, 'error'); return }
-        const result = rsvpRes.data
-        const verb = response === 'going' ? 'confirmed' : 'marked not going'
-        const parts = [players.length === 1 ? (response === 'going' ? 'You\'re confirmed' : 'Marked not going') : `${result.saved} ${verb}`]
-        if (result.notifiedCoaches > 0) {
-          parts.push(`coach${result.notifiedCoaches === 1 ? '' : 'es'} notified`)
-        }
-        toast(parts.join(' · '), 'success')
-        onClose()
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to save RSVP'
-        toast(msg, 'error')
-      }
-    })
+  function handleSubmit() {
+    if (selected.size === 0) return
+    onSubmit({ playerIds: Array.from(selected), playerCount: players.length })
+    onClose()
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
-        <h2 className="text-xl font-bold mb-2">I&apos;ll Be There</h2>
-        <p className="text-gray text-sm mb-6">{eventTitle}</p>
-
-        {loading ? (
-          <div className="animate-pulse space-y-3">
-            {[1, 2].map(i => <div key={i} className="h-12 bg-dark rounded-xl" />)}
-          </div>
-        ) : players.length === 0 ? (
-          <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
-            <p className="text-gray text-sm">
-              Your account isn&apos;t linked to a player on this team yet. Ask your coach to send you an invite.
-            </p>
-          </div>
-        ) : players.length === 1 ? (
-          <p className="text-sm text-gray mb-6">
-            Confirm you&apos;ll be there. Your coaches will see it on the schedule.
+    <Modal title="I'll Be There" description={eventTitle} onClose={onClose}>
+      {loading ? (
+        <div className="space-y-3 mb-6">
+          {[1, 2].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}
+        </div>
+      ) : players.length === 0 ? (
+        <div className="bg-dark rounded-xl p-6 text-center border border-white/5 mb-6">
+          <p className="text-gray text-sm">
+            Your account isn&apos;t linked to a player on this team yet. Ask your coach to send you an invite.
           </p>
-        ) : (
-          <>
-            <p className="text-xs text-gray uppercase tracking-wide mb-3">
-              Who is coming?
-            </p>
-            <div className="space-y-2 mb-6">
-              {players.map(p => {
-                const isSelected = selected.has(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => toggle(p.id)}
-                    disabled={isPending}
-                    className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                      isSelected
-                        ? 'border-green/40 bg-green/10'
-                        : 'border-white/10 hover:border-white/20'
+        </div>
+      ) : players.length === 1 ? (
+        <p className="text-sm text-gray mb-6">
+          Confirm you&apos;ll be there. Your coaches will see it on the schedule.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs text-gray uppercase tracking-wide mb-3">
+            Who is coming?
+          </p>
+          <div className="space-y-2 mb-6">
+            {players.map(p => {
+              const isSelected = selected.has(p.id)
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={isSelected}
+                  onClick={() => toggle(p.id)}
+                  className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                    isSelected
+                      ? 'border-green/40 bg-green/10'
+                      : 'border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {p.jersey_number !== null ? (
+                    <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center shrink-0">
+                      <span className="text-green font-bold text-xs">{p.jersey_number}</span>
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                      <span className="text-gray font-bold text-xs">{p.first_name.charAt(0)}</span>
+                    </div>
+                  )}
+                  <span className="text-sm font-medium flex-1">{p.first_name} {p.last_name}</span>
+                  <span
+                    aria-hidden="true"
+                    className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                      isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
                     }`}
                   >
-                    {p.jersey_number !== null ? (
-                      <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center shrink-0">
-                        <span className="text-green font-bold text-xs">{p.jersey_number}</span>
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                        <span className="text-gray font-bold text-xs">{p.first_name.charAt(0)}</span>
-                      </div>
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     )}
-                    <span className="text-sm font-medium flex-1">{p.first_name} {p.last_name}</span>
-                    <span
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                        isSelected ? 'bg-green border-green text-dark' : 'border-white/20'
-                      }`}
-                    >
-                      {isSelected && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
 
-        <div className="flex gap-3">
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 bg-dark border border-white/10 text-gray font-medium py-3 rounded-xl hover:text-white transition-colors"
+        >
+          Cancel
+        </button>
+        {players.length > 0 && (
           <button
-            onClick={onClose}
-            className="flex-1 bg-dark border border-white/10 text-gray font-medium py-3 rounded-xl hover:text-white transition-colors"
+            type="button"
+            onClick={handleSubmit}
+            disabled={selected.size === 0}
+            className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            Cancel
+            Confirm
           </button>
-          {players.length > 0 && (
-            <button
-              onClick={() => handleSubmit('going')}
-              disabled={isPending || selected.size === 0}
-              className="flex-1 bg-green text-dark font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {isPending ? 'Saving...' : 'Confirm'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }

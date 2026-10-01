@@ -6,60 +6,58 @@ import VoiceCommand from '@/components/voice-command'
 import { VoiceFocusProvider } from '@/components/voice-context'
 import { canSwitchRole, getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import PlayerPreviewBanner from './player-preview-banner'
+import OfflineBanner from '@/components/offline-banner'
 import { ClubTimezoneProvider } from '@/components/club-timezone'
 import { DEFAULT_TIMEZONE } from '@/lib/format-datetime'
+import { getAuthClaims, getCurrentProfile } from '@/lib/current-profile'
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  // getClaims verifies the JWT locally (asymmetric signing keys) — no network
-  // round-trip. Middleware already validated + refreshed the session.
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const claims = claimsData?.claims
+  // Request-memoized (lib/current-profile): getClaims verifies the JWT
+  // locally (asymmetric signing keys), no network round-trip, and the page
+  // below shares this same claims check and profile query instead of issuing
+  // its own. Middleware already validated + refreshed the session.
+  const claims = await getAuthClaims()
 
   if (!claims) redirect('/login')
 
   // Check onboarding status. The club's timezone rides along on the same query
   // so every date below this layout formats against it rather than against the
   // runtime's zone (UTC on the server, local in the browser) — see migration 043.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('onboarding_complete, role, club_id, clubs(timezone)')
-    .eq('user_id', claims.sub)
-    .single()
+  const profile = await getCurrentProfile()
 
   if (!profile || !profile.onboarding_complete) {
     redirect('/onboarding')
   }
+
+  const supabase = await createClient()
 
   // "Preview as" — a DOC can view the app as one of their coaches or players.
   const actualRole = profile.role ?? 'player'
   const effectiveRole = await getEffectiveRole(actualRole)
   // "View as → Player" shows a real sample player's experience; the banner
   // says whose view this is so nobody mistakes it for their own account.
-  const viewer = canSwitchRole(actualRole) && effectiveRole === 'player'
-    ? await getViewerIdentity()
-    : null
-
-  // Supabase returns a to-one embed as an object or a one-element array
-  // depending on how it infers the relationship; normalize both. Falls back to
-  // the default for a profile detached from its club (soft-deleted).
-  const club = Array.isArray(profile.clubs) ? profile.clubs[0] : profile.clubs
-  const timezone = (club as { timezone?: string } | null)?.timezone ?? DEFAULT_TIMEZONE
-
   // One-team programs (every college program) see "Roster" instead of "Teams"
-  // in the nav. Head-only count: no rows come back.
-  let teamCount = 0
-  if (profile.club_id) {
-    const { count } = await supabase
-      .from('teams')
-      .select('id', { count: 'exact', head: true })
-      .eq('club_id', profile.club_id)
-    teamCount = count ?? 0
-  }
+  // in the nav. Head-only count: no rows come back. Both run together.
+  const [viewer, teamCount] = await Promise.all([
+    canSwitchRole(actualRole) && effectiveRole === 'player'
+      ? getViewerIdentity()
+      : Promise.resolve(null),
+    profile.club_id
+      ? supabase
+          .from('teams')
+          .select('id', { count: 'exact', head: true })
+          .eq('club_id', profile.club_id)
+          .then(({ count }) => count ?? 0)
+      : Promise.resolve(0),
+  ])
+
+  // Falls back to the default for a profile detached from its club
+  // (soft-deleted).
+  const timezone = profile.timezone ?? DEFAULT_TIMEZONE
 
   return (
     <div className="flex min-h-screen bg-dark">
@@ -72,11 +70,13 @@ export default async function DashboardLayout({
       <ToastProvider>
         <ClubTimezoneProvider timezone={timezone}>
         <VoiceFocusProvider>
-          {/* pt-14 on mobile clears the fixed hamburger button (top-4 + ~38px
-              button = 54px footprint) so page headers don't render underneath
-              it. md:pt-0 because the sidebar is static on desktop and the
-              hamburger isn't rendered. */}
-          <main className="flex-1 overflow-auto pt-14 md:pt-0">
+          {/* Phones: bottom padding clears the fixed 60px tab bar plus the
+              iPhone home-indicator inset (mobile-tab-bar.tsx); top padding
+              respects the status bar inset. min-w-0 stops wide children from
+              stretching the flex row past the viewport. Desktop has the
+              static sidebar, so no padding there. */}
+          <OfflineBanner />
+          <main className="flex-1 min-w-0 overflow-auto pt-[env(safe-area-inset-top)] pb-[calc(60px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
             {viewer?.isPreview && <PlayerPreviewBanner player={viewer.previewPlayer} />}
             {children}
           </main>

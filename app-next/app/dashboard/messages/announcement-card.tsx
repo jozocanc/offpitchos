@@ -5,7 +5,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { togglePin, deleteAnnouncement, markAnnouncementRead, respondToPoll } from './actions'
 import ReplyThread from './reply-thread'
-import { useToast } from '@/components/toast'
+import { useToast, isPreviewBlocked, networkErrorMessage } from '@/components/toast'
+import { useConfirm } from '@/components/confirm-dialog'
 import { isStaff } from '@/lib/constants'
 import { ageGroupLabel } from '@/lib/team-label'
 
@@ -45,8 +46,11 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const [isPending, startTransition] = useTransition()
   const [kids, setKids] = useState<PollKid[]>(announcement.my_kids ?? [])
   const [respondingKidId, setRespondingKidId] = useState<string | null>(null)
+  const [pinned, setPinned] = useState(announcement.pinned)
+  const [hidden, setHidden] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   function handleExpand() {
     const nextExpanded = !expanded
@@ -74,19 +78,23 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const tally = announcement.poll_tally
   const unanswered = tally ? Math.max(0, tally.totalKids - tally.yes - tally.no - tally.maybe) : 0
 
+  // Optimistic vote: the chosen button lights up at once. On failure the
+  // previous answer for that player comes back and a toast explains.
   function handlePollResponse(playerId: string, response: 'yes' | 'no' | 'maybe') {
+    const previous = kids.find(k => k.playerId === playerId)?.response ?? null
+    if (previous === response) return
     setRespondingKidId(playerId)
-    // Optimistic local update
     setKids(prev => prev.map(k => k.playerId === playerId ? { ...k, response } : k))
     startTransition(async () => {
       const pollRes = await respondToPoll(announcement.id, playerId, response)
-      if (!pollRes.ok) { toast(pollRes.error, 'error'); return }
-      const result = pollRes.data
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
       setRespondingKidId(null)
-      if (result.error) {
-        toast(result.error, 'error')
-        // Revert
-        setKids(announcement.my_kids ?? [])
+      const error = !pollRes.ok ? pollRes.error : pollRes.data.error
+      if (error) {
+        setKids(prev => prev.map(k => k.playerId === playerId ? { ...k, response: previous } : k))
+        toast(error, 'error', isPreviewBlocked(error) ? undefined : {
+          action: { label: 'Retry', onClick: () => handlePollResponse(playerId, response) },
+        })
         return
       }
       router.refresh()
@@ -105,17 +113,30 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   }
 
   function handlePin() {
+    const was = pinned
+    setPinned(!was)
     startTransition(async () => {
       const r = await togglePin(announcement.id)
-      if (!r.ok) { toast(r.error, 'error'); return }
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      if (!r.ok) { setPinned(was); toast(r.error, 'error'); return }
+      toast(was ? 'Unpinned' : 'Pinned to the top', 'success')
     })
   }
 
-  function handleDelete() {
-    if (!confirm('Delete this announcement and all its replies?')) return
+  async function handleDelete() {
+    const ok = await confirm({
+      title: 'Delete this announcement?',
+      message: 'It and all its replies are removed for everyone. This can\u2019t be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    })
+    if (!ok) return
+    setHidden(true)
     startTransition(async () => {
       const r = await deleteAnnouncement(announcement.id)
-      if (!r.ok) { toast(r.error, 'error'); return }
+        .catch(() => ({ ok: false as const, error: networkErrorMessage() }))
+      if (!r.ok) { setHidden(false); toast(r.error, 'error'); return }
+      toast('Announcement deleted', 'success')
     })
   }
 
@@ -128,10 +149,19 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
     hour: 'numeric', minute: '2-digit', timeZone: timezone,
   })
 
+  if (hidden) return confirmDialog
+
   return (
-    <div className={`bg-dark-secondary rounded-xl p-4 border ${announcement.pinned ? 'border-green/20' : 'border-white/5'} hover:border-green/10 transition-colors`}>
+    <div className={`bg-dark-secondary rounded-xl p-4 border ${pinned ? 'border-green/20' : 'border-white/5'} hover:border-green/10 transition-colors`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0 cursor-pointer select-none" onClick={handleExpand}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleExpand() } }}
+          className="flex-1 min-w-0 cursor-pointer select-none rounded-lg"
+          onClick={handleExpand}
+        >
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             {/* Real unread dot — only shows for non-authors who haven't opened this */}
             {!locallyRead && !isAuthor && (
@@ -146,7 +176,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
                 All Teams
               </span>
             )}
-            {announcement.pinned && (
+            {pinned && (
               <span className="text-xs text-green" title="Pinned">Pinned</span>
             )}
             <span className="text-xs text-gray" title={fullDate}>{timeAgo(announcement.created_at)}</span>
@@ -173,7 +203,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
                 </p>
               </>
             )}
-            <span className={`text-xs transition-transform ${expanded ? 'rotate-180' : ''}`}>
+            <span aria-hidden="true" className={`text-xs transition-transform ${expanded ? 'rotate-180' : ''}`}>
               ▾
             </span>
           </div>
@@ -182,19 +212,21 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
         <div className="flex gap-2 shrink-0">
           {isDoc && (
             <button
+              type="button"
               onClick={handlePin}
               disabled={isPending}
-              className="text-gray hover:text-green text-sm transition-colors"
-              title={announcement.pinned ? 'Unpin' : 'Pin'}
+              className="text-gray hover:text-green text-sm transition-colors px-1"
+              title={pinned ? 'Unpin' : 'Pin'}
             >
-              {announcement.pinned ? 'Unpin' : 'Pin'}
+              {pinned ? 'Unpin' : 'Pin'}
             </button>
           )}
           {(isDoc || isAuthor) && (
             <button
+              type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="text-gray hover:text-red text-sm transition-colors"
+              className="text-gray hover:text-red text-sm transition-colors px-1"
             >
               Delete
             </button>
@@ -253,7 +285,8 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
                         <button
                           key={opt}
                           type="button"
-                          disabled={respondingKidId === kid.playerId}
+                          aria-pressed={selected}
+                          aria-busy={respondingKidId === kid.playerId && selected}
                           onClick={() => handlePollResponse(kid.playerId, opt)}
                           className={`flex-1 text-xs font-semibold py-2 rounded-lg capitalize transition-colors disabled:opacity-50 ${styles}`}
                         >
@@ -283,6 +316,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
           userRole={userRole}
         />
       )}
+      {confirmDialog}
     </div>
   )
 }

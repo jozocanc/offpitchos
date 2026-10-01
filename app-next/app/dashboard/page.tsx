@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AttentionPanel from './attention-panel'
+import { getAttentionList, getAttentionSignals } from './attention-actions'
+import { getOnboardingState } from './onboarding-checklist-actions'
+import { getMyCheckinState } from './check-in/actions'
 import CoachAttentionPanel from './coach-attention-panel'
 import ParentAttentionPanel from './parent-attention-panel'
 import CheckinCard from './check-in/checkin-card'
@@ -11,7 +14,9 @@ import OnboardingChecklist from './onboarding-checklist'
 import DemoSeedButton from './demo-seed-button'
 import { getDemoSeedState } from './demo-seed-actions'
 import InstallPrompt from '@/components/install-prompt'
+import SharedDashboardBodySkeleton from './dashboard-skeleton'
 import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
+import { getAuthClaims, getCurrentProfile } from '@/lib/current-profile'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatTime, formatShortDate } from '@/lib/format-datetime'
 import { isMember, isStaff } from '@/lib/constants'
@@ -20,26 +25,23 @@ import { teamLabel, ageGroupLabel } from '@/lib/team-label'
 export const metadata: Metadata = { title: 'Dashboard' }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  // getClaims verifies the JWT locally (asymmetric signing keys) — no network
-  // round-trip to the auth server. Middleware already refreshed the session.
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const claims = claimsData?.claims
+  // Request-memoized: the layout, getClubTimezone() and getViewerIdentity()
+  // share this one JWT check (local, no auth-server round-trip) and one
+  // profile query instead of each issuing their own.
+  const claims = await getAuthClaims()
 
   if (!claims) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, display_name, club_id, role')
-    .eq('user_id', claims.sub)
-    .single()
+  const profile = await getCurrentProfile()
 
-  // Respect the "preview as" switcher (same helper as the layout)
-  const userRole = await getEffectiveRole(profile?.role ?? 'player')
-
+  // Respect the "preview as" switcher (same helper as the layout).
   // "View as → Player" renders the club's sample player's dashboard: their
-  // name in the greeting, their team memberships below.
-  const viewer = await getViewerIdentity()
+  // name in the greeting, their team memberships below. Both only need the
+  // cached profile, so they resolve together.
+  const [userRole, viewer] = await Promise.all([
+    getEffectiveRole(profile?.role ?? 'player'),
+    getViewerIdentity(),
+  ])
   const preview = viewer.isPreview ? viewer.previewPlayer : null
   const viewerProfileId = preview ? viewer.profileId : (profile?.id ?? null)
 
@@ -88,7 +90,6 @@ async function DashboardBody({
   profileId: string | null
 }) {
   const supabase = await createClient()
-  const timezone = await getClubTimezone()
   const isDoc = userRole === 'doc'
 
   const todayStart = new Date()
@@ -96,10 +97,31 @@ async function DashboardBody({
   const todayEnd = new Date()
   todayEnd.setHours(23, 59, 59, 999)
 
-  // Wave 1: every query that only needs club_id / profile_id, fired
-  // concurrently instead of one-after-another.
-  const [teamCountRes, todaySessionsRes, coverageRes, myTeamsRes, demoState] =
+  // Head coach's attention panel: kick both calls off now so they overlap
+  // with the queries below, and stream the promises to the client panel.
+  // The fast one (database only) paints first; the AI-ranked one replaces
+  // it when it lands. They share one signal gather (see attention-actions).
+  // Never reject: a null tells the panel to fall back to its own fetch.
+  const attentionSignals = isDoc ? getAttentionSignals().catch(() => null) : undefined
+  const attentionRanked = isDoc ? getAttentionList().catch(() => null) : undefined
+
+  // The setup checklist and the morning check-in card load their own data;
+  // start it now so it overlaps the wave below instead of following it. The
+  // no-op catch only marks the promise handled while it waits: the component
+  // awaiting it still sees any rejection, exactly as before.
+  const onboardingState = isDoc ? getOnboardingState() : undefined
+  onboardingState?.catch(() => {})
+  const checkinState = isMember(userRole) ? getMyCheckinState() : undefined
+  checkinState?.catch(() => {})
+
+  // One wave: every query only needs club_id / profile_id, so they all fire
+  // concurrently. Today's events used to wait for the viewer's team ids so it
+  // could add `.in('team_id', ...)`; it now fetches the club's (one day,
+  // already RLS-scoped) list here and narrows in memory below, which returns
+  // the same rows without the second round-trip.
+  const [timezone, teamCountRes, todaySessionsRes, coverageRes, myTeamsRes, demoState, todayEventsRes] =
     await Promise.all([
+      getClubTimezone(),
       isDoc && clubId
         ? supabase.from('players').select('id', { count: 'exact', head: true }).eq('club_id', clubId)
         : Promise.resolve({ count: 0 }),
@@ -130,6 +152,15 @@ async function DashboardBody({
             .eq('profile_id', profileId)
         : Promise.resolve({ data: null }),
       isDoc ? getDemoSeedState() : Promise.resolve(null),
+      clubId
+        ? supabase
+            .from('events')
+            .select('id, title, start_time, end_time, type, status, team_id, teams(name, age_group)')
+            .eq('club_id', clubId)
+            .gte('start_time', todayStart.toISOString())
+            .lte('start_time', todayEnd.toISOString())
+            .order('start_time', { ascending: true })
+        : Promise.resolve({ data: null, error: null }),
     ])
 
   const playerCount = teamCountRes.count
@@ -138,24 +169,16 @@ async function DashboardBody({
   const myTeams = (myTeamsRes.data ?? []) as unknown as { team_id: string; role: string; teams: { name: string; age_group: string } }[]
   const myTeamIds = myTeams.map(tm => tm.team_id)
 
-  // Wave 2: today's events — scoped to the viewer's teams for coach/player so
-  // they don't see other teams' events. Depends on myTeamIds, so it follows.
-  let todayEventsQuery = supabase
-    .from('events')
-    .select('id, title, start_time, end_time, type, status, team_id, teams(name, age_group)')
-    .eq('club_id', clubId ?? '')
-    .gte('start_time', todayStart.toISOString())
-    .lte('start_time', todayEnd.toISOString())
-    .order('start_time', { ascending: true })
-    .limit(10)
-
-  if (!isDoc && myTeamIds.length > 0) {
-    todayEventsQuery = todayEventsQuery.in('team_id', myTeamIds)
-  }
-
-  const { data: todayEvents, error: todayEventsError } = clubId
-    ? await todayEventsQuery
-    : { data: null, error: null }
+  // Today's events, scoped to the viewer's teams for coach/player so they
+  // don't see other teams' events, capped at 10 as before.
+  const todayEventsError = todayEventsRes.error
+  const myTeamIdSet = new Set(myTeamIds)
+  const todayEvents = todayEventsRes.data
+    ? (!isDoc && myTeamIds.length > 0
+        ? todayEventsRes.data.filter(e => myTeamIdSet.has(e.team_id as string))
+        : todayEventsRes.data
+      ).slice(0, 10)
+    : null
 
   if (todayEventsError) console.error('todayEvents error:', todayEventsError)
 
@@ -165,18 +188,24 @@ async function DashboardBody({
       {isDoc && demoState && <DemoSeedButton state={demoState} />}
 
       {/* Post-wizard setup checklist (DOC only, self-hides when dismissed). */}
-      {isDoc && <OnboardingChecklist />}
+      {isDoc && <OnboardingChecklist statePromise={onboardingState} />}
 
       {/* AI-prioritized attention list (DOC only). Key flips on seed/clear so
           React remounts the client component and re-runs its load effect. */}
-      {isDoc && <AttentionPanel key={`demo-${demoState?.loaded ? 'on' : 'off'}`} />}
+      {isDoc && (
+        <AttentionPanel
+          key={`demo-${demoState?.loaded ? 'on' : 'off'}`}
+          initialSignals={attentionSignals}
+          initialRanked={attentionRanked}
+        />
+      )}
 
       {/* Coach-scoped attention panel. */}
       {userRole === 'coach' && <CoachAttentionPanel />}
 
       {/* Player-scoped attention panel. */}
       {/* Daily check-in first: it is the one thing players do every morning. */}
-      {isMember(userRole) && <CheckinCard />}
+      {isMember(userRole) && <CheckinCard statePromise={checkinState} />}
       {isMember(userRole) && <ParentAttentionPanel />}
 
       {/* Stat cards. */}
@@ -279,25 +308,7 @@ async function DashboardBody({
 }
 
 function DashboardBodySkeleton({ userRole }: { userRole: string }) {
-  const isDoc = userRole === 'doc'
-  return (
-    <div className="animate-pulse">
-      {/* attention panel placeholder */}
-      <div className="bg-dark-secondary rounded-2xl border border-white/5 h-40 mb-10" />
-      {/* stat cards */}
-      <div className={`grid grid-cols-1 ${isDoc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3 sm:gap-4 mb-10`}>
-        {(isDoc ? [1, 2, 3] : [1, 2]).map(i => (
-          <div key={i} className="bg-dark-secondary rounded-2xl p-6 border border-white/5 h-32" />
-        ))}
-      </div>
-      {/* schedule */}
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="bg-dark-secondary rounded-xl border border-white/5 h-16" />
-        ))}
-      </div>
-    </div>
-  )
+  return <SharedDashboardBodySkeleton userRole={userRole} />
 }
 
 function StatCard({

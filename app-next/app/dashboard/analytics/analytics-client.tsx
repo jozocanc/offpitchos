@@ -196,7 +196,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
       {/* Team Breakdown */}
       <section>
         <h2 className="text-lg font-bold text-white mb-4">Teams</h2>
-        <div className="bg-dark-secondary border border-white/5 rounded-xl overflow-hidden">
+        <div className="bg-dark-secondary border border-white/5 rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5 text-left text-gray">

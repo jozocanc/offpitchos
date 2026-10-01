@@ -1,6 +1,7 @@
 'use client'
 
 import EventCard from './event-card'
+import EmptyState from '@/components/empty-state'
 import { useClubTimezone } from '@/components/club-timezone'
 import { dayKey, daysFromToday, formatDayKeyLong } from '@/lib/format-datetime'
 import type { EventTravelFields } from '@/lib/travel'
@@ -48,18 +49,28 @@ interface AgendaViewProps {
   rsvpTallies?: Record<string, { going: number; notGoing: number; totalKids: number }>
   showRsvpTally?: boolean
   matchSheets?: Record<string, boolean>
+  /** Player's own answers. undefined = still loading (cards hold space). */
+  myRsvps?: Record<string, 'going' | 'not_going'>
+  pendingRsvpIds?: Set<string>
+  empty?: { title: string; body: string; action?: { label: string; onClick: () => void } }
 }
 
-export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets }: AgendaViewProps) {
+export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdit, isDoc, onCantAttend, onParentCantAttend, onParentGoing, onAttendance, coverageRequests, userRole, userProfileId, unmarkedEventIds, coachesByTeam, rsvpTallies, showRsvpTally, matchSheets, myRsvps, pendingRsvpIds, empty }: AgendaViewProps) {
   // Before the early return — hooks must run unconditionally.
   const timezone = useClubTimezone()
 
   if (events.length === 0) {
     return (
-      <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
-        <p className="text-gray text-lg">No events scheduled yet.</p>
-        <p className="text-gray text-sm mt-1">Add your first event to get started.</p>
-      </div>
+      <EmptyState
+        title={empty?.title ?? 'No events scheduled yet'}
+        body={empty?.body}
+        action={empty?.action}
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        }
+      />
     )
   }
 
@@ -102,6 +113,8 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 rsvpTally={rsvpTallies?.[event.id] ?? null}
                 showRsvpTally={showRsvpTally}
                 matchSheetEnabled={matchSheets?.[event.id]}
+                myRsvp={myRsvps ? (myRsvps[event.id] ?? null) : undefined}
+                myRsvpPending={pendingRsvpIds?.has(event.id) ?? false}
               />
             ))}
           </div>

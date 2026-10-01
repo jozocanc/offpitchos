@@ -6,6 +6,7 @@ import AnnouncementCard from './announcement-card'
 import NewAnnouncementModal from './new-announcement-modal'
 import DMClient from './dm-client'
 import { teamLabel } from '@/lib/team-label'
+import EmptyState from '@/components/empty-state'
 
 interface Team {
   id: string
@@ -62,8 +63,11 @@ export default function MessagesClient({
         <h1 className="text-3xl font-black tracking-tight">Messages</h1>
       </div>
 
-      <div className="flex gap-2 mb-6 border-b border-white/5">
+      <div className="flex gap-2 mb-6 border-b border-white/5" role="tablist" aria-label="Message type">
         <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'announcements'}
           onClick={() => setTab('announcements')}
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
             tab === 'announcements' ? 'text-green border-green' : 'text-gray border-transparent hover:text-white'
@@ -72,6 +76,9 @@ export default function MessagesClient({
           Announcements
         </button>
         <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'dm'}
           onClick={() => setTab('dm')}
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
             tab === 'dm' ? 'text-green border-green' : 'text-gray border-transparent hover:text-white'
@@ -91,6 +98,7 @@ export default function MessagesClient({
         </p>
         {canPost && (
           <button
+            type="button"
             onClick={() => (isPlayer ? setTab('dm') : setModalOpen(true))}
             className="bg-green text-dark font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
@@ -100,7 +108,9 @@ export default function MessagesClient({
       </div>
 
       <div className="mb-6">
+        <label htmlFor="ann-filter" className="sr-only">Filter by team</label>
         <select
+          id="ann-filter"
           value={filterTeam}
           onChange={e => setFilterTeam(e.target.value)}
           className="bg-dark border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-green transition-colors appearance-none"
@@ -114,12 +124,25 @@ export default function MessagesClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-dark-secondary rounded-2xl p-12 text-center border border-white/5">
-          <p className="text-gray text-lg">No announcements yet.</p>
-          <p className="text-gray text-sm mt-1">
-            {canPost && !isPlayer ? 'Post your first announcement to get started.' : 'Announcements from your coaches will appear here.'}
-          </p>
-        </div>
+        filterTeam ? (
+          <EmptyState
+            title="Nothing posted here yet"
+            body="No announcements match this filter."
+            action={{ label: 'Show all', onClick: () => setFilterTeam('') }}
+          />
+        ) : canPost && !isPlayer ? (
+          <EmptyState
+            title="No announcements yet"
+            body="Post schedule changes, travel details or reminders. Everyone on the team gets it in one go."
+            action={{ label: '+ New Announcement', onClick: () => setModalOpen(true) }}
+          />
+        ) : (
+          <EmptyState
+            title="No announcements yet"
+            body="When your coaches post updates, they show up here. Have a question? Message a coach directly."
+            action={isPlayer ? { label: 'Message Coach', onClick: () => setTab('dm') } : undefined}
+          />
+        )
       ) : (
         <div className="space-y-4">
           {filtered.map(a => (
