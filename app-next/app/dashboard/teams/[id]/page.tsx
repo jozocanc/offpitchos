@@ -309,7 +309,18 @@ export default async function TeamDetailPage({
                 Players
                 <span className="text-gray font-normal text-sm ml-2">· {players.length}</span>
               </h2>
-              {isDOC && <AddPlayerForm teamId={team.id} />}
+              <div className="flex items-center gap-2">
+                {isStaffViewer && players.length > 0 && (
+                  <a
+                    href={`/api/export/roster/${team.id}`}
+                    download
+                    className="text-sm font-medium text-gray hover:text-white border border-white/10 rounded-xl px-3 py-2 transition-colors whitespace-nowrap"
+                  >
+                    Download
+                  </a>
+                )}
+                {isDOC && <AddPlayerForm teamId={team.id} />}
+              </div>
             </div>
 
             {/* Health summary: DOC only, players don't need admin stats about teammates. */}

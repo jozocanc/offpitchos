@@ -452,6 +452,16 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             </button>
           </div>
 
+          {canEdit && (
+            <a
+              href="/api/export/schedule"
+              download
+              className="px-3 py-2 text-sm font-medium rounded-xl border border-white/10 text-gray hover:text-white transition-colors whitespace-nowrap"
+            >
+              Download
+            </a>
+          )}
+
           {canCreate && (
             <button
               type="button"
