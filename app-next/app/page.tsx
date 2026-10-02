@@ -210,7 +210,7 @@ export default async function Home() {
             label="Game report"
             title="Upload the box score. Every profile updates."
             body="Drop in the stats sheet in any format: PDF, spreadsheet, Word or a photo. OffPitchOS reads it, matches every line to your roster and shows it to you first. Fix anything that looks wrong, save, and minutes, goals, assists and saves land on each player's season record."
-            mockup={<Screenshot src="/home/game-report.jpg" width={1538} height={760} alt="Game report review screen with each player's minutes, goals and assists" />}
+            mockup={<Screenshot src="/home/game-report.jpg" width={1000} height={760} alt="Game report review screen with each player's minutes, goals and assists" />}
           />
           <Feature
             reverse
