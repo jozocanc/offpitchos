@@ -1,5 +1,7 @@
 'use client'
 
+import Portal from '@/components/portal'
+
 import { useEffect, useState, useTransition, useRef } from 'react'
 import {
   getEventPhotos,
@@ -80,6 +82,7 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
   // The dialog renders as a sibling of the backdrop so its clicks don't bubble
   // to onClose, and it stacks above the lightbox (both sit at z-50 at the root).
   return (
+    <Portal>
     <>
     <div
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
@@ -170,6 +173,7 @@ export default function EventPhotosModal({ eventId, eventTitle, onClose }: Props
     </div>
     {dialog}
     </>
+    </Portal>
   )
 }
 
@@ -197,6 +201,7 @@ function Lightbox({
   }, [onClose, onPrev, onNext])
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 bg-black z-[60] flex items-center justify-center p-4"
       onClick={onClose}
@@ -249,6 +254,7 @@ function Lightbox({
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

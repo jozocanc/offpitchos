@@ -1,5 +1,7 @@
 'use client'
 
+import Portal from '@/components/portal'
+
 import { useEffect, useState, useTransition } from 'react'
 import { useToast } from '@/components/toast'
 import { getMatchSheet, saveMatchSheet, setMatchSheetEnabled } from './match-sheet-actions'
@@ -101,6 +103,7 @@ export default function VisitorInfoModal({ eventId, eventTitle, onClose }: Props
   }
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 overflow-y-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -224,5 +227,6 @@ export default function VisitorInfoModal({ eventId, eventTitle, onClose }: Props
         )}
       </div>
     </div>
+    </Portal>
   )
 }

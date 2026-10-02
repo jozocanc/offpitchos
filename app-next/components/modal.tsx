@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -12,6 +13,10 @@ const FOCUSABLE =
  *
  * `title` renders as the dialog heading and labels it for screen readers.
  * Pass `dismissible={false}` while a request must not be interrupted.
+ *
+ * Rendered into document.body: a modal opened from inside a dimmed or
+ * transformed ancestor (past schedule cards are opacity-50) would otherwise be
+ * trapped in that stacking context, half transparent and under later content.
  */
 export default function Modal({
   title,
@@ -91,7 +96,9 @@ export default function Modal({
 
   const width = size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-lg' : 'max-w-md'
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
       onMouseDown={e => {
@@ -127,6 +134,7 @@ export default function Modal({
         {!description && <div className="mb-5" />}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

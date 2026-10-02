@@ -1,4 +1,5 @@
 'use client'
+import Portal from '@/components/portal'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import {
@@ -189,6 +190,7 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
       )}
 
       {pickerOpen && (
+        <Portal>
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setPickerOpen(false)}>
           <div className="bg-dark-secondary rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/5 flex items-center justify-between gap-2">
@@ -223,6 +225,7 @@ export default function SessionPlan({ eventId, eventDurationMin }: Props) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
       {dialog}
     </section>

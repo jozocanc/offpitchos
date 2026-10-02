@@ -1,5 +1,7 @@
 'use client'
 
+import Portal from '@/components/portal'
+
 import { useState, useTransition, useEffect } from 'react'
 import { EVENT_TYPES, EVENT_TYPE_LABELS, DAYS_OF_WEEK, type EventType } from '@/lib/constants'
 import { createEvent, updateEvent } from './actions'
@@ -290,6 +292,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   }
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 overflow-y-auto"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -659,5 +662,6 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
