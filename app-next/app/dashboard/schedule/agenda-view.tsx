@@ -86,7 +86,9 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
   return (
     <div className="space-y-8">
       {grouped.map(({ dateStr, label, events: dayEvents, isPast }) => (
-        <div key={dateStr} className={isPast ? 'opacity-50' : ''}>
+        // Past days fade, except games still waiting for attendance: those
+        // are what the coach was sent here to act on.
+        <div key={dateStr} className={isPast && !dayEvents.some(e => unmarkedEventIds?.has(e.id)) ? 'opacity-50' : ''}>
           <h3 className={`text-sm font-bold uppercase tracking-wider mb-3 ${
             label === 'Today' ? 'text-green' : 'text-gray'
           }`}>
