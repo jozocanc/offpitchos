@@ -9,7 +9,6 @@ export const metadata: Metadata = { title: 'Settings' }
 import AccountSettings from './account-settings'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import DangerZone from './danger-zone'
-import StripeConnect from './stripe-connect'
 import { isStaff } from '@/lib/constants'
 import { getEffectiveRole } from '@/lib/admin-role'
 
@@ -87,7 +86,7 @@ export default async function SettingsPage() {
 
         {!!profile && isStaff(profile.role) && <VenuesSection />}
 
-        {!!profile && isStaff(profile.role) && <StripeConnect />}
+        {/* Stripe Connect (./stripe-connect) is for paid camps: hidden with Camps for the pilot. */}
 
         <DangerZone userRole={profile?.role ?? 'player'} />
 

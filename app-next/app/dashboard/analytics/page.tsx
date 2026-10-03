@@ -23,7 +23,7 @@ export default async function AnalyticsPage() {
     <div className="p-6 md:p-10 max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight">Analytics</h1>
-        <p className="text-sm text-gray mt-1">Your program at a glance: attendance, activity and camp revenue.</p>
+        <p className="text-sm text-gray mt-1">Your program at a glance: attendance and activity.</p>
       </div>
 
       <AnalyticsClient data={data} />

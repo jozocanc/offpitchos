@@ -180,11 +180,11 @@ const navItems: NavItem[] = [
   { label: 'Messages', href: '/dashboard/messages', icon: <MessageIcon /> },
   { label: 'Check-in', href: '/dashboard/check-in', icon: <CheckInIcon />, roles: ['player'] },
   { label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] },
-  { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
+  // Load (GPS import) and Camps are hidden for the pilot (2026-10-03): GPS data
+  // isn't charted anywhere yet and paid camps need Stripe finished. Pages still exist.
   { label: 'Staff', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc', 'coach'] },
   { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
   { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc', 'coach'] },
-  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc', 'coach'] },
   { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc', 'coach'] },
   // A weekly staff summary: it names individual players' attendance and
   // coach feedback, so it is not for the squad.

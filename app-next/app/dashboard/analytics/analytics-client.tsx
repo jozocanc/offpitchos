@@ -185,14 +185,14 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
       {/* Revenue — same responsive pattern; currency values are the ones
           most likely to overflow so the StatCard truncate + smaller mobile
           font size carries the rest of the burden. */}
-      <section>
+      {revenue.totalCampRegistrations > 0 && <section>
         <h2 className="text-lg font-bold text-white mb-4">Camp revenue</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="Camp registrations" value={revenue.totalCampRegistrations} />
           <StatCard label="Expected revenue" value={formatCurrency(revenue.totalRevenueCents)} color="green" />
           <StatCard label="Collected" value={formatCurrency(revenue.totalCollectedCents)} />
         </div>
-      </section>
+      </section>}
 
       {/* Team Breakdown */}
       <section>
