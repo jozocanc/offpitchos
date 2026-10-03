@@ -68,7 +68,7 @@ export default function AnnouncementCard({ announcement, userProfileId, userRole
   const author = Array.isArray(announcement.author) ? announcement.author[0] : announcement.author
   const team = Array.isArray(announcement.teams) ? announcement.teams[0] : announcement.teams
   const replyCount = announcement.announcement_replies?.length ?? 0
-  const isDoc = userRole === 'doc'
+  const isDoc = userRole === 'doc' || userRole === 'coach'
   const isAuthor = author?.id === userProfileId
   const isPlayer = !isStaff(userRole)
   const readCount = announcement.read_count ?? 0

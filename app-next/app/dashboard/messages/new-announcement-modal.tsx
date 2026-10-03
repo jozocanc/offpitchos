@@ -50,7 +50,7 @@ export default function NewAnnouncementModal({
   const [isPending, startTransition] = useTransition()
   const { toast } = useToast()
 
-  const isDoc = userRole === 'doc'
+  const isDoc = userRole === 'doc' || userRole === 'coach'
   // Non-staff (players) get the "Message Coach" framing.
   const isPlayer = !isStaff(userRole)
 

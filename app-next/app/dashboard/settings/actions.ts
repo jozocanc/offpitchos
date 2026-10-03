@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
-import { isValidTimezone } from '@/lib/constants'
+import { isValidTimezone, isStaff } from '@/lib/constants'
 
 export async function updateDisplayName(name: string) {
   const supabase = await createClient()
@@ -39,7 +39,7 @@ export async function updateClubName(name: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the program name' }
+  if ((!profile || !isStaff(profile.role))) return { error: 'Only coaching staff can change the program name' }
 
   const { error } = await supabase
     .from('clubs')
@@ -64,7 +64,7 @@ export async function updateClubTimezone(timezone: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') return { error: 'Only the head coach can change the timezone' }
+  if ((!profile || !isStaff(profile.role))) return { error: 'Only coaching staff can change the timezone' }
 
   const { error } = await supabase
     .from('clubs')

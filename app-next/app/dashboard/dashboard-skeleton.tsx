@@ -4,7 +4,7 @@ import { Skeleton, SkeletonCard } from '@/components/skeleton'
 // upcoming schedule). Shared by app/dashboard/loading.tsx and the Suspense
 // fallback in app/dashboard/page.tsx so both look the same.
 export default function DashboardBodySkeleton({ userRole }: { userRole?: string }) {
-  const isDoc = userRole === 'doc'
+  const isDoc = userRole === 'doc' || userRole === 'coach'
   const statCount = userRole === undefined || isDoc ? 3 : 2
   return (
     <div aria-hidden="true">

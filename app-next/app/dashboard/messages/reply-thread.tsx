@@ -110,7 +110,7 @@ export default function ReplyThread({ announcementId, userProfileId, userRole }:
 
   function canDelete(reply: Reply): boolean {
     const authorId = Array.isArray(reply.author) ? reply.author[0]?.id : (reply.author as { id?: string } | null)?.id
-    return authorId === userProfileId || userRole === 'doc'
+    return authorId === userProfileId || userRole === 'doc' || userRole === 'coach'
   }
 
   return (

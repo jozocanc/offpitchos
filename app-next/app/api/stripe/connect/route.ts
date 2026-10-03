@@ -1,3 +1,4 @@
+import { isStaff } from '@/lib/constants'
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
@@ -13,8 +14,8 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'doc') {
-    return NextResponse.json({ error: 'Only the head coach can connect Stripe' }, { status: 403 })
+  if (!profile || !isStaff(profile.role)) {
+    return NextResponse.json({ error: 'Only coaching staff can connect Stripe' }, { status: 403 })
   }
 
   // Check if club already has a Stripe account

@@ -14,7 +14,7 @@ export default async function GearPage() {
   if (!(await getAuthUserId())) redirect('/login')
   const prof = await getCurrentProfile()
   const role = await getEffectiveRole(prof?.role ?? 'player')
-  if (role !== 'doc') redirect('/dashboard')
+  if (role !== 'doc' && role !== 'coach') redirect('/dashboard')
 
   const { teams, userRole, lastRequestedAt, lastRequestedPlayerCount, respondedSinceRequest, playersWithAccounts } = await getGearData()
 

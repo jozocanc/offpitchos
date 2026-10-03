@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
@@ -31,7 +32,7 @@ export async function listClubFiles(): Promise<ClubFile[]> {
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id) return []
-  const isDoc = profile.role === 'doc'
+  const isDoc = isStaff(profile.role)
 
   const { data: files } = await supabase
     .from('club_files')
@@ -83,7 +84,7 @@ export async function uploadClubFile(formData: FormData): Promise<{ error?: stri
     .eq('user_id', user.id)
     .single()
   if (!profile?.club_id) return { error: 'No team found' }
-  if (profile.role !== 'doc') return { error: 'Only the head coach can upload' }
+  if (!isStaff(profile.role)) return { error: 'Only coaching staff can upload' }
 
   const path = `${profile.club_id}/${crypto.randomUUID()}-${sanitize(file.name)}`
   const arrayBuf = await file.arrayBuffer()

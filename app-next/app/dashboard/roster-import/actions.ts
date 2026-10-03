@@ -26,7 +26,7 @@ import {
   REQUIRED_FIELDS,
 } from './lib/types'
 import { normalizeEmail, normalizeDate, trimName, teamKey } from './lib/normalize'
-import { ROLES, NO_AGE_GROUP } from '@/lib/constants'
+import { ROLES, NO_AGE_GROUP, isStaff } from '@/lib/constants'
 import { makeTeamCode } from '@/lib/team-code'
 import { sendRosterRecoveryEmail } from '@/lib/email'
 
@@ -53,8 +53,8 @@ export async function previewImport(
     .select('id, club_id, role')
     .eq('user_id', user.id)
     .single()
-  if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'Only the head coach can do this' }
+  if (!profile?.club_id || !isStaff(profile.role)) {
+    return { ok: false, error: 'Only coaching staff can do this' }
   }
 
   if (rows.length > MAX_ROWS) {
@@ -242,8 +242,8 @@ export async function commitImport(
     .select('id, club_id, role')
     .eq('user_id', user.id)
     .single()
-  if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'Only the head coach can do this' }
+  if (!profile?.club_id || !isStaff(profile.role)) {
+    return { ok: false, error: 'Only coaching staff can do this' }
   }
 
   const service = createServiceClient()
@@ -454,8 +454,8 @@ export async function sendParentRecoveryEmails(
     .select('club_id, role')
     .eq('user_id', user.id)
     .single()
-  if (!profile?.club_id || profile.role !== 'doc') {
-    return { ok: false, error: 'Only the head coach can do this' }
+  if (!profile?.club_id || !isStaff(profile.role)) {
+    return { ok: false, error: 'Only coaching staff can do this' }
   }
 
   // Security: verify these member profiles all belong to the DOC's club.

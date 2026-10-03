@@ -181,11 +181,11 @@ const navItems: NavItem[] = [
   { label: 'Check-in', href: '/dashboard/check-in', icon: <CheckInIcon />, roles: ['player'] },
   { label: 'Tactics', href: '/dashboard/tactics', icon: <TacticsIcon />, roles: ['doc', 'coach'] },
   { label: 'Load', href: '/dashboard/load', icon: <LoadIcon />, roles: ['doc', 'coach'] },
-  { label: 'Staff', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc'] },
+  { label: 'Staff', href: '/dashboard/coaches', icon: <CoachesIcon />, roles: ['doc', 'coach'] },
   { label: 'Files', href: '/dashboard/files', icon: <FilesIcon /> },
-  { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc'] },
-  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc'] },
-  { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc'] },
+  { label: 'Gear', href: '/dashboard/gear', icon: <GearIcon />, roles: ['doc', 'coach'] },
+  { label: 'Camps', href: '/dashboard/camps', icon: <CampsIcon />, roles: ['doc', 'coach'] },
+  { label: 'Analytics', href: '/dashboard/analytics', icon: <AnalyticsIcon />, roles: ['doc', 'coach'] },
   // A weekly staff summary: it names individual players' attendance and
   // coach feedback, so it is not for the squad.
   { label: 'Digest', href: '/dashboard/digest', icon: <DigestIcon />, roles: ['doc', 'coach'] },

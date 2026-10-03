@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
@@ -29,7 +30,7 @@ export async function getEventPhotos(eventId: string): Promise<EventPhoto[]> {
     .select('role, club_id')
     .eq('user_id', user.id)
     .single()
-  const isDoc = profile?.role === 'doc'
+  const isDoc = !!profile && isStaff(profile.role)
 
   const { data: photos, error } = await supabase
     .from('event_photos')

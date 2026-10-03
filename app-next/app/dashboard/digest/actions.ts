@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
@@ -21,7 +22,7 @@ async function getDocProfile() {
     .single()
 
   if (!profile?.club_id) throw new Error('No team found')
-  if (profile.role !== 'doc') throw new Error('Only the head coach can generate digests')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can generate digests')
 
   return { user, profile, supabase }
 }

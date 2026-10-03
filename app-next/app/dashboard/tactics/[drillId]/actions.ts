@@ -1,4 +1,5 @@
 'use server'
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { DrillDocSchema } from '@/lib/tactics/object-schema'
 import { writeDrillThumbnail } from '@/lib/tactics/thumbnail-store'
@@ -238,7 +239,7 @@ async function _regenerateThumbnail(drillId: string) {
   if (!drill) return
   const canEdit =
     drill.created_by === profile.id ||
-    (profile.role === 'doc' && profile.club_id === drill.club_id) ||
+    (isStaff(profile.role) && profile.club_id === drill.club_id) ||
     (profile.role === 'coach' && drill.visibility !== 'private' && drill.team_id &&
       await isRosteredOnTeam(supabase, profile.id, drill.team_id))
   if (!canEdit) throw new Error('Forbidden')

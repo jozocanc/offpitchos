@@ -211,7 +211,7 @@ export default async function TeamDetailPage({
   // Respect "View as → Player" so the head coach sees the player's team page,
   // not the admin controls, when previewing.
   const viewRole = profile?.role ? await getEffectiveRole(profile.role) : profile?.role
-  const isDOC = viewRole === 'doc'
+  const isDOC = viewRole === 'doc' || viewRole === 'coach'
   const isSquadMember = isMember(viewRole)
   const coaches = members.filter(m => m.role === 'coach')
   const playerAccounts = members.filter(m => isMember(m.role))

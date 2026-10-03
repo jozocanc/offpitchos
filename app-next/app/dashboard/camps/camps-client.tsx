@@ -62,7 +62,7 @@ export default function CampsClient({ camps, userRole, userProfileId, teams, ven
   const [registerCamp, setRegisterCamp] = useState<Camp | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const isDoc = userRole === 'doc'
+  const isDoc = userRole === 'doc' || userRole === 'coach'
   const isMemberView = !isStaff(userRole)
 
   // Split into upcoming and past

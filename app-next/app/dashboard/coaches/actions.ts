@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendCoachInviteEmail } from '@/lib/email'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ROLES, STAFF_TITLES, DEFAULT_STAFF_TITLE } from '@/lib/constants'
+import { ROLES, STAFF_TITLES, DEFAULT_STAFF_TITLE, isStaff } from '@/lib/constants'
 
 type InviteEmailState = { emailSent: boolean; emailError?: string }
 
@@ -37,7 +37,7 @@ export async function inviteCoach(
   if (profileError || !profile?.club_id) {
     throw new Error('Could not find your program')
   }
-  if (profile.role !== ROLES.DOC) throw new Error('Only the head coach can invite staff')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can invite staff')
 
   const { data: invite, error } = await supabase
     .from('invites')
@@ -106,8 +106,8 @@ export async function resendInvite(
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') {
-    throw new Error('Only the head coach can resend invites')
+  if ((!profile || !isStaff(profile.role))) {
+    throw new Error('Only coaching staff can resend invites')
   }
 
   // Fetch the invite to know email/role + scope it to this club
@@ -179,8 +179,8 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') {
-    throw new Error('Only the head coach can revoke invites')
+  if ((!profile || !isStaff(profile.role))) {
+    throw new Error('Only coaching staff can revoke invites')
   }
 
   const { error } = await supabase
@@ -198,7 +198,7 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
  }
 }
 
-// The head coach relabels a staff member. Title only, never the role: every
+// Coaching staff relabel a staff member. Title only, never the role: every
 // titled coach keeps the same staff permissions. Service client because
 // profiles_own_update only lets a user edit their own row, and the privilege
 // guard (migration 051) blocks anyone setting their own title.
@@ -217,8 +217,8 @@ export async function updateCoachTitle(
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== ROLES.DOC || !profile.club_id) {
-    throw new Error('Only the head coach can change staff titles')
+  if ((!profile || !isStaff(profile.role)) || !profile.club_id) {
+    throw new Error('Only coaching staff can change staff titles')
   }
   if (!(STAFF_TITLES as readonly string[]).includes(staffTitle)) {
     throw new Error('Pick a title from the list')

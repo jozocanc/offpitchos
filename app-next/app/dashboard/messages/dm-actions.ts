@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
@@ -45,7 +46,7 @@ async function getDMableUserIds(myUserId: string, myRole: string, myClubId: stri
   const service = createServiceClient()
   const allowed = new Set<string>()
 
-  if (myRole === 'doc') {
+  if (isStaff(myRole)) {
     // DOC can DM anyone in their club.
     const { data } = await service
       .from('profiles')

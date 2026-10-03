@@ -25,9 +25,9 @@ export default async function RosterImportPage({
     .single()
 
   if (!profile?.club_id || !isStaff(profile.role)) redirect('/dashboard')
-  const isDoc = profile.role === 'doc'
+  const isDoc = isStaff(profile.role)
 
-  // The CSV mapper also creates player accounts from emails; head coach only.
+  // The CSV mapper also creates player accounts from emails.
   if (csv === '1' && isDoc) {
     return (
       <div className="p-6 md:p-10 max-w-5xl mx-auto">

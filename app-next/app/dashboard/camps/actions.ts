@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
@@ -124,7 +125,7 @@ async function _setCampDetails(input: {
   capacity: number | null
 }) {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only the head coach can set camp details')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can set camp details')
 
   const { data: existing } = await supabase
     .from('camp_details')
@@ -245,7 +246,7 @@ export async function togglePayment(
 
 async function _togglePayment(registrationId: string) {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only the head coach can update payment status')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can update payment status')
 
   const { data: reg } = await supabase
     .from('camp_registrations')
@@ -321,7 +322,7 @@ export async function createCamp(
 
 async function _createCamp(input: CreateCampInput) {
   const { user, profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only the head coach can create camps')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can create camps')
 
   if (!input.title.trim()) throw new Error('Title is required')
   if (new Date(input.endTime) <= new Date(input.startTime)) {
@@ -456,7 +457,7 @@ async function _sendCampPaymentReminders(eventId: string): Promise<{
   emailFailed: number
 }> {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Only the head coach can send payment reminders')
+  if (!isStaff(profile.role)) throw new Error('Only coaching staff can send payment reminders')
 
   // Camp + fee for the reminder message.
   const { data: event } = await supabase

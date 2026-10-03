@@ -163,7 +163,7 @@ export default function GenerateModal({
             </div>
 
             {/* Team picker — shown if DOC has teams */}
-            {role === 'doc' && teams.length > 0 && (
+            {teams.length > 0 && (
               <div>
                 <label htmlFor="drill-team" className="block text-sm font-medium mb-1.5">
                   Team <span className="text-gray font-normal">(optional)</span>

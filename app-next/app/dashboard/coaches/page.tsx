@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Staff' }
 import CopyLink from '../teams/[id]/copy-link'
 import RevokeButton from './revoke-button'
 import TitleSelect from './title-select'
-import { DEFAULT_STAFF_TITLE } from '@/lib/constants'
+import { DEFAULT_STAFF_TITLE, isStaff } from '@/lib/constants'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 import { formatMonthDayYear } from '@/lib/format-datetime'
@@ -43,7 +43,7 @@ export default async function CoachesPage() {
 
   // Effective role, so the head coach's "View as: Player" preview is bounced
   // the same way a real player is.
-  if ((await getEffectiveRole(profile?.role ?? 'player')) !== 'doc') redirect('/dashboard')
+  if (!isStaff(await getEffectiveRole(profile?.role ?? 'player'))) redirect('/dashboard')
 
   const supabase = await createClient()
   const clubId = profile?.club_id ?? ''

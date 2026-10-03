@@ -67,7 +67,7 @@ export default function GearClient({
   const [copied, setCopied] = useState(false)
   const [copiedLinks, setCopiedLinks] = useState(false)
   const { toast } = useToast()
-  const isDoc = userRole === 'doc'
+  const isDoc = userRole === 'doc' || userRole === 'coach'
   // Any player linked to their own login? If not, the in-app request would
   // notify nobody and the collect links become the primary action.
   const hasAccounts = playersWithAccounts > 0

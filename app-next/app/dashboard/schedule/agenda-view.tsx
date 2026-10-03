@@ -115,7 +115,7 @@ export default function AgendaView({ events, onEdit, onCancel, onRestore, canEdi
                 })()}
                 isUnmarked={unmarkedEventIds?.has(event.id) ?? false}
                 coaches={coachesByTeam?.[event.team_id] ?? undefined}
-                showCoaches={userRole === 'doc'}
+                showCoaches={userRole === 'doc' || userRole === 'coach'}
                 rsvpTally={rsvpTallies?.[event.id] ?? null}
                 showRsvpTally={showRsvpTally}
                 matchSheetEnabled={matchSheets?.[event.id]}

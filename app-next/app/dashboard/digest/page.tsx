@@ -37,7 +37,7 @@ export default async function DigestPage() {
   const effectiveRole = await getEffectiveRole(profile.role ?? 'player')
   if (!isStaff(effectiveRole)) redirect('/dashboard')
 
-  const isDoc = effectiveRole === 'doc'
+  const isDoc = effectiveRole === 'doc' || effectiveRole === 'coach'
 
   // Service client read; the query is scoped to the viewer's own club.
   const service = createServiceClient()

@@ -15,7 +15,7 @@ export default async function CampsPage() {
   if (!user) redirect('/login')
   const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
   const role = await getEffectiveRole(prof?.role ?? 'player')
-  if (role !== 'doc') redirect('/dashboard')
+  if (role !== 'doc' && role !== 'coach') redirect('/dashboard')
 
   const { camps, userRole, userProfileId, teams, venues } = await getCampsData()
 

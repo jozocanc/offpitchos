@@ -153,7 +153,7 @@ export default function ImportPdfModal({
             </div>
 
             {/* Team picker — shown if DOC has teams */}
-            {role === 'doc' && teams.length > 0 && (
+            {teams.length > 0 && (
               <div>
                 <label htmlFor="import-team" className="block text-sm font-medium mb-1.5">
                   Team <span className="text-gray font-normal">(optional)</span>

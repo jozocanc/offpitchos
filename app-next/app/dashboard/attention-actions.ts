@@ -1,5 +1,6 @@
 'use server'
 
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Anthropic from '@anthropic-ai/sdk'
@@ -573,7 +574,7 @@ function getSignalsShared(
 export async function getAttentionSignals(_clientTimeZone: string = 'UTC'): Promise<AttentionResult> {
   const { profile, supabase, timeZone } = await getUserProfile()
 
-  if (profile.role !== 'doc') {
+  if (!isStaff(profile.role)) {
     return { items: [], totalSignals: 0, generatedAt: new Date().toISOString(), ranked: true }
   }
 
@@ -594,7 +595,7 @@ export async function getAttentionList(_clientTimeZone: string = 'UTC', forceRef
   const { profile, supabase, timeZone } = await getUserProfile()
 
   // Only DOCs get the triaged attention list
-  if (profile.role !== 'doc') {
+  if (!isStaff(profile.role)) {
     return { items: [], totalSignals: 0, generatedAt: new Date().toISOString(), ranked: true }
   }
 

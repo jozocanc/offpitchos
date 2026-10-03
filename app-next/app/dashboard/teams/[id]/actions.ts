@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, toActionError } from '@/lib/action-result'
-import { ROLES } from '@/lib/constants'
+import { ROLES, isStaff } from '@/lib/constants'
 
 // Creates a team join link for players. Exported name kept for compatibility.
 export async function generateParentInvite(
@@ -85,7 +85,7 @@ async function _updateTeam(teamId: string, name: string, ageGroup: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can edit teams')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can edit teams')
 
   const { error } = await supabase
     .from('teams')
@@ -120,7 +120,7 @@ async function _updateGroupChatLink(teamId: string, link: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can set the group chat link')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can set the group chat link')
 
   const { error } = await supabase
     .from('teams')
@@ -193,7 +193,7 @@ async function _removeMember(teamId: string, userId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can remove members')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can remove members')
 
   // Look up the member's profile PK to delete by profile_id
   const { data: memberProfile } = await supabase
@@ -203,6 +203,10 @@ async function _removeMember(teamId: string, userId: string) {
     .single()
 
   if (!memberProfile) throw new Error('Member profile not found')
+
+  // Any coach can manage the squad and staff, but not take the head coach off.
+  const { data: club } = await supabase.from('clubs').select('created_by').eq('id', profile.club_id).single()
+  if (club?.created_by === userId) throw new Error('The head coach can’t be removed from the team')
 
   const { error } = await supabase
     .from('team_members')
@@ -242,7 +246,7 @@ async function _setTeamPublicShare(teamId: string, enabled: boolean) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can change sharing')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can change sharing')
 
   const updates: { public_enabled: boolean; public_share_token?: string } = {
     public_enabled: enabled,
@@ -296,7 +300,7 @@ async function _rotateTeamPublicShareToken(teamId: string) {
     .eq('user_id', user.id)
     .single()
 
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can rotate the share link')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can rotate the share link')
 
   const { error } = await supabase
     .from('teams')
@@ -357,7 +361,7 @@ export async function createTeamInviteCode(teamId: string): Promise<ActionResult
     .select('club_id, role, clubs(name)')
     .eq('user_id', user.id)
     .single()
-  if (profile?.role !== 'doc') throw new Error('Only the head coach can create the team invite code')
+  if ((!profile || !isStaff(profile.role))) throw new Error('Only coaching staff can create the team invite code')
 
   const club = Array.isArray(profile.clubs) ? profile.clubs[0] : profile.clubs
   for (let attempt = 0; attempt < 5; attempt++) {

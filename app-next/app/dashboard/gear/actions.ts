@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
 import { getEffectiveRole } from '@/lib/admin-role'
-import { ROLES } from '@/lib/constants'
+import { ROLES, isStaff } from '@/lib/constants'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 import { getAuthUserId, getCurrentProfile } from '@/lib/current-profile'
 
@@ -230,8 +230,8 @@ export async function requestMissingSizes(
 async function _requestMissingSizes(): Promise<RequestSizesResult> {
   const { profile } = await getUserProfile()
 
-  if (profile.role !== 'doc') {
-    throw new Error('Only the head coach can request sizes from players')
+  if (!isStaff(profile.role)) {
+    throw new Error('Only coaching staff can request sizes from players')
   }
 
   const service = createServiceClient()

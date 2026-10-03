@@ -7,7 +7,6 @@ import AttentionPanel from './attention-panel'
 import { getAttentionList, getAttentionSignals } from './attention-actions'
 import { getOnboardingState } from './onboarding-checklist-actions'
 import { getMyCheckinState } from './check-in/actions'
-import CoachAttentionPanel from './coach-attention-panel'
 import ParentAttentionPanel from './parent-attention-panel'
 import CheckinCard from './check-in/checkin-card'
 import OnboardingChecklist from './onboarding-checklist'
@@ -90,7 +89,10 @@ async function DashboardBody({
   profileId: string | null
 }) {
   const supabase = await createClient()
-  const isDoc = userRole === 'doc'
+  // Every coach gets the head coach's dashboard. Setup tools (demo seed,
+  // onboarding checklist) stay with the head coach who created the program.
+  const isDoc = userRole === 'doc' || userRole === 'coach'
+  const isHeadCoach = userRole === 'doc'
 
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
@@ -109,7 +111,7 @@ async function DashboardBody({
   // start it now so it overlaps the wave below instead of following it. The
   // no-op catch only marks the promise handled while it waits: the component
   // awaiting it still sees any rejection, exactly as before.
-  const onboardingState = isDoc ? getOnboardingState() : undefined
+  const onboardingState = isHeadCoach ? getOnboardingState() : undefined
   onboardingState?.catch(() => {})
   const checkinState = isMember(userRole) ? getMyCheckinState() : undefined
   checkinState?.catch(() => {})
@@ -151,7 +153,7 @@ async function DashboardBody({
             .select('team_id, role, teams(name, age_group)')
             .eq('profile_id', profileId)
         : Promise.resolve({ data: null }),
-      isDoc ? getDemoSeedState() : Promise.resolve(null),
+      isHeadCoach ? getDemoSeedState() : Promise.resolve(null),
       clubId
         ? supabase
             .from('events')
@@ -185,12 +187,12 @@ async function DashboardBody({
   return (
     <>
       {/* Demo seed button (DOC only, gated by NEXT_PUBLIC_ALLOW_DEMO_SEED). */}
-      {isDoc && demoState && <DemoSeedButton state={demoState} />}
+      {isHeadCoach && demoState && <DemoSeedButton state={demoState} />}
 
       {/* Post-wizard setup checklist (DOC only, self-hides when dismissed). */}
-      {isDoc && <OnboardingChecklist statePromise={onboardingState} />}
+      {isHeadCoach && <OnboardingChecklist statePromise={onboardingState} />}
 
-      {/* AI-prioritized attention list (DOC only). Key flips on seed/clear so
+      {/* AI-prioritized attention list (all coaching staff). Key flips on seed/clear so
           React remounts the client component and re-runs its load effect. */}
       {isDoc && (
         <AttentionPanel
@@ -199,9 +201,6 @@ async function DashboardBody({
           initialRanked={attentionRanked}
         />
       )}
-
-      {/* Coach-scoped attention panel. */}
-      {userRole === 'coach' && <CoachAttentionPanel />}
 
       {/* Player-scoped attention panel. */}
       {/* Daily check-in first: it is the one thing players do every morning. */}

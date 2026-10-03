@@ -48,14 +48,14 @@ export default async function SettingsPage() {
           clubName={club?.name ?? ''}
           displayName={profile?.display_name ?? ''}
           email={user.email ?? ''}
-          isDOC={profile?.role === 'doc'}
+          isDOC={!!profile && isStaff(profile.role)}
           role={profile?.role}
           staffTitle={profile?.staff_title}
           timezone={timezone}
         />
 
         {/* Staff invites */}
-        {profile?.role === 'doc' && (
+        {!!profile && isStaff(profile.role) && (
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <h2 className="text-lg font-bold mb-2">Staff invites</h2>
             <p className="text-gray text-sm mb-4">
@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           </section>
         )}
 
-        {profile?.role === 'doc' && (
+        {!!profile && isStaff(profile.role) && (
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <h2 className="text-lg font-bold mb-2">Roster import</h2>
             <p className="text-gray text-sm mb-4">
@@ -85,9 +85,9 @@ export default async function SettingsPage() {
           </section>
         )}
 
-        {profile?.role === 'doc' && <VenuesSection />}
+        {!!profile && isStaff(profile.role) && <VenuesSection />}
 
-        {profile?.role === 'doc' && <StripeConnect />}
+        {!!profile && isStaff(profile.role) && <StripeConnect />}
 
         <DangerZone userRole={profile?.role ?? 'player'} />
 

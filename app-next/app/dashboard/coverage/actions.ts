@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getEffectiveRole } from '@/lib/admin-role'
-import { isMember } from '@/lib/constants'
+import { isMember, isStaff } from '@/lib/constants'
 import { autoAssignCoverage, rankCoverageCandidates, type RankedCandidate } from './auto-assign'
 import { sendPushToProfiles } from '@/lib/push'
 import { sendEmailToProfiles } from '@/lib/email'
@@ -239,8 +239,8 @@ export async function getAssignmentSuggestions(
 async function _getAssignmentSuggestions(requestId: string): Promise<RankedCandidate[]> {
   const { profile, supabase } = await getUserProfile()
 
-  if (profile.role !== 'doc') {
-    throw new Error('Only the head coach can view assignment suggestions')
+  if (!isStaff(profile.role)) {
+    throw new Error('Only coaching staff can view assignment suggestions')
   }
 
   const { data: request, error } = await supabase

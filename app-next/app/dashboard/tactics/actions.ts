@@ -1,4 +1,5 @@
 'use server'
+import { isStaff } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 import { writeDrillThumbnail } from '@/lib/tactics/thumbnail-store'
 import { defaultDrillVisibility } from '@/lib/tactics/drill-categories'
@@ -77,8 +78,8 @@ export async function listDrills(filters?: {
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/drill-thumbnails/${d.thumbnail_path}`
       : null,
     updatedAt: d.updated_at,
-    canEdit: d.created_by === profile.id || profile.role === 'doc',
-    canDelete: d.created_by === profile.id || profile.role === 'doc',
+    canEdit: d.created_by === profile.id || isStaff(profile.role),
+    canDelete: d.created_by === profile.id || isStaff(profile.role),
   }))
 }
 

@@ -17,7 +17,7 @@ export default async function AskPage() {
         <p className="text-sm text-gray mt-1">Get instant answers about your team: schedule, events, staff, and more.</p>
       </div>
 
-      {userRole === 'doc' && (
+      {(userRole === 'doc' || userRole === 'coach') && (
         <div className="shrink-0">
           <AiLogClient />
         </div>

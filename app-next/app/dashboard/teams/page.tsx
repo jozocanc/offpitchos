@@ -6,7 +6,7 @@ import AddTeamForm from './add-team-form'
 import { getClubTimezone } from '@/lib/club-timezone-server'
 import { formatShortDate } from '@/lib/format-datetime'
 import { ageGroupLabel } from '@/lib/team-label'
-import { isMember } from '@/lib/constants'
+import { isMember, isStaff } from '@/lib/constants'
 import { getEffectiveRole } from '@/lib/admin-role'
 
 export const metadata: Metadata = { title: 'Teams' }
@@ -56,7 +56,7 @@ export default async function TeamsPage({
     )
   }
 
-  const isDoc = (await getEffectiveRole(profile.role ?? 'player')) === 'doc'
+  const isDoc = isStaff(await getEffectiveRole(profile.role ?? 'player'))
 
   const { data: teamsRaw, error: teamsError } = await supabase
     .from('teams')

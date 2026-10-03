@@ -121,7 +121,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   }, [filterTeam, editEvent?.id, initialHighlight])
 
   const canEdit = userRole === ROLES.DOC || userRole === ROLES.COACH
-  const canCreate = userRole === ROLES.DOC
+  const canCreate = canEdit
   // Players (and legacy 'parent' rows) get the member RSVP buttons.
   const isPlayer = isMember(userRole)
 
@@ -501,7 +501,7 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
           onEdit={handleEdit}
           onCancel={handleCancel}
           onRestore={handleRestore}
-          isDoc={userRole === ROLES.DOC}
+          isDoc={canEdit}
           onCantAttend={canEdit ? setCantAttendEventId : undefined}
           onParentCantAttend={isPlayer ? handlePlayerCantMakeIt : undefined}
           onParentGoing={isPlayer ? handlePlayerGoing : undefined}

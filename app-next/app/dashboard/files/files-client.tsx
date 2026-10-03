@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function FilesClient({ files, role }: Props) {
-  const isDoc = role === 'doc'
+  const isDoc = role === 'doc' || role === 'coach'
   const router = useRouter()
   const { toast } = useToast()
   const { confirm, dialog } = useConfirm()

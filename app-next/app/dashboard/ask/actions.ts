@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
-import { isMember } from '@/lib/constants'
+import { isMember, isStaff } from '@/lib/constants'
 import { askClubQuestion } from '@/lib/ai'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
@@ -250,7 +250,7 @@ export async function getAiLog(
 
 async function _getAiLog() {
   const { profile, supabase } = await getUserProfile()
-  if (profile.role !== 'doc') throw new Error('Unauthorized')
+  if (!isStaff(profile.role)) throw new Error('Unauthorized')
 
   const { data: chats } = await supabase
     .from('ai_chats')
