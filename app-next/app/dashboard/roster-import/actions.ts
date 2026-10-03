@@ -483,8 +483,8 @@ export async function sendParentRecoveryEmails(
   const failures: { email: string; reason: string }[] = []
   let sent = 0
 
-  // Derive site origin so recovery links route through /auth/callback?next=/reset-password
-  // on the host the request came in on (works for prod, preview, and localhost).
+  // Derive site origin so recovery links land on /auth/confirm on the host the
+  // request came in on (works for prod, preview, and localhost).
   const h = await headers()
   const host = h.get('host') ?? 'offpitchos.com'
   const protocol = host.includes('localhost') ? 'http' : 'https'
@@ -504,15 +504,16 @@ export async function sendParentRecoveryEmails(
           redirectTo: `${siteOrigin}/auth/callback?next=/reset-password`,
         },
       })
-      if (linkErr || !linkData?.properties?.action_link) {
+      if (linkErr || !linkData?.properties?.hashed_token) {
         throw new Error(linkErr?.message ?? 'Recovery-link generation failed')
       }
 
-      await sendRosterRecoveryEmail({
-        to: email,
-        clubName,
-        recoveryUrl: linkData.properties.action_link,
-      })
+      // Link to our own domain, not the Supabase verify URL: Gmail flags a
+      // password email whose button points at a different site as phishing.
+      const recoveryUrl =
+        `${siteOrigin}/auth/confirm?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}` +
+        `&type=recovery&next=${encodeURIComponent('/reset-password')}`
+      await sendRosterRecoveryEmail({ to: email, clubName, recoveryUrl })
       sent++
     } catch (e: unknown) {
       const reason = e instanceof Error ? e.message : 'send failed'
