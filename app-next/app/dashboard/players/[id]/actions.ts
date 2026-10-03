@@ -204,7 +204,7 @@ async function _addFeedback(input: {
   playerId: string
   eventId: string | null
   category: string
-  rating: number
+  rating: number | null
   notes: string
 }) {
   const { profile, supabase } = await getUserProfile()
@@ -228,4 +228,47 @@ async function _addFeedback(input: {
   if (error) throw new Error(`Failed to save feedback: ${error.message}`)
 
   revalidatePath(`/dashboard/players/${input.playerId}`)
+}
+
+// Staff fix a player's name, number or position (typos, a changed number).
+export async function updatePlayerDetails(
+  ...args: Parameters<typeof _updatePlayerDetails>
+): Promise<ActionResult<Awaited<ReturnType<typeof _updatePlayerDetails>>>> {
+  try {
+    return { ok: true, data: await _updatePlayerDetails(...args) }
+  } catch (e) {
+    return toActionError(e)
+  }
+}
+
+async function _updatePlayerDetails(
+  playerId: string,
+  input: { firstName: string; lastName: string; jerseyNumber: string; position: string },
+) {
+  await assertNotPreview()
+  const { profile, supabase } = await getUserProfile()
+  if (profile.role !== 'doc' && profile.role !== 'coach') throw new Error('Only coaching staff can edit players')
+
+  const firstName = input.firstName.trim().slice(0, 60)
+  const lastName = input.lastName.trim().slice(0, 60)
+  if (!firstName || !lastName) throw new Error('First and last name are required')
+  const jersey = input.jerseyNumber.trim()
+  if (jersey && !/^\d{1,2}$/.test(jersey)) throw new Error('Jersey number must be 0 to 99')
+
+  const { data, error } = await supabase
+    .from('players')
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      jersey_number: jersey ? parseInt(jersey, 10) : null,
+      position: input.position.trim().slice(0, 40) || null,
+    })
+    .eq('id', playerId)
+    .eq('club_id', profile.club_id)
+    .select('id, team_id')
+  if (error) throw new Error(`Couldn't save: ${error.message}`)
+  if (!data || data.length === 0) throw new Error('Player not found')
+
+  revalidatePath(`/dashboard/players/${playerId}`)
+  if (data[0].team_id) revalidatePath(`/dashboard/teams/${data[0].team_id}`)
 }

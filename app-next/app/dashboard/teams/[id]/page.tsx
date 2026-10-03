@@ -210,6 +210,11 @@ export default async function TeamDetailPage({
 
   // Respect "View as → Player" so the head coach sees the player's team page,
   // not the admin controls, when previewing.
+  const { count: teamCount } = await supabase
+    .from('teams')
+    .select('id', { count: 'exact', head: true })
+    .eq('club_id', profile?.club_id ?? '')
+  const hasOtherTeams = (teamCount ?? 0) > 1
   const viewRole = profile?.role ? await getEffectiveRole(profile.role) : profile?.role
   const isDOC = viewRole === 'doc' || viewRole === 'coach'
   const isSquadMember = isMember(viewRole)
@@ -232,9 +237,11 @@ export default async function TeamDetailPage({
       <div className="mb-8">
         {/* ?all=1: the list redirects straight back here when the program has
             a single team, so the link must opt out of that. */}
-        <Link href="/dashboard/teams?all=1" className="text-gray text-sm hover:text-white transition-colors mb-4 inline-block">
-          ← All teams
-        </Link>
+        {hasOtherTeams && (
+          <Link href="/dashboard/teams?all=1" className="text-gray text-sm hover:text-white transition-colors mb-4 inline-block">
+            ← All teams
+          </Link>
+        )}
         <div className="flex items-center gap-3 mt-1">
           <h1 className="text-3xl font-black tracking-tight">{team.name}</h1>
           {ageGroupLabel(team.age_group) && (
@@ -247,7 +254,7 @@ export default async function TeamDetailPage({
           <p className="text-gray text-sm">
             {`${players.length} player${players.length !== 1 ? 's' : ''} · ${coaches.length} coach${coaches.length !== 1 ? 'es' : ''}`}
           </p>
-          {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} />}
+          {isDOC && <TeamActions teamId={team.id} name={team.name} ageGroup={team.age_group} canDelete={viewRole === 'doc'} />}
         </div>
       </div>
 
@@ -304,12 +311,12 @@ export default async function TeamDetailPage({
 
           {/* Players */}
           <section>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h2 className="text-lg font-bold">
                 Players
                 <span className="text-gray font-normal text-sm ml-2">· {players.length}</span>
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {isStaffViewer && players.length > 0 && (
                   <a
                     href={`/api/export/roster/${team.id}`}
@@ -468,6 +475,9 @@ export default async function TeamDetailPage({
             coaches and players shouldn't be generating/revoking join
             links or publishing the team. */}
         {isDOC && <div>
+          {/* The team code above already invites players; this older link
+              flow only shows for a team without one. */}
+          {!(team as any).invite_code && (
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Share invite link</h2>
@@ -499,6 +509,7 @@ export default async function TeamDetailPage({
               </div>
             )}
           </section>
+          )}
           <PublicShareCard
             teamId={team.id}
             initialEnabled={(team as any).public_enabled ?? false}

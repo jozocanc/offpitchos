@@ -23,7 +23,8 @@ interface RecentEvent {
 export default function FeedbackForm({ playerId, recentEvents }: { playerId: string; recentEvents: RecentEvent[] }) {
   const timezone = useClubTimezone()
   const [category, setCategory] = useState('general')
-  const [rating, setRating] = useState(3)
+  // No rating until the coach picks one: a quick note shouldn't count as a 3/5.
+  const [rating, setRating] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [eventId, setEventId] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -77,7 +78,7 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
       if (!fbRes.ok) { setError(fbRes.error); return }
       setSuccess(true)
       setNotes('')
-      setRating(3)
+      setRating(null)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
       setError(err.message)
@@ -110,14 +111,14 @@ export default function FeedbackForm({ playerId, recentEvents }: { playerId: str
 
       {/* Rating */}
       <div className="mb-4">
-        <label className="block text-sm text-gray mb-2">Rating</label>
+        <label className="block text-sm text-gray mb-2">Rating <span className="text-gray/60">(optional)</span></label>
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map(n => (
             <button
               key={n}
-              onClick={() => setRating(n)}
+              onClick={() => setRating(r => (r === n ? null : n))}
               className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${
-                n <= rating ? 'bg-green text-dark' : 'bg-white/5 text-gray hover:text-white'
+                rating !== null && n <= rating ? 'bg-green text-dark' : 'bg-white/5 text-gray hover:text-white'
               }`}
             >
               {n}

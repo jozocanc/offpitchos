@@ -12,9 +12,11 @@ interface TeamActionsProps {
   teamId: string
   name: string
   ageGroup: string
+  /** Deleting the team is the head coach's call only. */
+  canDelete?: boolean
 }
 
-export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps) {
+export default function TeamActions({ teamId, name, ageGroup, canDelete = false }: TeamActionsProps) {
   const [editing, setEditing] = useState(false)
   const [draftName, setDraftName] = useState(name)
   const [draftAge, setDraftAge] = useState(ageGroup)
@@ -88,13 +90,15 @@ export default function TeamActions({ teamId, name, ageGroup }: TeamActionsProps
       >
         Edit
       </button>
-      <button
-        onClick={handleDelete}
-        disabled={isPending}
-        className="text-xs font-medium text-red hover:opacity-80 transition-opacity disabled:opacity-50"
-      >
-        {isPending ? 'Deleting...' : 'Delete'}
-      </button>
+      {canDelete && (
+        <button
+          onClick={handleDelete}
+          disabled={isPending}
+          className="text-xs font-medium text-red hover:opacity-80 transition-opacity disabled:opacity-50"
+        >
+          {isPending ? 'Deleting...' : 'Delete'}
+        </button>
+      )}
       {dialog}
     </div>
   )

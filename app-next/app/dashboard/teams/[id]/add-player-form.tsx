@@ -130,7 +130,7 @@ export default function AddPlayerForm({ teamId }: { teamId: string }) {
   }
 
   return (
-    <form action={handleSubmit} className="bg-dark rounded-xl p-4 border border-green/20 space-y-3 toast-enter">
+    <form action={handleSubmit} className="w-full min-w-[280px] sm:min-w-[400px] bg-dark rounded-xl p-4 border border-green/20 space-y-3 toast-enter">
       <input type="hidden" name="teamId" value={teamId} />
       <div className="grid grid-cols-2 gap-3">
         <input

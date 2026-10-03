@@ -5,6 +5,7 @@ import { useClubTimezone } from '@/components/club-timezone'
 import { useState } from 'react'
 import Link from 'next/link'
 import FeedbackForm from './feedback-form'
+import PlayerDetailsEditor from './player-details-editor'
 import DevelopmentChart from './development-chart'
 import { submitPlayerSize } from './actions'
 import { useToast } from '@/components/toast'
@@ -58,10 +59,12 @@ function GearSizesEditor({
   initialJersey,
   initialShorts,
   isOwner,
+  isStaffViewer = false,
 }: {
   playerId: string
   initialJersey: string | null
   initialShorts: string | null
+  isStaffViewer?: boolean
   isOwner: boolean
 }) {
   const { toast } = useToast()
@@ -129,7 +132,7 @@ function GearSizesEditor({
           {saving ? 'Saving…' : hasChanges ? 'Save' : 'Saved'}
         </button>
       </div>
-      {isOwner && (
+      {isOwner && !isStaffViewer && (
         <p className="text-xs text-gray mt-3">
           Your staff use these sizes to order team gear. Please keep them up to date.
         </p>
@@ -253,7 +256,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
       )}
       {/* Player header */}
       <div className="bg-dark-secondary border border-white/5 rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-black text-white">
               {player.first_name} {player.last_name}
@@ -264,6 +267,16 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
               {player.position && <span>· {player.position}</span>}
             </div>
           </div>
+          {canAddFeedback && (
+            <PlayerDetailsEditor
+              key={`${player.first_name}|${player.last_name}|${player.jersey_number}|${player.position}`}
+              playerId={playerId}
+              firstName={player.first_name}
+              lastName={player.last_name}
+              jerseyNumber={player.jersey_number}
+              position={player.position}
+            />
+          )}
           {!canEditSize && player.jersey_size && (
             <div className="text-right text-xs text-gray">
               <p>Jersey: {gearSizeLabel(player.jersey_size)}</p>
@@ -278,6 +291,7 @@ export default function PlayerProfileClient({ player, feedback, recentEvents, ca
             initialJersey={player.jersey_size}
             initialShorts={player.shorts_size}
             isOwner={isOwner}
+            isStaffViewer={canAddFeedback}
           />
         )}
 
