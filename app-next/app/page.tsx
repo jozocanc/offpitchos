@@ -82,10 +82,11 @@ export default async function Home() {
         >
           Built for teams with a coaching staff
         </p>
-        <div className="max-w-3xl mx-auto grid grid-cols-2 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
           {[
             { k: 'College programs', v: 'Season schedule, film and tactics' },
             { k: 'Junior colleges', v: 'A full squad run by a small staff' },
+            { k: 'Club teams', v: 'One squad, one staff, one plan' },
           ].map((x) => (
             <div key={x.k} style={{ backgroundColor: cream }} className="px-6 py-7 text-center">
               <p style={{ color: ink }} className="font-semibold text-[15px] tracking-[-0.01em]">{x.k}</p>
