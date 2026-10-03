@@ -82,12 +82,10 @@ export default async function Home() {
         >
           Built for teams with a coaching staff
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
+        <div className="max-w-3xl mx-auto grid grid-cols-2 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
           {[
             { k: 'College programs', v: 'Season schedule, film and tactics' },
             { k: 'Junior colleges', v: 'A full squad run by a small staff' },
-            { k: 'Academies', v: 'Full-time staff and training blocks' },
-            { k: 'Club first teams', v: 'One squad, one staff, one plan' },
           ].map((x) => (
             <div key={x.k} style={{ backgroundColor: cream }} className="px-6 py-7 text-center">
               <p style={{ color: ink }} className="font-semibold text-[15px] tracking-[-0.01em]">{x.k}</p>
@@ -137,39 +135,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Product demo video ──────────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-6 pb-24 md:pb-32">
-        <div className="text-center mb-10">
-          <SectionLabel n="02" center>See it work</SectionLabel>
-          <h2 style={{ color: ink }} className="mt-4 text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05]">
-            One change. Everyone notified.
-          </h2>
-          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5 max-w-xl mx-auto">
-            No forms to fill in, no chat to copy-paste into. The change propagates to
-            every person it touches, and the team carries on.
-          </p>
-        </div>
-        <div
-          style={{ backgroundColor: card, borderColor: border }}
-          className="rounded-[28px] border overflow-hidden shadow-[0_24px_60px_-30px_rgba(15,21,16,0.28)]"
-        >
-          <video
-            key="product-demo-v3"
-            src="/hero/product-demo-v3.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="w-full h-auto block"
-          />
-        </div>
-      </section>
-
       {/* ── Capabilities ────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
         <div className="max-w-3xl mb-16">
-          <SectionLabel n="03">What it does</SectionLabel>
+          <SectionLabel n="02">What it does</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Built to react, not just record.
           </h2>
@@ -182,20 +151,13 @@ export default async function Home() {
             body="Cancel a session from the parking lot. The schedule updates and everyone affected is told before you have put your phone down."
             mockup={<VoiceMockup />}
           />
-          <Feature
-            reverse
-            label="Decisions, surfaced"
-            title="The five things that actually need you."
-            body="Instead of a feed to scroll, your day opens on a ranked list: who flagged in this morning's check-in, who still owes kit sizes, what is coming up next. Everything else waits."
-            mockup={<Screenshot src="/home/attention.jpg" width={1430} height={840} alt="Needs your attention list with flagged players, missing kit sizes and today's sessions" />}
-          />
         </div>
       </section>
 
       {/* ── Game day ────────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
         <div className="max-w-3xl mb-16">
-          <SectionLabel n="04">Game day</SectionLabel>
+          <SectionLabel n="03">Game day</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Everything around the ninety minutes.
           </h2>
@@ -239,9 +201,9 @@ export default async function Home() {
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
         <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <SectionLabel n="05" center>Every role</SectionLabel>
+            <SectionLabel n="04" center>Every role</SectionLabel>
             <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
-              One system. Three points of view.
+              One system for the staff and the squad.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
               Everyone sees precisely what their job requires, and nothing that belongs
@@ -257,7 +219,7 @@ export default async function Home() {
             <RoleCard
               label="Assistant coach"
               title="Runs the session"
-              points={['Squad and availability', 'Tactics board with Pep AI', 'Session plans as PDF', 'Feedback logged per player']}
+              points={['Squad and availability', 'Tactics board and game plans', 'Session plans as PDF', 'Feedback logged per player']}
             />
             <RoleCard
               label="Player"
@@ -271,7 +233,7 @@ export default async function Home() {
       {/* ── Comparison ──────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
         <div className="max-w-3xl mb-14">
-          <SectionLabel n="06">The alternative</SectionLabel>
+          <SectionLabel n="05">The alternative</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Four tools that have never met.
           </h2>
@@ -340,7 +302,7 @@ export default async function Home() {
       <section style={{ backgroundColor: card, borderColor: border }} className="border-y">
         <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
           <div className="max-w-3xl mb-14">
-            <SectionLabel n="07">Your data</SectionLabel>
+            <SectionLabel n="06">Your data</SectionLabel>
             <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
               A team roster is not a mailing list.
             </h2>
@@ -365,39 +327,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* ── Founders ────────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-        <div className="max-w-3xl mb-16">
-          <SectionLabel n="08">Who is behind it</SectionLabel>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4 text-balance">
-            Built by someone who played the game.
-          </h2>
-          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-            OffPitchOS is not built by someone who read about the problem. It is built by
-            a player who lived it inside real programs, which is why it is soccer only and
-            why it argues with the way the existing tools behave.
-          </p>
-        </div>
-
-        <div className="max-w-md">
-          <Founder
-            name="Jozo Cancar"
-            role="Founder · Builds the product"
-            actionSrc="/jozo-soccer.jpg"
-            actionAlt="Jozo Cancar playing college soccer"
-            portraitSrc="/jozo.jpg"
-            portraitAlt="Jozo Cancar, founder of OffPitchOS"
-            priority
-          >
-            Played at Tyler Junior College, then Division I at Florida Atlantic. Years around real teams, as a player and
-            on staff, showed me where the existing tools give up: coaches dropping out the
-            night before, players lost in group chats, a head coach opening six apps to
-            answer one question. I build the thing that should have existed already.
-          </Founder>
-        </div>
-      </section>
-
 
       {/* ── College pilot offer ─────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
@@ -432,6 +361,7 @@ export default async function Home() {
               'Every feature, the whole staff and every player',
               'Set up in one call, players join with a team code',
               'No card, no contract, no setup fee',
+              'You work with the founder directly',
             ].map(point => (
               <li key={point} className="flex items-start gap-3 text-[16px]" style={{ color: ink }}>
                 <span style={{ color: forest }} className="mt-0.5">✓</span>
@@ -549,64 +479,6 @@ function SectionLabel({ n, children, center }: { n: string; children: React.Reac
       <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
         {children}
       </span>
-    </div>
-  )
-}
-
-/**
- * One founder: a tilted pair of photos (on the pitch behind, portrait in front)
- * above their name and story.
- */
-function Founder({
-  name, role, actionSrc, actionAlt, portraitSrc, portraitAlt, priority, children,
-}: {
-  name: string; role: string
-  actionSrc: string; actionAlt: string
-  portraitSrc: string; portraitAlt: string
-  priority?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="relative w-[280px] h-[320px] sm:w-[320px] sm:h-[350px] mx-auto md:mx-0 shrink-0 group mb-8">
-        {/* Behind: on the pitch */}
-        <div
-          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-          className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
-        >
-          <Image
-            src={actionSrc}
-            alt={actionAlt}
-            width={190}
-            height={250}
-            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
-          />
-        </div>
-        {/* In front: portrait */}
-        <div
-          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-          className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
-        >
-          <Image
-            src={portraitSrc}
-            alt={portraitAlt}
-            width={190}
-            height={250}
-            priority={priority}
-            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
-          />
-        </div>
-      </div>
-
-      <h3 style={{ color: ink }} className="text-2xl md:text-3xl font-semibold tracking-[-0.025em]">
-        {name}
-      </h3>
-      <p style={{ color: forest }} className="text-[13px] font-semibold mt-1.5 mb-4">
-        {role}
-      </p>
-      <p style={{ color: subtext }} className="text-[16px] leading-relaxed">
-        {children}
-      </p>
     </div>
   )
 }
