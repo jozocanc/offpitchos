@@ -16,7 +16,8 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
-  const [teamId, setTeamId] = useState('')
+  // One team: the new coach joins it, so they show on its roster and schedule.
+  const [teamId, setTeamId] = useState(teams.length === 1 ? teams[0].id : '')
   const [staffTitle, setStaffTitle] = useState<string>(DEFAULT_STAFF_TITLE)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -76,7 +77,7 @@ export default function InviteCoachForm({ teams }: { teams: Team[] }) {
           <div className="bg-dark-secondary rounded-2xl p-8 w-full max-w-md border border-white/10 shadow-2xl">
             <h2 className="text-xl font-bold mb-6">Invite a staff member</h2>
             <p className="text-gray text-sm -mt-4 mb-6">
-              Every coach gets the same staff access. Only you, the head coach, manage the team.
+              They get full access, the same as you. Only the head coach can delete the program.
             </p>
 
             <label className="block text-sm font-medium text-gray mb-2" htmlFor="ic-email">

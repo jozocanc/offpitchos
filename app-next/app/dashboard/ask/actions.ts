@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { getEffectiveRole, getViewerIdentity } from '@/lib/admin-role'
 import { isMember, isStaff } from '@/lib/constants'
 import { askClubQuestion } from '@/lib/ai'
+import { getClubTimezone } from '@/lib/club-timezone-server'
 import { type ActionResult, toActionError } from '@/lib/action-result'
 
 async function getUserProfile() {
@@ -93,6 +94,8 @@ async function _askQuestion(question: string) {
 
   // Upcoming events (next 14 days)
   const now = new Date()
+  // Times go to Pep in the team's own zone; a Texas 7 PM kickoff read as 8 PM in New York.
+  const tz = await getClubTimezone()
   const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
 
   const { data: events } = await supabase
@@ -111,9 +114,9 @@ async function _askQuestion(question: string) {
       title: e.title,
       type: e.type,
       team: team?.name ?? 'Team',
-      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
-      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
-      endTime: new Date(e.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
+      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: tz }),
+      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }),
+      endTime: new Date(e.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }),
       venue: venue?.name ?? 'TBD',
       address: e.address ?? venue?.address ?? null,
       status: e.status,
@@ -136,7 +139,7 @@ async function _askQuestion(question: string) {
       title: a.title,
       body: a.body,
       team: aTeam?.name ?? null,
-      date: new Date(a.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
+      date: new Date(a.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: tz }),
     }
   })
 
@@ -163,8 +166,8 @@ async function _askQuestion(question: string) {
       title: e.title,
       team: cTeam?.name ?? 'Team',
       ageGroup: cTeam?.age_group ?? '',
-      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }),
-      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }),
+      date: new Date(e.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: tz }),
+      time: new Date(e.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }),
       venue: cVenue?.name ?? 'TBD',
       fee: detail?.fee_cents ? `$${(detail.fee_cents / 100).toFixed(2)}` : 'Free',
       capacity: detail?.capacity ?? 'Unlimited',
@@ -217,7 +220,7 @@ async function _askQuestion(question: string) {
     recentAnnouncements,
     upcomingCamps,
     pendingCoverage,
-    today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }),
+    today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: tz }),
     userRole: previewing ? 'player' : profile.role,
     userName: userProfile?.display_name ?? 'User',
     myPlayers: myPlayers.length > 0 ? myPlayers : undefined,

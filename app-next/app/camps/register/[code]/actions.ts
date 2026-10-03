@@ -2,6 +2,7 @@
 
 import { createServiceClient } from '@/lib/supabase/service'
 import { type ActionResult, toActionError } from '@/lib/action-result'
+import { getClubTimezoneById } from '@/lib/club-timezone-server'
 
 // Public camp lookup — no auth required. Uses service client to bypass
 // RLS so anyone with the link can see camp details.
@@ -10,7 +11,7 @@ export async function getCampByCode(code: string) {
 
   const { data: detail } = await service
     .from('camp_details')
-    .select('id, event_id, fee_cents, capacity, registration_code, description, events(title, start_time, end_time, status, teams(name, age_group), venues(name, address))')
+    .select('id, event_id, fee_cents, capacity, registration_code, description, events(club_id, title, start_time, end_time, status, teams(name, age_group), venues(name, address))')
     .eq('registration_code', code.toUpperCase())
     .single()
 
@@ -19,6 +20,9 @@ export async function getCampByCode(code: string) {
   const event = Array.isArray(detail.events) ? detail.events[0] : detail.events
   const team = event?.teams ? (Array.isArray(event.teams) ? event.teams[0] : event.teams) : null
   const venue = event?.venues ? (Array.isArray(event.venues) ? event.venues[0] : event.venues) : null
+
+  // Shown in the camp's own zone, not the server's or a fixed Eastern one.
+  const tz = await getClubTimezoneById((event as { club_id?: string } | null)?.club_id)
 
   // Count current registrations
   const { count } = await service
@@ -31,16 +35,16 @@ export async function getCampByCode(code: string) {
     eventId: detail.event_id,
     title: event?.title ?? 'Camp',
     date: event?.start_time
-      ? new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
+      ? new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: tz })
       : '',
     endDate: event?.end_time
-      ? new Date(event.end_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })
+      ? new Date(event.end_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: tz })
       : '',
     startTime: event?.start_time
-      ? new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+      ? new Date(event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })
       : '',
     endTime: event?.end_time
-      ? new Date(event.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+      ? new Date(event.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })
       : '',
     team: team?.name ?? null,
     ageGroup: team?.age_group ?? null,

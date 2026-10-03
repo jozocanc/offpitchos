@@ -109,7 +109,7 @@ export default function NewAnnouncementModal({
           onChange={e => setTeamId(e.target.value)}
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green transition-colors appearance-none mb-2"
         >
-          {isDoc && <option value="">All teams</option>}
+          {isDoc && <option value="">{teams.length === 1 ? teamLabel(teams[0].name, teams[0].age_group) : 'All teams'}</option>}
           {teams.map(t => (
             <option key={t.id} value={t.id}>{teamLabel(t.name, t.age_group)}</option>
           ))}

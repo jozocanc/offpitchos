@@ -161,7 +161,7 @@ export default async function CoachesPage() {
         <div>
           <h1 className="text-3xl font-black tracking-tight">Coaching staff</h1>
           <p className="text-gray text-sm mt-1">
-            You are the head coach. Every coach gets the same staff access; only you manage the team.
+            Every coach on the staff has full access. Only the head coach can delete the program.
           </p>
         </div>
         <InviteCoachForm teams={teams ?? []} />

@@ -118,7 +118,7 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
             {msg.answer ? (
               <div className="flex flex-col items-start group">
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[80%]">
-                  <p className="text-white/90 text-sm whitespace-pre-wrap">{msg.answer}</p>
+                  <p className="text-white/90 text-sm whitespace-pre-wrap">{withBold(msg.answer)}</p>
                 </div>
                 <button
                   onClick={() => handleCopy(msg.id, msg.answer)}
@@ -180,5 +180,14 @@ export default function AskClient({ chatHistory, userRole }: { chatHistory: Chat
         )}
       </form>
     </div>
+  )
+}
+
+/** Pep writes **bold** for key facts; render it instead of showing the stars. */
+function withBold(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4
+      ? <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>
+      : part,
   )
 }

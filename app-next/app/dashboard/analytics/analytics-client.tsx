@@ -28,7 +28,7 @@ interface AnalyticsData {
   activity: {
     eventsInRange: number
     cancelledInRange: number
-    attendanceRate: number
+    attendanceRate: number | null
     totalAttendance: number
     presentCount: number
   }
@@ -133,7 +133,7 @@ export default function AnalyticsClient({ data: initialData }: { data: Analytics
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <StatCard label="Events" value={activity.eventsInRange} />
           <StatCard label="Cancelled" value={activity.cancelledInRange} color={activity.cancelledInRange > 0 ? 'red' : undefined} />
-          <StatCard label="Attendance rate" value={`${activity.attendanceRate}%`} color="green" />
+          <StatCard label="Attendance rate" value={activity.attendanceRate === null ? '—' : `${activity.attendanceRate}%`} color="green" />
           <StatCard label="Feedback notes" value={totalFeedback} />
         </div>
 

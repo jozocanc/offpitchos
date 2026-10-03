@@ -424,7 +424,7 @@ function NewMessagePicker({
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold truncate">{u.name}</p>
                 <p className="text-gray text-xs truncate">
-                  {u.role}{u.teams.length > 0 ? ` · ${u.teams.join(', ')}` : ''}
+                  {u.role === 'doc' ? 'Head Coach' : u.role === 'coach' ? 'Coach' : 'Player'}{u.teams.length > 0 ? ` · ${u.teams.join(', ')}` : ''}
                 </p>
               </div>
             </button>

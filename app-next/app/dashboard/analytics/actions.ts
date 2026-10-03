@@ -117,7 +117,8 @@ export async function getAnalyticsData(period: string = '30d') {
     .lte('start_time', rangeEnd.toISOString())
 
   const recentEventIds = (recentEvents ?? []).map(e => e.id)
-  let attendanceRate = 0
+  // null = nothing marked yet, shown as a dash rather than a misleading 0%.
+  let attendanceRate: number | null = null
   let totalAttendance = 0
   let presentCount = 0
 
@@ -132,7 +133,7 @@ export async function getAnalyticsData(period: string = '30d') {
 
     totalAttendance = attendanceData?.length ?? 0
     presentCount = attendanceData?.filter(a => a.status === 'present' || a.status === 'late').length ?? 0
-    attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0
+    attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : null
 
     // Map event_id -> date for grouping
     const eventDateMap: Record<string, string> = {}

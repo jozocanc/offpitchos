@@ -71,7 +71,11 @@ export async function collectClubStats(clubId: string, anchor: Date = new Date()
   const timezone = await getClubTimezoneById(clubId)
   const service = createServiceClient()
 
-  const weekStart = startOfWeek(new Date(anchor.getTime() - 7 * 24 * 60 * 60 * 1000))
+  // Recap the last finished week. On Friday or Saturday a coach clicking
+  // Generate means "this week": recapping the one before skipped this week's
+  // games entirely.
+  const lateWeek = anchor.getDay() >= 5
+  const weekStart = startOfWeek(lateWeek ? anchor : new Date(anchor.getTime() - 7 * 24 * 60 * 60 * 1000))
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
 
   // "Coming up" has to mean the future, whenever the digest is generated.
