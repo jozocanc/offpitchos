@@ -129,16 +129,31 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
   // Agenda is the default view and the only one that renders scrollable event
   // cards, so we don't force-switch views here (which would trip React 19's
   // set-state-in-effect rule).
+  // A past event (e.g. "Mark attendance" for last night's game) isn't in the
+  // upcoming list, so past events are loaded and shown first.
   useEffect(() => {
     if (!initialHighlight) return
-    const t = setTimeout(() => {
+    let cancelled = false
+    const flash = () => {
       const el = document.querySelector(`[data-event-id="${initialHighlight}"]`) as HTMLElement | null
-      if (!el) return
+      if (!el) return false
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el.classList.add('attention-highlight')
       setTimeout(() => el.classList.remove('attention-highlight'), 3200)
+      return true
+    }
+    const t = setTimeout(async () => {
+      if (flash() || events.some(e => e.id === initialHighlight)) return
+      const pastRes = await getPastEvents()
+      if (cancelled || !pastRes.ok) return
+      setPastEvents(pastRes.data.events as Event[])
+      setUnmarkedPastEventIds(new Set(pastRes.data.unmarkedEventIds))
+      setPastLoaded(true)
+      setShowPast(true)
+      setTimeout(() => { if (!cancelled) flash() }, 150)
     }, 100)
-    return () => clearTimeout(t)
+    return () => { cancelled = true; clearTimeout(t) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialHighlight])
 
   // The calendar always shows whole months, so it needs past events loaded

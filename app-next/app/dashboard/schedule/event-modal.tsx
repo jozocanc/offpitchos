@@ -4,7 +4,7 @@ import Portal from '@/components/portal'
 
 import { useState, useTransition, useEffect } from 'react'
 import { EVENT_TYPES, EVENT_TYPE_LABELS, DAYS_OF_WEEK, type EventType } from '@/lib/constants'
-import { createEvent, updateEvent } from './actions'
+import { createEvent, updateEvent, deleteEvent } from './actions'
 import { checkConflicts, suggestAlternatives } from './conflict-actions'
 import type { Conflict, Suggestion } from './conflict-actions'
 import ConflictBanner from './conflict-banner'
@@ -68,13 +68,17 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
   const [date, setDate] = useState(editEvent ? isoToWallDate(editEvent.start_time, tz) : '')
   const [startTime, setStartTime] = useState(editEvent ? isoToWallTime(editEvent.start_time, tz) : '')
   const [endTime, setEndTime] = useState(editEvent ? isoToWallTime(editEvent.end_time, tz) : '')
-  const [venueId, setVenueId] = useState(editEvent?.venue_id ?? '')
+  // A program with one home field gets it pre-selected on new events.
+  const defaultVenue = !editEvent && venues.length === 1 ? venues[0] : null
+  const [venueId, setVenueId] = useState(editEvent?.venue_id ?? defaultVenue?.id ?? '')
   const [address, setAddress] = useState(
-    editEvent?.address ?? (editEvent?.venue_id ? (venues.find(v => v.id === editEvent.venue_id)?.address ?? '') : '')
+    editEvent?.address ??
+      (editEvent?.venue_id ? (venues.find(v => v.id === editEvent.venue_id)?.address ?? '') : (defaultVenue?.address ?? ''))
   )
   const [addressTouched, setAddressTouched] = useState(!!editEvent?.address)
   const [link, setLink] = useState(editEvent?.link ?? '')
   const [notes, setNotes] = useState(editEvent?.notes ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [recurringEnabled, setRecurringEnabled] = useState(false)
   const [recurringDays, setRecurringDays] = useState<number[]>([])
   const [recurringEndDate, setRecurringEndDate] = useState('')
@@ -407,7 +411,7 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
             setAddress(e.target.value)
             setAddressTouched(true)
           }}
-          placeholder="e.g. 1700 Bayshore Blvd, Tampa, FL"
+          placeholder="Street address, city"
           className="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray focus:outline-none focus:border-green transition-colors mb-4"
         />
 
@@ -644,6 +648,29 @@ export default function EventModal({ teams, venues, editEvent, onClose, userRole
         )}
 
         {error && <p className="text-red text-sm mb-4">{error}</p>}
+
+        {/* Delete, for an event created by mistake. Cancel keeps it on the
+            schedule crossed out; delete removes it. Second tap confirms. */}
+        {isEditing && editEvent && (userRole === 'doc' || userRole === 'coach') && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              if (!confirmDelete) { setConfirmDelete(true); return }
+              startTransition(async () => {
+                const res = await deleteEvent(editEvent.id)
+                if (!res.ok) { setError(res.error); setConfirmDelete(false); return }
+                toast('Event deleted', 'success')
+                onClose()
+              })
+            }}
+            className={`w-full text-sm font-semibold py-2.5 rounded-xl border transition-colors mb-2 ${
+              confirmDelete ? 'bg-red text-white border-red' : 'text-red border-red/30 hover:bg-red/5'
+            }`}
+          >
+            {confirmDelete ? 'Tap again: deletes it with its attendance, RSVPs and any game stats' : 'Delete event'}
+          </button>
+        )}
 
         <div className="flex gap-3 mt-6">
           <button

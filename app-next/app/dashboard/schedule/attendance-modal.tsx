@@ -196,6 +196,11 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
               </div>
             </div>
           )}
+          {!loading && totalPlayers > 0 && (
+            <p className="text-xs text-gray mt-2">
+              P present · L late · A absent · E excused · + add a note
+            </p>
+          )}
         </div>
 
         {/* Player list */}
@@ -250,7 +255,8 @@ export default function AttendanceModal({ eventId, teamId, eventTitle, onClose }
                             aria-label={`Mark ${player.first_name} ${status}`}
                             aria-pressed={currentStatus === status}
                             onClick={() => handleMark(player.id, status)}
-                            className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all capitalize ${
+                            title={status[0].toUpperCase() + status.slice(1)}
+                            className={`text-xs font-bold min-w-8 min-h-8 px-2 py-1.5 rounded-md border transition-all capitalize ${
                               currentStatus === status
                                 ? STATUS_COLORS[status]
                                 : 'border-white/5 text-gray/50 hover:border-white/20 hover:text-gray'

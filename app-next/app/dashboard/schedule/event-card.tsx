@@ -195,7 +195,8 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
             const venueName = venue?.name ?? null
             const effectiveAddress = event.address || venue?.address || null
             if (!venueName && !effectiveAddress) return null
-            const mapsHref = effectiveAddress
+            // "Site TBD" isn't a place to search for.
+            const mapsHref = effectiveAddress && !/\b(tbd|tba)\b/i.test(effectiveAddress)
               ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(effectiveAddress)}`
               : null
             return (
@@ -204,7 +205,8 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
                   </svg>
-                  <span>{venueName ?? 'Location'}</span>
+                  {/* An away game often has only an address: show it as the place. */}
+                  <span>{venueName ?? effectiveAddress}</span>
                   {mapsHref && (
                     <a
                       href={mapsHref}
@@ -217,7 +219,7 @@ export default function EventCard({ event, onEdit, onCancel, onRestore, canEdit,
                     </a>
                   )}
                 </div>
-                {effectiveAddress && (
+                {venueName && effectiveAddress && (
                   <p className="text-xs text-gray mt-0.5 pl-[18px]">{effectiveAddress}</p>
                 )}
               </div>

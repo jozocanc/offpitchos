@@ -323,6 +323,7 @@ export default function LineupEditor({
       {picker?.kind === 'slot' && slot && (
         <PlayerPicker
           title={`${slot.label}: pick a player`}
+          slotLabel={slot.label}
           players={players}
           tags={tags}
           currentId={slot.player_id}

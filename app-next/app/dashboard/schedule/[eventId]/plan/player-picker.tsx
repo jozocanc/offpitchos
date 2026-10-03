@@ -6,6 +6,8 @@ import {
   AVAILABILITY_LABELS,
   AVAILABILITY_RANK,
   playerFullName,
+  positionLine,
+  slotAccepts,
   type Availability,
   type PlanPlayer,
 } from '@/lib/game-plan'
@@ -40,6 +42,7 @@ export default function PlayerPicker({
   onClose,
   showAvailability = true,
   actions,
+  slotLabel,
 }: {
   title: string
   description?: string
@@ -52,6 +55,8 @@ export default function PlayerPicker({
   showAvailability?: boolean
   /** Extra buttons above the list (clear slot, captain, delete marker...). */
   actions?: React.ReactNode
+  /** Lineup slot being filled ("ST", "LB"): players who play there list first. */
+  slotLabel?: string
 }) {
   const [query, setQuery] = useState('')
   const pick = (id: string) => {
@@ -59,15 +64,27 @@ export default function PlayerPicker({
     onPick(id)
   }
 
+  // For a slot: players whose position fits first, then players with no
+  // position, then the rest (keepers for an outfield slot, and vice versa).
+  const fit = useMemo(() => {
+    if (!slotLabel) return () => 0
+    const accepts = slotAccepts(slotLabel)
+    return (p: PlanPlayer) => {
+      const line = positionLine(p.position)
+      return line === null ? 1 : accepts.includes(line) ? 0 : 2
+    }
+  }, [slotLabel])
+
   const sorted = useMemo(
     () =>
       [...players].sort(
         (a, b) =>
           (showAvailability ? AVAILABILITY_RANK[a.availability] - AVAILABILITY_RANK[b.availability] : 0) ||
+          fit(a) - fit(b) ||
           (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999) ||
           a.lastName.localeCompare(b.lastName),
       ),
-    [players, showAvailability],
+    [players, showAvailability, fit],
   )
 
   const q = query.trim().toLowerCase()
