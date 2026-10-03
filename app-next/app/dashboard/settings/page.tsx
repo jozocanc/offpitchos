@@ -74,13 +74,13 @@ export default async function SettingsPage() {
           <section className="bg-dark-secondary rounded-2xl p-6 border border-white/5">
             <h2 className="text-lg font-bold mb-2">Roster import</h2>
             <p className="text-gray text-sm mb-4">
-              Bulk-import your players from a CSV roster.
+              Bring in your players from any roster file: PDF, screenshot, photo, Excel, CSV or Word.
             </p>
             <Link
               href="/dashboard/roster-import"
               className="inline-block text-sm font-bold text-green hover:underline"
             >
-              Upload a CSV →
+              Import a roster →
             </Link>
           </section>
         )}

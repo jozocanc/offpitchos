@@ -319,6 +319,14 @@ export default async function TeamDetailPage({
                     Download
                   </a>
                 )}
+                {isStaffViewer && (
+                  <a
+                    href="/dashboard/roster-import"
+                    className="text-sm font-medium text-gray hover:text-white border border-white/10 rounded-xl px-3 py-2 transition-colors whitespace-nowrap"
+                  >
+                    Import
+                  </a>
+                )}
                 {isDOC && <AddPlayerForm teamId={team.id} />}
               </div>
             </div>

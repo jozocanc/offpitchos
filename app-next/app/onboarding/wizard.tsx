@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AGE_GROUPS, NO_AGE_GROUP, NO_AGE_GROUP_LABEL } from '@/lib/constants'
 import { completeOnboarding } from './actions'
 import Wordmark from '@/components/wordmark'
-import ImportWizard from '@/app/dashboard/roster-import/import-wizard'
+import FileImport from '@/app/dashboard/roster-import/file-import'
 
 export default function OnboardingWizard() {
   const router = useRouter()
@@ -63,10 +63,7 @@ export default function OnboardingWizard() {
             <Wordmark size="xl" />
             <p className="text-gray text-sm mt-2">Team created. Bring in your players, or skip and add them later.</p>
           </div>
-          <ImportWizard
-            variant="onboarding"
-            onComplete={() => router.push('/dashboard')}
-          />
+          <FileImport onDone={() => router.push('/dashboard')} />
           <p className="text-center text-gray text-xs mt-6">Step 3 of 3</p>
         </div>
       </main>

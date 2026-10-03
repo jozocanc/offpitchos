@@ -186,7 +186,7 @@ export default async function TeamsPage({
               href="/dashboard/roster-import"
               className="text-sm font-bold text-green hover:underline"
             >
-              Import roster from CSV →
+              Import roster from a file →
             </Link>
             <AddTeamForm />
           </div>
