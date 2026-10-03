@@ -82,12 +82,10 @@ export default async function Home() {
         >
           Built for teams with a coaching staff
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
+        <div className="max-w-3xl mx-auto grid grid-cols-2 gap-px rounded-3xl overflow-hidden" style={{ backgroundColor: border }}>
           {[
             { k: 'College programs', v: 'Season schedule, film and tactics' },
             { k: 'Junior colleges', v: 'A full squad run by a small staff' },
-            { k: 'Academies', v: 'Full-time staff and training blocks' },
-            { k: 'Club first teams', v: 'One squad, one staff, one plan' },
           ].map((x) => (
             <div key={x.k} style={{ backgroundColor: cream }} className="px-6 py-7 text-center">
               <p style={{ color: ink }} className="font-semibold text-[15px] tracking-[-0.01em]">{x.k}</p>
@@ -137,39 +135,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Product demo video ──────────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-6 pb-24 md:pb-32">
-        <div className="text-center mb-10">
-          <SectionLabel n="02" center>See it work</SectionLabel>
-          <h2 style={{ color: ink }} className="mt-4 text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05]">
-            One change. Everyone notified.
-          </h2>
-          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5 max-w-xl mx-auto">
-            No forms to fill in, no chat to copy-paste into. The change propagates to
-            every person it touches, and the team carries on.
-          </p>
-        </div>
-        <div
-          style={{ backgroundColor: card, borderColor: border }}
-          className="rounded-[28px] border overflow-hidden shadow-[0_24px_60px_-30px_rgba(15,21,16,0.28)]"
-        >
-          <video
-            key="product-demo-v3"
-            src="/hero/product-demo-v3.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="w-full h-auto block"
-          />
-        </div>
-      </section>
-
       {/* ── Capabilities ────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
         <div className="max-w-3xl mb-16">
-          <SectionLabel n="03">What it does</SectionLabel>
+          <SectionLabel n="02">What it does</SectionLabel>
           <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
             Built to react, not just record.
           </h2>
@@ -182,18 +151,48 @@ export default async function Home() {
             body="Cancel a session from the parking lot. The schedule updates and everyone affected is told before you have put your phone down."
             mockup={<VoiceMockup />}
           />
+        </div>
+      </section>
+
+      {/* ── Game day ────────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
+        <div className="max-w-3xl mb-16">
+          <SectionLabel n="03">Game day</SectionLabel>
+          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
+            Everything around the ninety minutes.
+          </h2>
+          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
+            Who is fit, who starts, where everyone stands on a corner, and what the
+            numbers said afterwards. Built for the way a college staff actually runs a match week.
+          </p>
+        </div>
+
+        <div className="space-y-24 md:space-y-32">
           <Feature
-            reverse
-            label="Decisions, surfaced"
-            title="The five things that actually need you."
-            body="Instead of a feed to scroll, your day opens on a ranked list: who is unavailable, which players still owe forms, what is unanswered. Everything else waits."
-            mockup={<AttentionMockup />}
+            label="Game report"
+            title="Upload the box score. Every profile updates."
+            body="Drop in the stats sheet in any format: PDF, spreadsheet, Word or a photo. OffPitchOS reads it, matches every line to your roster and shows it to you first. Fix anything that looks wrong, save, and minutes, goals, assists and saves land on each player's season record."
+            mockup={<Screenshot src="/home/game-report.jpg" width={1000} height={760} alt="Game report review screen with each player's minutes, goals and assists" />}
           />
           <Feature
-            label="Sessions and tactics"
-            title="From an idea to a session plan."
-            body="Describe a drill in plain language and Pep AI builds it on the board: animated, printable, attached to the session, and shared with the staff who need it."
-            mockup={<EventMockup />}
+            reverse
+            label="Game plan"
+            title="Lineup, corners and tactics on one printout."
+            body="Pick the formation, tap a player into each spot and names and numbers fill in. Set attacking and defending corners on the same plan, add your tactics, then choose exactly which pages to print for the locker room."
+            mockup={<Screenshot src="/home/game-plan.jpg" width={1176} height={1025} alt="Lineup builder showing a 4-3-3 with names and numbers" />}
+          />
+          <Feature
+            label="Readiness"
+            title="Know who is fit before training starts."
+            body="Every morning players rate sleep, soreness and energy and mark themselves fit, limited or out. It takes them ten seconds. You open one board and see the whole squad, with a note on anyone carrying a knock."
+            mockup={<Screenshot src="/home/readiness.jpg" width={1372} height={886} alt="Readiness board with fit, limited and out players" />}
+          />
+          <Feature
+            reverse
+            label="Match page and travel"
+            title="The visitors know where to go. So does your bus."
+            body="Send the visiting team one link with arrival time, parking, locker room and kit colours. For away games, the trip plan sits on the fixture: departure, return, dress code and what to bring, pushed to every player."
+            mockup={<MatchTravelShots />}
           />
         </div>
       </section>
@@ -204,7 +203,7 @@ export default async function Home() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <SectionLabel n="04" center>Every role</SectionLabel>
             <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] text-balance leading-[1.05] mt-4">
-              One system. Three points of view.
+              One system for the staff and the squad.
             </h2>
             <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
               Everyone sees precisely what their job requires, and nothing that belongs
@@ -220,7 +219,7 @@ export default async function Home() {
             <RoleCard
               label="Assistant coach"
               title="Runs the session"
-              points={['Squad and availability', 'Tactics board with Pep AI', 'Session plans as PDF', 'Feedback logged per player']}
+              points={['Squad and availability', 'Tactics board and game plans', 'Session plans as PDF', 'Feedback logged per player']}
             />
             <RoleCard
               label="Player"
@@ -329,38 +328,49 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Founders ────────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-        <div className="max-w-3xl mb-16">
-          <SectionLabel n="07">Who is behind it</SectionLabel>
-          <h2 style={{ color: ink }} className="text-3xl md:text-5xl font-semibold tracking-[-0.03em] leading-[1.05] mt-4 text-balance">
-            Built by someone who played the game.
-          </h2>
-          <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-6">
-            OffPitchOS is not built by someone who read about the problem. It is built by
-            a player who lived it inside real programs, which is why it is soccer only and
-            why it argues with the way the existing tools behave.
-          </p>
-        </div>
-
-        <div className="max-w-md">
-          <Founder
-            name="Jozo Cancar"
-            role="Founder · Builds the product"
-            actionSrc="/jozo-soccer.jpg"
-            actionAlt="Jozo Cancar playing college soccer"
-            portraitSrc="/jozo.jpg"
-            portraitAlt="Jozo Cancar, founder of OffPitchOS"
-            priority
-          >
-            Played at Tyler Junior College, then Division I at Florida Atlantic. Years around real teams, as a player and
-            on staff, showed me where the existing tools give up: coaches dropping out the
-            night before, players lost in group chats, a head coach opening six apps to
-            answer one question. I build the thing that should have existed already.
-          </Founder>
+      {/* ── College pilot offer ─────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24 md:pb-32">
+        <div
+          style={{ backgroundColor: card, borderColor: border }}
+          className="rounded-[28px] border p-8 md:p-12 grid md:grid-cols-[1.1fr_1fr] gap-10 items-center"
+        >
+          <div>
+            <span style={{ color: forest }} className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+              For college programs
+            </span>
+            <h2 style={{ color: ink }} className="text-3xl md:text-4xl font-semibold tracking-[-0.03em] text-balance leading-[1.08] mt-3">
+              Free pilot for the 2026 season.
+            </h2>
+            <p style={{ color: subtext }} className="text-[17px] leading-relaxed mt-5">
+              Run your fall season on OffPitchOS at no cost. If it does not earn its place
+              by the end of the season, walk away. Nothing to cancel.
+            </p>
+            <a
+              href={DEMO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ backgroundColor: forest, color: cream }}
+              className="inline-block font-semibold px-7 py-4 rounded-full hover:opacity-90 transition-opacity text-base mt-8"
+            >
+              Apply for the pilot →
+            </a>
+          </div>
+          <ul className="space-y-4">
+            {[
+              'Your roster and full schedule loaded for you',
+              'Every feature, the whole staff and every player',
+              'Set up in one call, players join with a team code',
+              'No card, no contract, no setup fee',
+              'You work with the founder directly',
+            ].map(point => (
+              <li key={point} className="flex items-start gap-3 text-[16px]" style={{ color: ink }}>
+                <span style={{ color: forest }} className="mt-0.5">✓</span>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
-
 
       {/* ── Closing CTA ─────────────────────────────────────────────────── */}
       <section className="px-6 pb-24 md:pb-32">
@@ -473,64 +483,6 @@ function SectionLabel({ n, children, center }: { n: string; children: React.Reac
   )
 }
 
-/**
- * One founder: a tilted pair of photos (on the pitch behind, portrait in front)
- * above their name and story.
- */
-function Founder({
-  name, role, actionSrc, actionAlt, portraitSrc, portraitAlt, priority, children,
-}: {
-  name: string; role: string
-  actionSrc: string; actionAlt: string
-  portraitSrc: string; portraitAlt: string
-  priority?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="relative w-[280px] h-[320px] sm:w-[320px] sm:h-[350px] mx-auto md:mx-0 shrink-0 group mb-8">
-        {/* Behind: on the pitch */}
-        <div
-          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-          className="absolute top-0 left-0 rounded-2xl overflow-hidden border-4 shadow-[0_16px_40px_-16px_rgba(15,21,16,0.35)] -rotate-[8deg] transition-transform duration-500 ease-out group-hover:-rotate-[10deg] group-hover:-translate-x-1 group-hover:scale-[1.03]"
-        >
-          <Image
-            src={actionSrc}
-            alt={actionAlt}
-            width={190}
-            height={250}
-            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
-          />
-        </div>
-        {/* In front: portrait */}
-        <div
-          style={{ borderColor: border, backgroundColor: '#FFFFFF' }}
-          className="absolute bottom-0 right-0 rounded-2xl overflow-hidden border-4 shadow-[0_24px_60px_-20px_rgba(15,21,16,0.45)] rotate-[6deg] transition-transform duration-500 ease-out group-hover:rotate-[8deg] group-hover:translate-x-1 group-hover:scale-[1.04]"
-        >
-          <Image
-            src={portraitSrc}
-            alt={portraitAlt}
-            width={190}
-            height={250}
-            priority={priority}
-            className="block w-[160px] h-[210px] sm:w-[190px] sm:h-[250px] object-cover"
-          />
-        </div>
-      </div>
-
-      <h3 style={{ color: ink }} className="text-2xl md:text-3xl font-semibold tracking-[-0.025em]">
-        {name}
-      </h3>
-      <p style={{ color: forest }} className="text-[13px] font-semibold mt-1.5 mb-4">
-        {role}
-      </p>
-      <p style={{ color: subtext }} className="text-[16px] leading-relaxed">
-        {children}
-      </p>
-    </div>
-  )
-}
-
 /** Alternating text/mockup row used for the capability section. */
 function Feature({
   label, title, body, mockup, reverse,
@@ -549,6 +501,47 @@ function Feature({
         <p style={{ color: subtext }} className="text-[17px] leading-relaxed">{body}</p>
       </div>
       <div className={reverse ? 'md:order-1' : ''}>{mockup}</div>
+    </div>
+  )
+}
+
+/** A real product screenshot in a light frame. */
+function Screenshot({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) {
+  return (
+    <div
+      style={{ backgroundColor: card, borderColor: border }}
+      className="rounded-[22px] border p-2 shadow-[0_24px_60px_-30px_rgba(15,21,16,0.35)]"
+    >
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        sizes="(min-width: 768px) 560px, 100vw"
+        className="block w-full h-auto rounded-[16px]"
+      />
+    </div>
+  )
+}
+
+/** Away-trip card with the visitors' match page layered over its corner. */
+function MatchTravelShots() {
+  return (
+    <div className="relative pb-40 sm:pb-52">
+      <Screenshot src="/home/travel.jpg" width={1568} height={622} alt="Away game with the bus departure, return and itinerary" />
+      <div
+        style={{ backgroundColor: card, borderColor: border }}
+        className="absolute right-3 bottom-0 w-[52%] sm:w-[46%] rounded-[18px] border p-1.5 shadow-[0_24px_60px_-24px_rgba(15,21,16,0.45)] rotate-[2deg]"
+      >
+        <Image
+          src="/home/match-page.jpg"
+          alt="Match day page for the visiting team with kickoff, venue, arrival and parking"
+          width={830}
+          height={1000}
+          sizes="(min-width: 768px) 260px, 52vw"
+          className="block w-full h-auto rounded-[13px]"
+        />
+      </div>
     </div>
   )
 }
@@ -573,7 +566,7 @@ function RoleCard({ label, title, points }: { label: string; title: string; poin
   )
 }
 
-// ---- Stylized product mockups (CSS, not screenshots) ----
+// ---- Voice mockup (CSS): the voice flow cannot be screenshotted ----
 
 const mockSurface = '#0F1510'
 const mockSurfaceLift = '#1A211C'
@@ -584,8 +577,6 @@ const mockGreenSoft = 'rgba(52, 211, 153, 0.16)'
 const mockBorder = 'rgba(255, 255, 255, 0.08)'
 const mockRed = '#F87171'
 const mockRedSoft = 'rgba(248, 113, 113, 0.16)'
-const mockAmber = '#FBBF24'
-const mockAmberSoft = 'rgba(251, 191, 36, 0.14)'
 
 function MockShell({ children }: { children: React.ReactNode }) {
   return (
@@ -660,127 +651,4 @@ function VoiceMockup() {
   )
 }
 
-function AttentionMockup() {
-  return (
-    <MockShell>
-      <div className="flex items-center justify-between mb-4">
-        <p style={{ color: mockMuted }} className="text-[10px] uppercase tracking-[0.18em] font-semibold">
-          Attention · Today
-        </p>
-        <span style={{ color: mockMuted }} className="text-[10px]">Tue, Apr 16</span>
-      </div>
 
-      <div className="space-y-2.5">
-        {/* Critical */}
-        <div
-          style={{ backgroundColor: mockSurfaceLift, borderColor: mockBorder }}
-          className="rounded-2xl border p-3.5 flex items-start gap-3"
-        >
-          <span
-            style={{ backgroundColor: mockRedSoft, color: mockRed }}
-            className="shrink-0 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-1"
-          >
-            Now
-          </span>
-          <div className="flex-1 min-w-0">
-            <p style={{ color: mockText }} className="text-sm font-semibold">
-              4 players missing travel docs for Friday
-            </p>
-            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Reminder ready · send in 1 tap</p>
-          </div>
-        </div>
-
-        {/* Today */}
-        <div
-          style={{ backgroundColor: mockSurfaceLift, borderColor: mockBorder }}
-          className="rounded-2xl border p-3.5 flex items-start gap-3"
-        >
-          <span
-            style={{ backgroundColor: mockAmberSoft, color: mockAmber }}
-            className="shrink-0 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-1"
-          >
-            Today
-          </span>
-          <div className="flex-1 min-w-0">
-            <p style={{ color: mockText }} className="text-sm font-semibold">
-              3 players asked about Saturday&rsquo;s travel
-            </p>
-            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Reply to all in one tap</p>
-          </div>
-        </div>
-
-        {/* This week */}
-        <div
-          style={{ backgroundColor: mockSurfaceLift, borderColor: mockBorder }}
-          className="rounded-2xl border p-3.5 flex items-start gap-3"
-        >
-          <span
-            style={{ backgroundColor: mockGreenSoft, color: mockGreen }}
-            className="shrink-0 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-1"
-          >
-            Week
-          </span>
-          <div className="flex-1 min-w-0">
-            <p style={{ color: mockText }} className="text-sm font-semibold">
-              2 unpaid ID camp registrations
-            </p>
-            <p style={{ color: mockMuted }} className="text-xs mt-0.5">Send reminder · 1-tap</p>
-          </div>
-        </div>
-      </div>
-    </MockShell>
-  )
-}
-
-function EventMockup() {
-  return (
-    <MockShell>
-      <div className="flex items-center gap-2 mb-3">
-        <span style={{ backgroundColor: mockGreen }} className="w-2 h-2 rounded-full" />
-        <p style={{ color: mockText }} className="text-sm font-semibold">Men&rsquo;s Soccer</p>
-        <span style={{ color: mockMuted }} className="text-xs">· Training</span>
-      </div>
-
-      <p style={{ color: mockText }} className="text-xl font-semibold mb-1">Tue · 3:30 – 5:30 PM</p>
-      <p
-        style={{ color: mockGreen }}
-        className="inline-flex items-center gap-1.5 text-sm font-medium mb-5"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        Main Stadium · Open in Maps
-      </p>
-
-      <div className="border-t pt-4" style={{ borderColor: mockBorder }}>
-        <p style={{ color: mockMuted }} className="text-[10px] uppercase tracking-[0.18em] font-semibold mb-2">
-          Attending?
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            style={{ backgroundColor: mockGreen, color: mockSurface }}
-            className="text-sm font-semibold rounded-xl py-2.5"
-          >
-            Yes
-          </button>
-          <button
-            type="button"
-            style={{ backgroundColor: mockSurfaceLift, color: mockText, borderColor: mockBorder }}
-            className="text-sm font-semibold rounded-xl py-2.5 border"
-          >
-            No
-          </button>
-          <button
-            type="button"
-            style={{ backgroundColor: mockSurfaceLift, color: mockText, borderColor: mockBorder }}
-            className="text-sm font-semibold rounded-xl py-2.5 border"
-          >
-            Maybe
-          </button>
-        </div>
-      </div>
-    </MockShell>
-  )
-}
