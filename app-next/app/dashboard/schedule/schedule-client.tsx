@@ -462,6 +462,15 @@ export default function ScheduleClient({ events, teams, venues, userRole, covera
             </a>
           )}
 
+          {canEdit && (
+            <a
+              href="/dashboard/schedule/import"
+              className="px-3 py-2 text-sm font-medium rounded-xl border border-white/10 text-gray hover:text-white transition-colors whitespace-nowrap"
+            >
+              Import
+            </a>
+          )}
+
           {canCreate && (
             <button
               type="button"
